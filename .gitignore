@@ -314,6 +314,8 @@ pyrightconfig.json
 
 # Project
 data
+runs
+checkpoints
 *.zip
 
 # Minecraft schematic files

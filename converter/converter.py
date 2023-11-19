@@ -15,15 +15,15 @@ class RegionTensorConverter:
         Convert a region to a tensor.
         """
         # Create a 3D NumPy array initialized with the default token
-        air_token = self.block_token_mapper.block_id_to_token('minecraft:air')
+        air_token = self.block_token_mapper.block_to_token(
+            BlockState('minecraft:air'))
         blocks_np = np.full((region.length, region.height,
                             region.width), fill_value=air_token, dtype=int)
 
         # Loop through all blocks in the region
         for x, y, z in region.allblockpos():
-            blockstate = region.getblock(x, y, z)
-            token = self.block_token_mapper.block_id_to_token(
-                blockstate.to_block_state_identifier())
+            block = region.getblock(x, y, z)
+            token = self.block_token_mapper.block_to_token(block)
             blocks_np[z, y, x] = token
 
         # Convert the NumPy array to a PyTorch tensor
@@ -43,8 +43,7 @@ class RegionTensorConverter:
         # Loop through all blocks in the region
         for x, y, z in region.allblockpos():
             token = tensor[z, y, x].item()
-            block_id = self.block_token_mapper.token_to_block_id(token)
-            blockstate = BlockState(block_id)
-            region.setblock(x, y, z, blockstate)
+            block = self.block_token_mapper.token_to_block(token)
+            region.setblock(x, y, z, block)
 
         return region

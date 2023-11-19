@@ -1,5 +1,8 @@
 import json
 
+from litemapy import BlockState
+
+
 class BlockTokenMapper:
     def __init__(self):
         self.mapping_path = 'block_state_mapping.json'
@@ -9,61 +12,65 @@ class BlockTokenMapper:
             with open(self.mapping_path, 'r') as f:
                 self.block_id_to_token_map = json.load(f)
             # Generate the reverse mapping once at load time
-            self.token_to_block_id_map = {v: k for k, v in self.block_id_to_token_map.items()}
-            self.next_available_token = max(self.token_to_block_id_map.keys()) + 1
+            self.token_to_block_id_map = {
+                v: k for k, v in self.block_id_to_token_map.items()}
+            self.next_available_token = max(
+                self.token_to_block_id_map.keys()) + 1
         except FileNotFoundError:
             self.block_id_to_token_map = {}
             self.token_to_block_id_map = {}
             self.next_available_token = 1
 
-    def encode_block_id(self, block_id: str) -> int:
+    def block_to_id(self, block: BlockState) -> str:
+        block_id = block.to_block_state_identifier()
+
         # Remove the minecraft: prefix
         block_id = block_id.removeprefix('minecraft:')
 
-        # Check if there are any properties to normalize
-        if '[' not in block_id:
-            return block_id
-
-        # Parse and sort the properties to ensure consistent ordering
-        properties = block_id[block_id.index('[')+1:-1].split(',')
-        properties.sort()
-        normalized_properties = ','.join(properties)
-
-        # Reassemble into a canonical form
-        block_type = block_id.split('[')[0]
-        block_id = f'{block_type}[{normalized_properties}]'
-
         return block_id
-    
-    def decode_block_id(self, block_id: str) -> str:
+
+    def id_to_block(self, id: str) -> BlockState:
+        # Convert the properties to a dict
+        property_dict = {}
+        if id.find('[') == -1:
+            block_id = id
+        else:
+            entries = id.split('[')
+            block_id = entries[0]
+            properties = entries[1].replace(']', '').split(',')
+            for property in properties:
+                key, value = property.split('=')
+                property_dict[key] = value
+
         # Add the minecraft: prefix
         block_id = f'minecraft:{block_id}'
-        
-        return block_id
+
+        return BlockState(block_id, properties=property_dict)
 
     def save_mapping(self) -> None:
         # Save the forward mapping to a file
         with open(self.mapping_path, 'w') as f:
             json.dump(self.block_id_to_token_map, f)
 
-    def token_to_block_id(self, token: int) -> str:
+    def token_to_block(self, token: int) -> BlockState:
         # Get the block ID from the reverse mapping
-        encoded_block_id = self.token_to_block_id_map.get(token, None)
+        id = self.token_to_block_id_map.get(token, 'air')
 
         # Decode the block ID and return it
-        block_id = self.decode_block_id(encoded_block_id)
+        block_id = self.id_to_block(id)
         return block_id
 
-    def block_id_to_token(self, block_id: str) -> int:
+    def block_to_token(self, block: BlockState) -> int:
         # Encode the block ID
-        encoded_block_id = self.encode_block_id(block_id)
+        id = self.block_to_id(block)
 
         # If the block ID has not been tokenized, assign a new token
-        if encoded_block_id not in self.block_id_to_token_map:
-            self.block_id_to_token_map[encoded_block_id] = self.next_available_token
-            self.token_to_block_id_map[self.next_available_token] = encoded_block_id  # Update the reverse mapping as well
+        if id not in self.block_id_to_token_map:
+            self.block_id_to_token_map[id] = self.next_available_token
+            # Update the reverse mapping as well
+            self.token_to_block_id_map[self.next_available_token] = id
             self.next_available_token += 1
             self.save_mapping()
 
         # Return the token
-        return self.block_id_to_token_map[encoded_block_id]
+        return self.block_id_to_token_map[id]

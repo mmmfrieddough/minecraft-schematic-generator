@@ -1,58 +1,41 @@
+import torch.nn as nn
+import torch.nn.functional as F
+
+
 class MinecraftStructureGenerator(nn.Module):
-    def __init__(self, text_embedding_dim, num_block_types, structure_dim):
+    def __init__(self, input_embedding_dim, output_classes, output_size):
         super(MinecraftStructureGenerator, self).__init__()
-        self.fc = nn.Linear(text_embedding_dim, 512)
-        self.reshaper = nn.Unflatten(1, (512, 8, 8, 8))
-        self.conv_layers = nn.Sequential(
-            nn.Conv3d(512, 256, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Upsample(scale_factor=2),
-            nn.Conv3d(256, 128, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Upsample(scale_factor=2),
-            nn.Conv3d(128, num_block_types, kernel_size=3, padding=1)
-        )
+        self.output_classes = output_classes
+        self.output_size = output_size
+
+        # Define the architecture
+        self.fc1 = nn.Linear(input_embedding_dim, 128 * 8 * 8 * 8)
+        # 1D batch normalization for the output of fc1
+        self.bn1 = nn.BatchNorm1d(128 * 8 * 8 * 8)
+        self.conv1 = nn.Conv3d(128, 64, kernel_size=3, padding=1)
+        # Batch normalization for conv1
+        self.bn2 = nn.BatchNorm3d(64)
+        self.conv2 = nn.Conv3d(64, 32, kernel_size=5, padding=3)
+        # Batch normalization for conv2
+        self.bn3 = nn.BatchNorm3d(32)
+        self.conv3 = nn.Conv3d(32, output_classes, kernel_size=7, padding=5)
 
     def forward(self, x):
-        x = F.relu(self.fc(x))
-        x = self.reshaper(x)
-        x = self.conv_layers(x)
-        return x  # Output is a 3D tensor representing block tokens
+        # Fully connected layer to expand the input
+        x = self.fc1(x)
+        # Apply 1D batch normalization before activation
+        x = F.relu(self.bn1(x))
+        # Reshape to a 5D tensor for 3D convolution
+        x = x.view(-1, 128, 8, 8, 8)
 
-class BlockEmbedding(nn.Module):
-    def __init__(self, num_block_types, embedding_dim):
-        super(BlockEmbedding, self).__init__()
-        self.embedding = nn.Embedding(num_block_types, embedding_dim)
+        # Convolutional layers with batch normalization and activation
+        # Apply 3D batch normalization before activation
+        x = F.relu(self.bn2(self.conv1(x)))
+        # Apply 3D batch normalization before activation
+        x = F.relu(self.bn3(self.conv2(x)))
+        x = self.conv3(x)  # No activation, as this is the output layer
 
-    def forward(self, block_tokens):
-        return self.embedding(block_tokens)
-
-def custom_loss(output, target, block_embedding_layer):
-    output_embeddings = block_embedding_layer(output.argmax(dim=1))
-    target_embeddings = block_embedding_layer(target)
-    loss = F.mse_loss(output_embeddings, target_embeddings)  # Mean squared error as an example
-    return loss
-
-# Initialize model and block embedding layer
-structure_generator = MinecraftStructureGenerator(text_embedding_dim, num_block_types, structure_dim)
-block_embedding_layer = BlockEmbedding(num_block_types, embedding_dim)
-
-# Optimizer and data loader setup here...
-
-for epoch in range(num_epochs):
-    for text_embeddings, target_structure in dataloader:
-        optimizer.zero_grad()
-        output = structure_generator(text_embeddings)
-        loss = custom_loss(output, target_structure, block_embedding_layer)
-        loss.backward()
-        optimizer.step()
-
-def generate_structure(model, text_embedding):
-    model.eval()
-    with torch.no_grad():
-        output = model(text_embedding)
-    return output.argmax(dim=1)  # Convert output to block token indices
-
-# Example usage
-text_embedding = # Obtain embedding from a text description
-block_tokens = generate_structure(structure_generator, text_embedding)
+        # Upsample to the desired output size
+        x = F.interpolate(x, size=self.output_size,
+                          mode='trilinear', align_corners=True)
+        return x

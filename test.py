@@ -1,7 +1,7 @@
 import nbtlib
 from litemapy import Region
 
-from .converter import RegionTensorConverter
+from converter.converter import RegionTensorConverter
 
 # file_name = '0a0b45a9b3494ec02d9d73017510edb9d59e62aee88d2047c2d824aac8a28d66.schem'
 file_name = 'KbvChvZGXS-Hardcore House.schem'

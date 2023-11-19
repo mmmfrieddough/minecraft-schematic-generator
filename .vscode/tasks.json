@@ -2,6 +2,24 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "Run TensorBoard",
+            "type": "shell",
+            "command": "tensorboard",
+            "args": [
+                "--logdir",
+                "${workspaceFolder}/runs"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
             "label": "Run Node Server",
             "type": "shell",
             "command": "node",
@@ -11,6 +29,21 @@
             "problemMatcher": [],
             "group": {
                 "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "Start Server",
+            "type": "npm",
+            "script": "start",
+            "path": "schematic_viewer",
+            "problemMatcher": [],
+            "group": {
+                "kind": "test",
                 "isDefault": true
             },
             "presentation": {

@@ -16,3 +16,8 @@ html, body {
 #schematicRenderer:focus:not(:focus-visible) {
   outline: none; /* Removes the outline for mouse focus, but not keyboard focus */
 }
+
+#schematicTitle {
+  text-align: center;
+  margin-top: 20px;
+}

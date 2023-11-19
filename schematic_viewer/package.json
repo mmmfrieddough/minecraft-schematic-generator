@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -11,9 +12,12 @@
   "license": "ISC",
   "dependencies": {
     "@enginehub/schematicwebviewer": "^4.8.1",
+    "chokidar": "^2.1.8",
     "cors-anywhere": "^0.4.4",
     "express": "^4.18.2",
-    "http-proxy-middleware": "^2.0.6"
+    "http-proxy-middleware": "^2.0.6",
+    "socket.io": "^4.7.2",
+    "socket.io-client": "^4.7.2"
   },
   "devDependencies": {
     "parcel-bundler": "^1.12.5"

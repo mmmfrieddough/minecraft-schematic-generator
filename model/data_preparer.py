@@ -14,8 +14,9 @@ def prepare_data():
     os.makedirs(TRAINING_DATA_DIR, exist_ok=True)
 
     # Create an HDF5 file
+    file_count = len(os.listdir(TARGET_TENSORS_DIR))
     with h5py.File(os.path.join(TRAINING_DATA_DIR, 'data.h5'), 'w') as hf:
-        for i, file in enumerate(os.listdir(EMBEDDINGS_DIR)):
+        for i, file in enumerate(os.listdir(TARGET_TENSORS_DIR)):
             # Load the input embedding
             input_embedding = np.load(os.path.join(EMBEDDINGS_DIR, file))
 
@@ -23,7 +24,8 @@ def prepare_data():
             target_tensor = np.load(os.path.join(TARGET_TENSORS_DIR, file))
 
             # Create a group for each sample
-            group = hf.create_group(f'sample_{i}')
+            filename = file.split('.')[0]
+            group = hf.create_group(filename)
 
             # Create a dataset for input embeddings within the group
             group.create_dataset('input_embedding', data=input_embedding)
@@ -31,6 +33,5 @@ def prepare_data():
             # Create a dataset for target tensor within the group
             group.create_dataset('target_tensor', data=target_tensor)
 
-            # Break early for debugging
-            if i == 10:
-                break
+            # Print completion percentage
+            print(f"{i / file_count * 100:.2f}% complete")
