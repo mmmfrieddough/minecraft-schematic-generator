@@ -9,7 +9,7 @@ simple_block_types = [
     'minecraft:polished_diorite',
     'minecraft:andesite',
     'minecraft:polished_andesite',
-    'minecraft:grass_block',
+    'minecraft:grass_block[snowy=false]',
     'minecraft:dirt',
     'minecraft:coarse_dirt',
     'minecraft:podzol',

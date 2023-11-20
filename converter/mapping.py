@@ -1,6 +1,6 @@
 import json
 
-from litemapy import BlockState
+from schempy import Block
 
 
 class BlockTokenMapper:
@@ -21,15 +21,7 @@ class BlockTokenMapper:
             self.token_to_block_id_map = {}
             self.next_available_token = 1
 
-    def block_to_id(self, block: BlockState) -> str:
-        block_id = block.to_block_state_identifier()
-
-        # Remove the minecraft: prefix
-        block_id = block_id.removeprefix('minecraft:')
-
-        return block_id
-
-    def id_to_block(self, id: str) -> BlockState:
+    def id_to_block(self, id: str) -> Block:
         # Convert the properties to a dict
         property_dict = {}
         if id.find('[') == -1:
@@ -42,17 +34,14 @@ class BlockTokenMapper:
                 key, value = property.split('=')
                 property_dict[key] = value
 
-        # Add the minecraft: prefix
-        block_id = f'minecraft:{block_id}'
-
-        return BlockState(block_id, properties=property_dict)
+        return Block(block_id, properties=property_dict)
 
     def save_mapping(self) -> None:
         # Save the forward mapping to a file
         with open(self.mapping_path, 'w') as f:
             json.dump(self.block_id_to_token_map, f)
 
-    def token_to_block(self, token: int) -> BlockState:
+    def token_to_block(self, token: int) -> Block:
         # Get the block ID from the reverse mapping
         id = self.token_to_block_id_map.get(token, 'air')
 
@@ -60,9 +49,9 @@ class BlockTokenMapper:
         block_id = self.id_to_block(id)
         return block_id
 
-    def block_to_token(self, block: BlockState) -> int:
+    def block_to_token(self, block: Block) -> int:
         # Encode the block ID
-        id = self.block_to_id(block)
+        id = str(block)
 
         # If the block ID has not been tokenized, assign a new token
         if id not in self.block_id_to_token_map:

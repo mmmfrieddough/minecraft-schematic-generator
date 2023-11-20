@@ -1,49 +1,45 @@
-import nbtlib
+from typing import Optional
+
 import numpy as np
-import torch
-from litemapy import BlockState, Region, Schematic
+from schempy import Block, Schematic
 
 from .mapping import BlockTokenMapper
 
 
-class RegionTensorConverter:
+class SchematicArrayConverter:
     def __init__(self):
         self.block_token_mapper = BlockTokenMapper()
 
-    def region_to_tensor(self, region: Region):
+    def schematic_to_array(self, schematic: Schematic):
         """
-        Convert a region to a tensor.
+        Convert schematic to an array.
         """
         # Create a 3D NumPy array initialized with the default token
         air_token = self.block_token_mapper.block_to_token(
-            BlockState('minecraft:air'))
-        blocks_np = np.full((region.length, region.height,
-                            region.width), fill_value=air_token, dtype=int)
+            Block('minecraft:air'))
+        array = np.full((schematic.length, schematic.height,
+                        schematic.width), fill_value=air_token, dtype=int)
 
         # Loop through all blocks in the region
-        for x, y, z in region.allblockpos():
-            block = region.getblock(x, y, z)
+        for x, y, z in schematic.iter_block_positions():
+            block = schematic.get_block(x, y, z)
             token = self.block_token_mapper.block_to_token(block)
-            blocks_np[z, y, x] = token
+            array[z, y, x] = token
 
-        # Convert the NumPy array to a PyTorch tensor
-        # Use torch.long for token indices
-        blocks_tensor = torch.tensor(blocks_np, dtype=torch.long)
+        return array
 
-        return blocks_tensor
-
-    def tensor_to_region(self, tensor):
+    def array_to_schematic(self, array: np.ndarray, schematic: Optional[Schematic] = None):
         """
-        Convert a tensor to a region.
+        Convert an array to a schematic.
         """
-        # Create a region
-        region = Region(
-            0, 0, 0, tensor.shape[2], tensor.shape[1], tensor.shape[0])
+        if schematic is None:
+            schematic = Schematic(
+                array.shape[2], array.shape[1], array.shape[0])
 
-        # Loop through all blocks in the region
-        for x, y, z in region.allblockpos():
-            token = tensor[z, y, x].item()
+        # Loop through all blocks in the schematic
+        for x, y, z in schematic.iter_block_positions():
+            token = array[z, y, x].item()
             block = self.block_token_mapper.token_to_block(token)
-            region.setblock(x, y, z, block)
+            schematic.set_block(x, y, z, block)
 
-        return region
+        return schematic

@@ -1,5 +1,6 @@
 import random
-from litemapy import Region, BlockState
+
+from schempy import Block, Schematic
 
 # Constants for magic strings
 MINECRAFT_AIR = 'minecraft:air'
@@ -8,10 +9,13 @@ RANDOM = 'random'
 SPHERE = 'sphere'
 CUBE = 'cube'
 
+
 def block_id_to_name(block_id):
     if block_id.startswith(MINECRAFT_BLOCK_START):
         block_id = block_id[len(MINECRAFT_BLOCK_START):]
+    block_id = block_id.split('[')[0]
     return block_id.replace('_', ' ')
+
 
 def block_ids_to_names(block_ids):
     names = [block_id_to_name(id) for id in block_ids]
@@ -21,6 +25,7 @@ def block_ids_to_names(block_ids):
         return f'{names[0]} and {names[1]}'
     else:
         return names[0]
+
 
 def get_structure_size_description(properties):
     shape_type = properties.get('shape_type')
@@ -32,7 +37,8 @@ def get_structure_size_description(properties):
         return f'a side length of {side_length} block{"s" if side_length > 1 else ""}'
     else:
         raise ValueError(f"Invalid shape type: {shape_type}")
-    
+
+
 def get_composition_description(block_types):
     block_types = list(set(block_types))
     ending = ''
@@ -41,7 +47,8 @@ def get_composition_description(block_types):
         ending = ', interspersed with pockets of air'
     return block_ids_to_names(block_types) + ending
 
-def generate_description(properties):
+
+def generate_description(properties: dict) -> str:
     # It is considered hollow only if it is filled with air, otherwise it is solid
     structure_block_types = properties.get('structure_block_types')
     structure_fill_block_types = properties.get('structure_fill_block_types')
@@ -75,12 +82,14 @@ def generate_description(properties):
         background_composition = 'an empty void'
     else:
         position = 'embedded'
-        background_composition = get_composition_description(background_block_types)
+        background_composition = get_composition_description(
+            background_block_types)
 
     description = f'A {hollow} {shape_type} with {dimensions}. It is composed of {layer}{structure_composition}{filling}. It is {position} within {background_composition}.'
     return description
 
-def calculate_start_position(region_size, shape_dimensions, position_percentages):
+
+def calculate_start_position(region_size: tuple[int], shape_dimensions: tuple[int], position_percentages: tuple[float]) -> tuple[int]:
     """
     Calculate the start position for a shape within a region based on percentage offsets.
     This function assumes that the shape is centered on the start position.
@@ -108,22 +117,25 @@ def calculate_start_position(region_size, shape_dimensions, position_percentages
 
     return tuple(start_position)
 
-def generate_shape(reg, start_pos, shape_type, size, block_types, is_inner=False):
+
+def generate_shape(schematic: Schematic, start_pos: tuple[int], shape_type: str, size: int, block_types: list[str], is_inner: bool = False) -> None:
     pos_x, pos_y, pos_z = start_pos
-    blocks = [BlockState(block_type) for block_type in block_types]
+    blocks = [Block(block_type) for block_type in block_types]
     if shape_type == SPHERE:
         radius = size
-        for x, y, z in reg.allblockpos():
-            distance = round(((x - pos_x) ** 2 + (y - pos_y) ** 2 + (z - pos_z) ** 2) ** .5)
+        for x, y, z in schematic.iter_block_positions():
+            distance = round(((x - pos_x) ** 2 + (y - pos_y)
+                             ** 2 + (z - pos_z) ** 2) ** .5)
             if (is_inner and distance <= radius) or (not is_inner and distance <= radius):
-                reg.setblock(x, y, z, random.choice(blocks))
+                schematic.set_block(x, y, z, random.choice(blocks))
     elif shape_type == CUBE:
         half_side = size / 2
-        for x, y, z in reg.allblockpos():
+        for x, y, z in schematic.iter_block_positions():
             if (pos_x - half_side) <= x < (pos_x + half_side) and \
-            (pos_y - half_side) <= y < (pos_y + half_side) and \
-            (pos_z - half_side) <= z < (pos_z + half_side):
-                reg.setblock(x, y, z, random.choice(blocks))
+                (pos_y - half_side) <= y < (pos_y + half_side) and \
+                    (pos_z - half_side) <= z < (pos_z + half_side):
+                schematic.set_block(x, y, z, random.choice(blocks))
+
 
 def generate_schematic(properties):
     # Unpack properties
@@ -138,22 +150,22 @@ def generate_schematic(properties):
 
     # Set random seed
     random.seed(random_seed)
-    
+
     # Unpack region size and position
     width, height, depth = region_size
 
-    # Shortcut to create a schematic with a single region
-    reg = Region(0, 0, 0, width, height, depth)
-    schem = reg.as_schematic(name="SimpleShape", author="mmmfrieddough", description="Simple shape intended for training ML models")
+    # Create schematic
+    schematic = Schematic(width, height, depth)
 
     # Determine the background type and create the appropriate blocks
     background_block_types = properties.get('background_block_types', [])
-    background_blocks = [BlockState(block_type) for block_type in background_block_types]
+    background_blocks = [Block(block_type)
+                         for block_type in background_block_types]
 
     # Fill the region with the background blocks if not air
     if len(background_block_types) != 1 or background_block_types[0] != MINECRAFT_AIR:
-        for x, y, z in reg.allblockpos():
-            reg.setblock(x, y, z, random.choice(background_blocks))
+        for x, y, z in schematic.iter_block_positions():
+            schematic.set_block(x, y, z, random.choice(background_blocks))
 
     # Get the user-defined position percentages with default to center if not provided
     position_percentages = properties.get('position_offset')
@@ -165,14 +177,17 @@ def generate_schematic(properties):
         shape_dimensions = (side_length, side_length, side_length)
 
     # Calculate the start position for the shape
-    start_pos = calculate_start_position(region_size, shape_dimensions, position_percentages)
+    start_pos = calculate_start_position(
+        region_size, shape_dimensions, position_percentages)
 
     # Generate outer shape
-    generate_shape(reg, start_pos, shape_type, radius if shape_type == SPHERE else side_length, structure_block_types)
+    generate_shape(schematic, start_pos, shape_type, radius if shape_type ==
+                   SPHERE else side_length, structure_block_types)
 
     # Build the inner shape if fill block types are provided
     if fill_block_types and thickness > 0:
         inner_size = radius - thickness if shape_type == SPHERE else side_length - 2 * thickness
-        generate_shape(reg, start_pos, shape_type, inner_size, fill_block_types, is_inner=True)
+        generate_shape(schematic, start_pos, shape_type,
+                       inner_size, fill_block_types, is_inner=True)
 
-    return schem
+    return schematic
