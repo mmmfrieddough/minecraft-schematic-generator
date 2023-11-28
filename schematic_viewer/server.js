@@ -59,6 +59,5 @@ const handleFileUpdate = (filePath) => {
   
 watcher
   .on('add', handleFileUpdate)
-  .on('change', handleFileUpdate)
 
 console.log('Watching directory for changes...');

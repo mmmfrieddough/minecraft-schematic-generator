@@ -316,6 +316,8 @@ pyrightconfig.json
 data
 runs
 checkpoints
+logs
+lightning_logs
 *.zip
 
 # Minecraft schematic files

@@ -1,1 +1,1 @@
-from .converter import SchematicArrayConverter
+from .converter import BlockTokenMapper, SchematicArrayConverter

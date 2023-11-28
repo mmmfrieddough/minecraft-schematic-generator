@@ -7,7 +7,7 @@
             "command": "tensorboard",
             "args": [
                 "--logdir",
-                "${workspaceFolder}/runs"
+                "${workspaceFolder}"
             ],
             "problemMatcher": [],
             "group": {
@@ -17,23 +17,6 @@
             "presentation": {
                 "reveal": "always",
                 "panel": "new"
-            }
-        },
-        {
-            "label": "Run Node Server",
-            "type": "shell",
-            "command": "node",
-            "args": [
-                "${workspaceFolder}/schematic_viewer/server.js"
-            ],
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "presentation": {
-                "reveal": "always",
-                "panel": "dedicated"
             }
         },
         {

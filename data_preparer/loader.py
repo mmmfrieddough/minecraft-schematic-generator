@@ -26,13 +26,14 @@ def process_schematic(sample_name: str, schematic_path: str, hdf5_group: h5py.Gr
         input=schematic.name, model="text-embedding-ada-002").data[0].embedding
     schematic_data = converter.schematic_to_array(schematic)
     properties = schematic.metadata['SchematicGenerator']
+    description = schematic.name
 
     # Update the HDF5 group
     update_hdf5_group(hdf5_group, sample_name, embedding,
-                      schematic_data, properties)
+                      schematic_data, properties, description)
 
 
-def update_hdf5_group(hdf5_group: h5py.Group, sample_name: str, embedding: np.ndarray, schematic_data: np.ndarray, properties: dict) -> None:
+def update_hdf5_group(hdf5_group: h5py.Group, sample_name: str, embedding: np.ndarray, schematic_data: np.ndarray, properties: dict, description: str) -> None:
     # Create a group for the sample
     sample_group = hdf5_group.require_group(sample_name)
 
@@ -41,6 +42,9 @@ def update_hdf5_group(hdf5_group: h5py.Group, sample_name: str, embedding: np.nd
 
     # Create a dataset for the schematic data within the sample group
     sample_group.create_dataset('target', data=schematic_data)
+
+    # Create a dataset for the description within the sample group
+    sample_group.create_dataset('description', data=description)
 
     # Serialize the properties to a string and save it as an attribute
     properties_string = json.dumps(properties)

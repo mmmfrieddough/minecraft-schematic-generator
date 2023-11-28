@@ -15,7 +15,7 @@ from .configs import expand_configs
 client = OpenAI()
 
 
-def generate_file_hash(properties):
+def generate_file_hash(properties: dict) -> str:
     """
     Generate a unique hash for a given set of properties.
     """
@@ -23,7 +23,7 @@ def generate_file_hash(properties):
     return hashlib.sha256(metadata_string.encode('utf-8')).hexdigest()
 
 
-def get_generator_class(properties):
+def get_generator_class(properties: dict) -> type:
     """
     Dispatch to the appropriate generator function based on properties.
     """
@@ -39,12 +39,12 @@ def get_generator_class(properties):
         raise ValueError("Invalid generator type specified in properties")
 
 
-def process_schematic(file_hash, properties, dry_run: bool = False):
+def process_schematic(properties: dict, schematics_directory: str, dry_run: bool = False) -> str:
     """
     Ensure schematic is generated.
     """
-    schematic_path = os.path.join(
-        SCHEMATICS_DIR, properties["generator_type"], f'{file_hash}.schem')
+    file_hash = generate_file_hash(properties)
+    schematic_path = os.path.join(schematics_directory, f'{file_hash}.schem')
 
     # Check if the schematic needs to be generated
     if not os.path.exists(schematic_path):
@@ -66,53 +66,42 @@ def process_schematic(file_hash, properties, dry_run: bool = False):
                         f'Dry run: Would have saved schematic to {schematic_path}')
                     return
                 schematic.save_to_file(Path(schematic_path), 2)
-
-
-def generate_sample(parameters, dry_run: bool = False):
-    """
-    Process all data types for a given set of parameters.
-    """
-    file_hash = generate_file_hash(parameters)
-    # print(f"Processing {file_hash}")
-    process_schematic(file_hash, parameters, dry_run=dry_run)
     return file_hash
 
 
-def remove_old_samples(hashes, dry_run: bool = False):
+def remove_old_samples(hashes: list[str], schematics_directory: str, dry_run: bool = False) -> None:
     """
     Remove all samples that are not in the given list of hashes.
     """
-    for root_dir in os.listdir(SCHEMATICS_DIR):
-        root_path = os.path.join(SCHEMATICS_DIR, root_dir)
-        if os.path.isdir(root_path):
-            for file in os.listdir(root_path):
-                file_hash = file.split('.')[0]
-                if file_hash not in hashes:
-                    if dry_run:
-                        print(f'Dry run: Would have removed {file}')
-                        continue
-                    print(f"Removing old sample {file}")
-                    os.remove(os.path.join(root_path, file))
+    for file in os.listdir(schematics_directory):
+        file_hash = file.split('.')[0]
+        if file_hash not in hashes:
+            if dry_run:
+                print(f'Dry run: Would have removed {file}')
+                continue
+            print(f"Removing old sample {file}")
+            os.remove(os.path.join(schematics_directory, file))
 
 
-def generate_samples(parameters_list, dry_run=False):
+def generate_samples(parameters_list: list[dict], dataset_name: str, dry_run: bool = False) -> None:
     """
     Generate samples for a given list of parameters.
     """
-    # Ensure directories exist
-    os.makedirs(SCHEMATICS_DIR, exist_ok=True)
+    schematics_directory = os.path.join(SCHEMATICS_DIR, dataset_name)
+    os.makedirs(schematics_directory, exist_ok=True)
 
     hashes = []
     parameters_list_bar = tqdm(parameters_list, desc="Generating samples")
     for parameters in parameters_list_bar:
-        hash = generate_sample(parameters, dry_run=dry_run)
+        hash = process_schematic(
+            parameters, schematics_directory, dry_run=dry_run)
         hashes.append(hash)
-    remove_old_samples(hashes, dry_run=dry_run)
+    remove_old_samples(hashes, schematics_directory, dry_run=dry_run)
 
 
-def generate_samples_from_configurations(parameters_configuration, dry_run=False):
+def generate_samples_from_configurations(parameters_configuration: list[dict], dataset_name: str, dry_run: bool = False) -> None:
     """
     Expand the given paramerters configuration into the full list of parameters and generate samples.
     """
     parameters_list = expand_configs(parameters_configuration)
-    generate_samples(parameters_list, dry_run=dry_run)
+    generate_samples(parameters_list, dataset_name, dry_run=dry_run)

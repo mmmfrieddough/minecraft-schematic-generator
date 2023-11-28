@@ -49,8 +49,13 @@ def get_composition_description(block_types):
 
 
 def generate_description(properties: dict) -> str:
-    # It is considered hollow only if it is filled with air, otherwise it is solid
     structure_block_types = properties.get('structure_block_types')
+    if 'minecraft:air' in structure_block_types:
+        beginning = 'An imperfect'
+    else:
+        beginning = 'A perfect'
+
+    # It is considered hollow only if it is filled with air, otherwise it is solid
     structure_fill_block_types = properties.get('structure_fill_block_types')
     if structure_fill_block_types and len(structure_fill_block_types) == 1 and structure_fill_block_types[0] == MINECRAFT_AIR:
         hollow = 'hollow'
@@ -85,7 +90,7 @@ def generate_description(properties: dict) -> str:
         background_composition = get_composition_description(
             background_block_types)
 
-    description = f'A {hollow} {shape_type} with {dimensions}. It is composed of {layer}{structure_composition}{filling}. It is {position} within {background_composition}.'
+    description = f'{beginning} {hollow} {shape_type} with {dimensions}. It is composed of {layer}{structure_composition}{filling}. It is {position} within {background_composition}.'
     return description
 
 

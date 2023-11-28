@@ -1,23 +1,25 @@
 import h5py
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
 
 class MinecraftDataset(Dataset):
-    def __init__(self, hdf5_file):
-        self.hdf5_file = hdf5_file
-        with h5py.File(self.hdf5_file, 'r') as hf:
-            self.keys = list(hf.keys())  # Store the keys in a list
+    def __init__(self, file_path, split_type, generator_type):
+        self.file_path = file_path
+        self.split_type = split_type
+        self.generator_type = generator_type
+        with h5py.File(file_path, 'r') as file:
+            self.sample_names = list(
+                file[self.split_type][self.generator_type].keys())
+            self.length = len(self.sample_names)
 
     def __len__(self):
-        with h5py.File(self.hdf5_file, 'r') as hf:
-            return len(self.keys)
+        return self.length
 
     def __getitem__(self, idx):
-        with h5py.File(self.hdf5_file, 'r') as hf:
-            group_key = self.keys[idx]  # Use the stored key
-            group = hf[group_key]
-            input_embedding = torch.tensor(group['input_embedding'][:])
-            input_embedding = input_embedding.float()
-            target_tensor = torch.tensor(group['target_tensor'][:])
-        return input_embedding, target_tensor, group_key
+        with h5py.File(self.file_path, 'r') as file:
+            group = file[self.split_type][self.generator_type][self.sample_names[idx]]
+            features = torch.tensor(group['features'][:]).float()
+            target = torch.tensor(group['target'][:]).long()
+            description = group['description'][()].decode('utf-8')
+        return features, target, description
