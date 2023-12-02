@@ -2,6 +2,7 @@ import lightning as L
 import torch
 from lightning.pytorch.utilities.grads import grad_norm
 from torch import optim
+from torchmetrics.functional import accuracy
 
 from model import TransformerMinecraftStructureGenerator
 
@@ -12,6 +13,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         self.save_hyperparameters()
         self.model = TransformerMinecraftStructureGenerator(
             num_classes=num_classes, max_sequence_length=max_sequence_length, embedding_dim=embedding_dim, freeze_encoder=freeze_encoder)
+        self.num_classes = num_classes
         self.learning_rate = learning_rate
         self.validation_step_outputs = []
 
@@ -28,30 +30,40 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         _, structure, prompt = batch
         predictions = self.model(prompt, structure)
         loss = self.loss_function(predictions, structure)
-        return predictions, loss
+        acc = accuracy(torch.argmax(predictions, dim=1), structure,
+                       task='multiclass', num_classes=self.num_classes)
+        return predictions, loss, acc
 
     def training_step(self, batch, batch_idx):
-        _, loss = self._forward_and_loss(batch)
+        _, loss, acc = self._forward_and_loss(batch)
         self.log('train_loss', loss)
+        self.log('train_accuracy', acc)
         return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
-        predictions, loss = self._forward_and_loss(batch)
+        predictions, loss, acc = self._forward_and_loss(batch)
         data_module = self.trainer.datamodule
         generator_type, _ = data_module.val_datasets[dataloader_idx]
         self.log(f'val_loss/{generator_type}',
                  loss, add_dataloader_idx=False)
+        self.log(f'val_accuracy/{generator_type}',
+                 acc, add_dataloader_idx=False)
         self.validation_step_outputs.append(
-            {'val_loss': loss, 'num_samples': predictions.size(0)})
+            {'val_loss': loss, 'val_accuracy': acc, 'num_samples': predictions.size(0)})
 
     def on_validation_epoch_end(self):
         val_loss_total = torch.tensor(0.0, device=self.device)
+        val_accuarcy_total = torch.tensor(0.0, device=self.device)
         num_samples_total = 0
         for output in self.validation_step_outputs:
             val_loss_total += output['val_loss'] * output['num_samples']
+            val_accuarcy_total += output['val_accuracy'] * \
+                output['num_samples']
             num_samples_total += output['num_samples']
         weighted_avg_loss = val_loss_total / num_samples_total
+        weighted_avg_accuracy = val_accuarcy_total / num_samples_total
         self.log('val_loss', weighted_avg_loss)
+        self.log('val_accuracy', weighted_avg_accuracy)
         self.validation_step_outputs.clear()
 
     def on_before_optimizer_step(self, optimizer):

@@ -10,7 +10,7 @@ from modules import (GenerateSchematicCallback,
                      LightningTransformerMinecraftStructureGenerator,
                      MinecraftDataModule)
 
-seed_everything(1, workers=True)
+seed_everything(0, workers=True)
 
 lightning_model = LightningTransformerMinecraftStructureGenerator(
     num_classes=50, max_sequence_length=512, embedding_dim=64, freeze_encoder=True, learning_rate=1e-3)
