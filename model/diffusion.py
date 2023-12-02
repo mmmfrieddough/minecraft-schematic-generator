@@ -20,9 +20,9 @@ class ConvBlock3D(nn.Module):
 
 
 class Encoder3D(nn.Module):
-    def __init__(self):
+    def __init__(self, block_embedding_dim):
         super(Encoder3D, self).__init__()
-        self.conv1 = ConvBlock3D(80, 128)
+        self.conv1 = ConvBlock3D(block_embedding_dim, 128)
         self.pool1 = nn.MaxPool3d(2)
         self.conv2 = ConvBlock3D(128, 256)
         self.pool2 = nn.MaxPool3d(2)
@@ -39,14 +39,15 @@ class Encoder3D(nn.Module):
 
 
 class Decoder3D(nn.Module):
-    def __init__(self):
+    def __init__(self, block_embedding_dim):
         super(Decoder3D, self).__init__()
         self.upconv3 = nn.ConvTranspose3d(512, 256, kernel_size=2, stride=2)
         self.conv3 = ConvBlock3D(512, 256)
         self.upconv2 = nn.ConvTranspose3d(256, 128, kernel_size=2, stride=2)
         self.conv2 = ConvBlock3D(256, 128)
-        self.upconv1 = nn.ConvTranspose3d(128, 80, kernel_size=2, stride=2)
-        self.conv1 = ConvBlock3D(160, 80)
+        self.upconv1 = nn.ConvTranspose3d(
+            128, block_embedding_dim, kernel_size=2, stride=2)
+        self.conv1 = ConvBlock3D(160, block_embedding_dim)
 
     def forward(self, x, enc_features):
         x = self.upconv3(x)
@@ -61,13 +62,14 @@ class Decoder3D(nn.Module):
         return x
 
 
-class UNet3D(nn.Module):
-    def __init__(self):
-        super(UNet3D, self).__init__()
-        self.encoder = Encoder3D()
+class DiffusionMinecraftStructureGenerator(nn.Module):
+    def __init__(self, block_embedding_dim):
+        super(DiffusionMinecraftStructureGenerator, self).__init__()
+        self.encoder = Encoder3D(block_embedding_dim)
         self.bottleneck = ConvBlock3D(512, 1024)
-        self.decoder = Decoder3D()
-        self.final_conv = nn.Conv3d(80, 80, kernel_size=1)
+        self.decoder = Decoder3D(block_embedding_dim)
+        self.final_conv = nn.Conv3d(
+            block_embedding_dim, block_embedding_dim, kernel_size=1)
 
     def forward(self, x, text_embedding):
         x, enc_features = self.encoder(x)

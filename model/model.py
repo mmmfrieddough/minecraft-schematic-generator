@@ -11,7 +11,7 @@ class MinecraftStructureGenerator(nn.Module):
         self.num_classes = num_classes
 
         # Define the model
-        self.channels_layer_1 = 512
+        self.channels_layer_1 = 64
         self.dim_layer_1 = 8
         self.size_layer_1 = self.channels_layer_1 * self.dim_layer_1 ** 3
         self.channels_layer_2 = self.channels_layer_1 // 2
@@ -24,21 +24,21 @@ class MinecraftStructureGenerator(nn.Module):
 
         # 3D convolutional layers with batch normalization and skip connections
         self.up1 = nn.ConvTranspose3d(in_channels=self.channels_layer_1,
-                                      out_channels=self.channels_layer_2, kernel_size=3, stride=2, padding=1, output_padding=1)
+                                      out_channels=self.channels_layer_2, kernel_size=3, stride=1, padding=1)
         self.bn_up1 = nn.BatchNorm3d(self.channels_layer_2)
         self.conv1 = nn.Conv3d(in_channels=self.channels_layer_2,
                                out_channels=self.channels_layer_2, kernel_size=3, stride=1, padding=1)
         self.bn_conv1 = nn.BatchNorm3d(self.channels_layer_2)
 
         self.up2 = nn.ConvTranspose3d(in_channels=self.channels_layer_2,
-                                      out_channels=self.channels_layer_3, kernel_size=5, stride=2, padding=2, output_padding=1)
+                                      out_channels=self.channels_layer_3, kernel_size=3, stride=1, padding=1)
         self.bn_up2 = nn.BatchNorm3d(self.channels_layer_3)
         self.conv2 = nn.Conv3d(in_channels=self.channels_layer_3,
                                out_channels=self.channels_layer_3, kernel_size=3, stride=1, padding=1)
         self.bn_conv2 = nn.BatchNorm3d(self.channels_layer_3)
 
         self.up3 = nn.ConvTranspose3d(in_channels=self.channels_layer_3,
-                                      out_channels=self.channels_layer_4, kernel_size=5, stride=2, padding=2, output_padding=1)
+                                      out_channels=self.channels_layer_4, kernel_size=3, stride=2, padding=1, output_padding=1)
         self.bn_up3 = nn.BatchNorm3d(self.channels_layer_4)
         self.conv3 = nn.Conv3d(in_channels=self.channels_layer_4,
                                out_channels=self.channels_layer_4, kernel_size=7, stride=1, padding=3)

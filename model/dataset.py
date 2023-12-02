@@ -12,6 +12,10 @@ class MinecraftDataset(Dataset):
             self.sample_names = list(
                 file[self.split_type][self.generator_type].keys())
             self.length = len(self.sample_names)
+        # Set to only load a single sample for debugging
+        # test_pos = 5
+        # self.sample_names = self.sample_names[test_pos:test_pos+1]
+        # self.length = len(self.sample_names)
 
     def __len__(self):
         return self.length

@@ -1,6 +1,6 @@
-import json
 import os
 from pathlib import Path
+import random
 
 import torch
 from lightning.pytorch.callbacks import Callback
@@ -10,12 +10,14 @@ from converter import SchematicArrayConverter
 
 
 class GenerateSchematicCallback(Callback):
-    def __init__(self, save_path, data_module, generate_train=False, generate_val=True, generate_every_n_epochs=1):
+    def __init__(self, save_path, data_module, generate_train=False, generate_val=True, generate_every_n_epochs=1, generate_all_datasets=True, autoregressive=True):
         self.save_path = save_path
         self.data_module = data_module
         self.generate_train = generate_train
         self.generate_val = generate_val
         self.generate_every_n_epochs = generate_every_n_epochs
+        self.generate_all_datasets = generate_all_datasets
+        self.autoregressive = autoregressive
         self.schematic_array_converter = SchematicArrayConverter()
 
     def setup(self, trainer, pl_module, stage) -> None:
@@ -28,30 +30,35 @@ class GenerateSchematicCallback(Callback):
             os.remove(filepath)
 
     def generate_sample(self, module, dataloader):
-        # Select a sample
-        samples = next(iter(dataloader))
-        features, _, description = samples
-        features = features[0]
+        # Pick a random sample from the dataloader
+        i = random.randint(0, len(dataloader.dataset) - 1)
+        features, _, description = dataloader.dataset[i]
 
         # Move the sample to the same device as the model
         features = features.to(module.device)
 
         # Generate a sample using the model
-        module.eval()  # Set the model to evaluation mode
+        module.eval()
         with torch.no_grad():
-            generated_sample = module(features.unsqueeze(0))
-        module.train()  # Set the model back to training mode
-
-        # Convert logits to classes
-        generated_sample = torch.argmax(generated_sample, dim=1)
-        generated_sample = generated_sample.squeeze(0)
+            generated_sample = module.generate(
+                description, self.autoregressive)
+        module.train()
 
         # Convert the sample to the desired format using the provided function
         schematic = self.schematic_array_converter.array_to_schematic(
             generated_sample)
-        schematic.name = description[0]
+        schematic.name = description
 
         return schematic
+
+    def _generate_and_save_sample(self, trainer, module, dataloader, dataset_name):
+        # Generate a sample
+        schematic = self.generate_sample(module, dataloader)
+
+        # Save the sample
+        epoch = trainer.current_epoch
+        filename = f'sample_epoch_{epoch}_dataloader_{dataset_name}.schem'
+        self.save_sample(schematic, epoch, filename)
 
     def on_train_epoch_end(self, trainer, module):
         epoch = trainer.current_epoch
@@ -62,29 +69,31 @@ class GenerateSchematicCallback(Callback):
         train_dataloader = self.data_module.train_dataloader()
 
         # Generate a sample
-        schematic = self.generate_sample(module, train_dataloader)
-
-        # Save the sample
-        epoch = trainer.current_epoch
-        filename = f'sample_epoch_{epoch}_train.schem'
-        self.save_sample(schematic, epoch, filename)
+        self._generate_and_save_sample(
+            trainer, module, train_dataloader, 'train')
 
     def on_validation_epoch_end(self, trainer, module):
         epoch = trainer.current_epoch
         if not self.generate_val or (epoch + 1) % self.generate_every_n_epochs != 0:
             return
 
-        # Get all validation dataloaders
         val_dataloaders = self.data_module.val_dataloader()
-        for i, val_loader in enumerate(val_dataloaders):
-            # Generate a sample
-            schematic = self.generate_sample(module, val_loader)
+        if not self.generate_all_datasets:
+            # Pick a random validation dataloader
+            random_val_loader = random.choice(val_dataloaders)
+            i = val_dataloaders.index(random_val_loader)
+            name = self.data_module.val_datasets[i][0]
 
-            # Save the sample
-            epoch = trainer.current_epoch
-            dataset_name, _ = self.data_module.val_datasets[i]
-            filename = f'sample_epoch_{epoch}_dataloader_{dataset_name}.schem'
-            self.save_sample(schematic, epoch, filename)
+            # Generate a sample
+            self._generate_and_save_sample(
+                trainer, module, random_val_loader, name)
+        else:
+            # Go through all validation dataloaders
+            for i, val_loader in enumerate(val_dataloaders):
+                name = self.data_module.val_datasets[i][0]
+                # Generate a sample
+                self._generate_and_save_sample(
+                    trainer, module, val_loader, name)
 
     def save_sample(self, schematic: Schematic, epoch: int, filename: str):
         filepath = os.path.join(self.save_path, filename)

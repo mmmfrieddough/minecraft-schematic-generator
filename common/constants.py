@@ -1,4 +1,4 @@
-region_size = (64, 64, 64)
+region_size = (8, 8, 8)
 
 # Simple, solid blocks
 simple_block_types = [

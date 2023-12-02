@@ -7,7 +7,8 @@
             "command": "tensorboard",
             "args": [
                 "--logdir",
-                "${workspaceFolder}"
+                "${workspaceFolder}",
+                "--bind_all"
             ],
             "problemMatcher": [],
             "group": {

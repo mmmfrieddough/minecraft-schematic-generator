@@ -107,7 +107,7 @@ def calculate_start_position(region_size: tuple[int], shape_dimensions: tuple[in
     start_position = []
     for region_dim, shape_dim, percent in zip(region_size, shape_dimensions, position_percentages):
         # Calculate the maximum offset to keep the shape within the region bounds
-        max_offset = (region_dim - shape_dim) // 2 - 1
+        max_offset = (region_dim - shape_dim) // 2
 
         # Account for even/odd dimensions
         if region_dim % 2 != shape_dim % 2 and percent < 0:

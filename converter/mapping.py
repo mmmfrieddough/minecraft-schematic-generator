@@ -20,6 +20,7 @@ class BlockTokenMapper:
             self.block_id_to_token_map = {}
             self.token_to_block_id_map = {}
             self.next_available_token = 1
+            self.block_to_token(Block('minecraft:air'))
 
     def id_to_block(self, id: str) -> Block:
         # Convert the properties to a dict
