@@ -27,7 +27,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         return torch.nn.functional.cross_entropy(predictions, targets)
 
     def _forward_and_loss(self, batch):
-        _, structure, prompt = batch
+        _, prompt, structure = batch
         predictions = self.model(prompt, structure)
         loss = self.loss_function(predictions, structure)
         acc = accuracy(torch.argmax(predictions, dim=1), structure,

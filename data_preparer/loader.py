@@ -1,61 +1,46 @@
-import json
 import os
 from pathlib import Path
 from typing import Dict, Set, Tuple
 
 import h5py
-import numpy as np
-from openai import OpenAI
 from schempy import Schematic
 from tqdm import tqdm
 
 from converter import SchematicArrayConverter
 
-client = OpenAI()
 converter = SchematicArrayConverter()
 
 
-def process_schematic(sample_name: str, schematic_path: str, hdf5_group: h5py.Group) -> None:
+def process_schematic(sample_name: str, schematic_path: str, group: h5py.Group) -> None:
     # print(f"Processing schematic: {sample_name}")
 
     # Load the schematic
     schematic = Schematic.from_file(Path(schematic_path))
 
-    # Get the values we need
-    embedding = client.embeddings.create(
-        input=schematic.name, model="text-embedding-ada-002").data[0].embedding
+    # Convert the schematic to an array
     schematic_data = converter.schematic_to_array(schematic)
-    properties = schematic.metadata['SchematicGenerator']
-    description = schematic.name
 
-    # Update the HDF5 group
-    update_hdf5_group(hdf5_group, sample_name, embedding,
-                      schematic_data, properties, description)
+    # Make sure the datasets exist
+    if 'names' not in group:
+        group.create_dataset('names', shape=(0,), maxshape=(
+            None,), dtype=h5py.string_dtype())
+    if 'prompts' not in group:
+        group.create_dataset('prompts', shape=(
+            0,), maxshape=(None,), dtype=h5py.string_dtype())
+    if 'structures' not in group:
+        group.create_dataset('structures', shape=(0,) + schematic_data.shape,
+                             maxshape=(None,) + schematic_data.shape, dtype=schematic_data.dtype)
 
-
-def update_hdf5_group(hdf5_group: h5py.Group, sample_name: str, embedding: np.ndarray, schematic_data: np.ndarray, properties: dict, description: str) -> None:
-    # Create a group for the sample
-    sample_group = hdf5_group.require_group(sample_name)
-
-    # Create a dataset for the embedding within the sample group
-    sample_group.create_dataset('features', data=embedding)
-
-    # Create a dataset for the schematic data within the sample group
-    sample_group.create_dataset('target', data=schematic_data)
-
-    # Create a dataset for the description within the sample group
-    sample_group.create_dataset('description', data=description)
-
-    # Serialize the properties to a string and save it as an attribute
-    properties_string = json.dumps(properties)
-    sample_group.attrs['properties'] = properties_string
-
-
-def remove_deleted_samples(hdf5_group: h5py.Group, existing_samples: Set[str]) -> None:
-    for sample_name in existing_samples:
-        del hdf5_group[sample_name]
-        print(
-            f"Removed {sample_name} from HDF5 as it no longer belongs to this group.")
+    # Append the data to the datasets
+    names_dataset = group['names']
+    names_dataset.resize(names_dataset.shape[0] + 1, axis=0)
+    names_dataset[-1] = sample_name
+    prompts_dataset = group['prompts']
+    prompts_dataset.resize(prompts_dataset.shape[0] + 1, axis=0)
+    prompts_dataset[-1] = schematic.name
+    structures_dataset = group['structures']
+    structures_dataset.resize(structures_dataset.shape[0] + 1, axis=0)
+    structures_dataset[-1] = schematic_data
 
 
 def split_data(generator_path: str, split_ratios: Tuple[float, float, float]) -> Dict[str, Set[str]]:
@@ -99,17 +84,12 @@ def split_data(generator_path: str, split_ratios: Tuple[float, float, float]) ->
     return splits
 
 
-def load_schematics(schematics_dir: str, hdf5_path: str, split_ratios: Tuple[float, float, float] = (0.7, 0.15, 0.15)) -> None:
-    with h5py.File(hdf5_path, 'a') as hdf5_file:
+def load_schematics(schematics_dir: str, hdf5_path: str, split_ratios: Tuple[float, float, float]) -> None:
+    with h5py.File(hdf5_path, 'w') as hdf5_file:
         print(f"Loading schematics from {schematics_dir} into {hdf5_path}")
-
-        existing_splits = set(hdf5_file.keys())
 
         for generator_type in os.listdir(schematics_dir):
             generator_path = os.path.join(schematics_dir, generator_type)
-
-            if not os.path.isdir(generator_path):
-                continue
 
             print(f"Processing generator type: {generator_type}")
 
@@ -119,35 +99,13 @@ def load_schematics(schematics_dir: str, hdf5_path: str, split_ratios: Tuple[flo
             for set_type, files in splits.items():
                 set_group = hdf5_file.require_group(
                     set_type).require_group(generator_type)
-                existing_samples = set(set_group.keys())
 
                 files_bar = tqdm(
-                    files, desc=f"Updating set: {set_type} for generator: {generator_type}")
+                    files, desc=f"Generating set: {set_type} for generator: {generator_type}")
                 for i, schematic_file in enumerate(files_bar):
                     sample_name = os.path.splitext(schematic_file)[0]
-
-                    if sample_name in existing_samples:
-                        # print(
-                        #     f"Skipping {sample_name} as it already exists in the HDF5 file.")
-                        existing_samples.remove(sample_name)
-                        continue
-
                     schematic_path = os.path.join(
                         generator_path, schematic_file)
                     process_schematic(sample_name, schematic_path, set_group)
-
-                    if i % 50 == 0:
-                        hdf5_file.flush()
-
-                hdf5_file.flush()
-                remove_deleted_samples(set_group, existing_samples)
-
-        # Remove any generator type groups that no longer exist
-        for split in existing_splits:
-            for group_name in hdf5_file[split].keys():
-                if group_name not in os.listdir(schematics_dir):
-                    del hdf5_file[split][group_name]
-                    print(
-                        f"Removed group {group_name} from HDF5 as it no longer has a corresponding directory.")
 
         print("Finished updating HDF5 file.")

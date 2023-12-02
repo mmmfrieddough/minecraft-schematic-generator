@@ -44,7 +44,7 @@ generate_schematic_callback = GenerateSchematicCallback(
     generate_train=False,
     generate_val=True,
     generate_all_datasets=False,
-    generate_every_n_epochs=10,
+    generate_every_n_epochs=1,
     autoregressive=True
 )
 

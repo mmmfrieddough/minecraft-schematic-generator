@@ -32,22 +32,21 @@ class GenerateSchematicCallback(Callback):
     def generate_sample(self, module, dataloader):
         # Pick a random sample from the dataloader
         i = random.randint(0, len(dataloader.dataset) - 1)
-        features, _, description = dataloader.dataset[i]
+        _, prompt, _ = dataloader.dataset[i]
 
         # Move the sample to the same device as the model
-        features = features.to(module.device)
+        # features = features.to(module.device)
 
         # Generate a sample using the model
         module.eval()
         with torch.no_grad():
-            generated_sample = module.generate(
-                description, self.autoregressive)
+            generated_sample = module.generate(prompt, self.autoregressive)
         module.train()
 
         # Convert the sample to the desired format using the provided function
-        schematic = self.schematic_array_converter.array_to_schematic(
+        schematic: Schematic = self.schematic_array_converter.array_to_schematic(
             generated_sample)
-        schematic.name = description
+        schematic.name = prompt
 
         return schematic
 
