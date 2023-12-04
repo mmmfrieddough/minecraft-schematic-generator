@@ -1,4 +1,3 @@
-import math
 import torch
 from torch import nn
 from transformers import DistilBertModel, DistilBertTokenizer
@@ -17,7 +16,7 @@ class PositionalEncoding(nn.Module):
 
 
 class TransformerMinecraftStructureGenerator(nn.Module):
-    def __init__(self, num_classes, max_sequence_length, embedding_dim, freeze_encoder=False):
+    def __init__(self, num_classes, max_sequence_length, embedding_dim, embedding_dropout, decoder_dim, num_heads, num_layers, decoder_dropout, freeze_encoder=False):
         super().__init__()
         self.num_classes = num_classes
         self.max_sequence_length = max_sequence_length
@@ -33,24 +32,17 @@ class TransformerMinecraftStructureGenerator(nn.Module):
                 param.requires_grad = False
 
         self.encoder_output_projection = nn.Linear(
-            self.encoder.config.dim, embedding_dim)
+            self.encoder.config.dim, decoder_dim)
         self.embedding = nn.Embedding(num_classes, embedding_dim)
         self.positional_encoding = PositionalEncoding(
             embedding_dim, max_sequence_length)
-        decoder_layer = nn.TransformerDecoderLayer(embedding_dim, nhead=32)
-        self.decoder = nn.TransformerDecoder(decoder_layer, num_layers=2)
+        self.embedding_dropout = nn.Dropout(embedding_dropout)
+        self.embedding_upsample = nn.Linear(embedding_dim, decoder_dim)
+        decoder_layer = nn.TransformerDecoderLayer(
+            decoder_dim, num_heads, dropout=decoder_dropout)
+        self.decoder = nn.TransformerDecoder(decoder_layer, num_layers)
+        self.embedding_downsample = nn.Linear(decoder_dim, embedding_dim)
         self.output_layer = nn.Linear(embedding_dim, num_classes)
-
-    def create_positional_encoding(self, num_classes, embedding_size):
-        # Create positional encoding with shape [1, num_classes, embedding_size]
-        position = torch.arange(num_classes).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, embedding_size, 2)
-                             * -(math.log(10000.0) / embedding_size))
-        pe = torch.zeros(num_classes, embedding_size)
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0).transpose(0, 1)
-        return pe
 
     def encode_prompt(self, prompt_tokens: torch.Tensor) -> torch.Tensor:
         prompt_encodings = self.encoder(**prompt_tokens)[0]
@@ -64,6 +56,12 @@ class TransformerMinecraftStructureGenerator(nn.Module):
         # Add positional encoding
         output_seq = self.positional_encoding(output_seq)
 
+        # Add dropout
+        output_seq = self.embedding_dropout(output_seq)
+
+        # Upsample the embedding
+        output_seq = self.embedding_upsample(output_seq)
+
         # Reshape the prompt and sequence so the sequence is the first dimension
         prompt_encodings = prompt_encodings.transpose(0, 1)
         output_seq = output_seq.transpose(0, 1)
@@ -76,6 +74,9 @@ class TransformerMinecraftStructureGenerator(nn.Module):
 
         # Reshape back to the batch first format
         output = output.transpose(0, 1)
+
+        # Downsample the embedding
+        output = self.embedding_downsample(output)
 
         # Run the output layer
         output = self.output_layer(output)

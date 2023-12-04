@@ -27,14 +27,19 @@ def block_ids_to_names(block_ids):
         return names[0]
 
 
-def get_structure_size_description(properties):
+def get_dimensions_description_simple(properties):
+    shape_type = properties.get('shape_type')
+    length = properties.get(
+        'radius') if shape_type == SPHERE else properties.get('side_length')
+    return f'{length} block{"s" if length > 1 else ""}'
+
+
+def get_dimensions_description(properties, description_simple):
     shape_type = properties.get('shape_type')
     if shape_type == SPHERE:
-        radius = properties.get('radius')
-        return f'a radius of {radius} block{"s" if radius > 1 else ""}'
+        return f'a radius of {description_simple}'
     elif shape_type == CUBE:
-        side_length = properties.get('side_length')
-        return f'a side length of {side_length} block{"s" if side_length > 1 else ""}'
+        return f'a side length of {description_simple}'
     else:
         raise ValueError(f"Invalid shape type: {shape_type}")
 
@@ -48,12 +53,8 @@ def get_composition_description(block_types):
     return block_ids_to_names(block_types) + ending
 
 
-def generate_description(properties: dict) -> str:
-    structure_block_types = properties.get('structure_block_types')
-    if 'minecraft:air' in structure_block_types:
-        beginning = 'An imperfect'
-    else:
-        beginning = 'A perfect'
+def generate_descriptions(properties: dict) -> list[str]:
+    structure_block_types = properties['structure_block_types']
 
     # It is considered hollow only if it is filled with air, otherwise it is solid
     structure_fill_block_types = properties.get('structure_fill_block_types')
@@ -62,8 +63,11 @@ def generate_description(properties: dict) -> str:
     else:
         hollow = 'solid'
 
-    shape_type = properties.get('shape_type')
-    dimensions = get_structure_size_description(properties)
+    shape_type = properties['shape_type']
+    dimensions_description_simple = get_dimensions_description_simple(
+        properties)
+    dimensions_description = get_dimensions_description(
+        properties, dimensions_description_simple)
 
     # We only describe the layer if it is different from the structure blocks
     thickness = properties.get('thickness')
@@ -81,7 +85,7 @@ def generate_description(properties: dict) -> str:
         filling = ''
 
     # It is considered floating only if it is floating in air, otherwise it is embedded
-    background_block_types = properties.get('background_block_types')
+    background_block_types = properties.get('background_block_types', [])
     if len(background_block_types) == 1 and background_block_types[0] == MINECRAFT_AIR:
         position = 'floating'
         background_composition = 'an empty void'
@@ -90,8 +94,126 @@ def generate_description(properties: dict) -> str:
         background_composition = get_composition_description(
             background_block_types)
 
-    description = f'{beginning} {hollow} {shape_type} with {dimensions}. It is composed of {layer}{structure_composition}{filling}. It is {position} within {background_composition}.'
-    return description
+    full_structure_composition = f'{layer}{structure_composition}{filling}'
+
+    descriptions = []
+
+    # Example: A perfect solid sphere with a radius of 1 block. It is composed of stone. It is floating within an empty void.
+    description = 'An imperfect' if MINECRAFT_AIR in structure_block_types else 'A perfect'
+    description += ' '
+    description += hollow
+    description += ' '
+    description += shape_type
+    description += ' with '
+    description += dimensions_description
+    description += '. It is composed of '
+    description += full_structure_composition
+    description += '. It is '
+    description += position
+    description += ' within '
+    description += background_composition
+    description += '.'
+    descriptions.append(description)
+
+    # Example: A perfect cube made of lime concrete, each side precisely 6 blocks, floating immaculately in a void.
+    description = 'An imperfect' if MINECRAFT_AIR in structure_block_types else 'A perfect'
+    description += ' '
+    description += hollow
+    description += ' '
+    description += shape_type
+    description += ' made of '
+    description += full_structure_composition
+    description += ', '
+    description += 'each side' if shape_type == CUBE else 'a radius of'
+    description += ' precisely '
+    description += dimensions_description_simple
+    description += ', '
+    description += position
+    description += ' '
+    description += 'immaculately ' if len(
+        background_block_types) == 1 and MINECRAFT_AIR in background_block_types else ''
+    description += 'in '
+    description += 'a void' if len(
+        background_block_types) == 1 and MINECRAFT_AIR in background_block_types else background_composition
+    description += '.'
+    descriptions.append(description)
+
+    # Example: An impeccably constructed lime concrete cube, with 6 blocks along each edge, hovers in an empty void.
+    description = 'An impeccably constructed '
+    description += structure_composition
+    description += ' '
+    description += shape_type
+    if structure_fill_block_types and structure_fill_block_types != structure_block_types:
+        description += ' filled with '
+        description += block_ids_to_names(structure_fill_block_types)
+    description += ', with '
+    description += dimensions_description_simple
+    description += ' '
+    description += 'along each edge' if shape_type == CUBE else 'in radius'
+    description += ', '
+    description += 'hovers' if MINECRAFT_AIR in background_block_types else 'sits'
+    description += ' in '
+    description += background_composition
+    description += '.'
+    descriptions.append(description)
+
+    # Example: A flawless lime concrete cube, 6 blocks in size, suspended in a void.
+    description = 'A '
+    description += 'flawed' if MINECRAFT_AIR in structure_block_types else 'flawless'
+    description += ' '
+    description += structure_composition
+    description += ' '
+    description += shape_type
+    description += ', '
+    description += dimensions_description_simple
+    description += ' in '
+    description += 'size' if shape_type == CUBE else 'radius'
+    description += ', '
+    description += 'suspended' if MINECRAFT_AIR in background_block_types else 'embedded'
+    description += ' in '
+    description += 'a void' if len(
+        background_block_types) == 1 and MINECRAFT_AIR in background_block_types else background_composition
+    description += '.'
+    descriptions.append(description)
+
+    # Example: A meticulously crafted cube, perfect in geometry, made of lime concrete and measuring 6 blocks per side, set against the backdrop of an empty void.
+    description = 'A '
+    description += 'carelessly assembled' if MINECRAFT_AIR in structure_block_types else 'meticulously crafted'
+    description += ' '
+    description += shape_type
+    description += ', '
+    description += '' if MINECRAFT_AIR in structure_block_types else 'perfect in geometry, '
+    description += 'made of '
+    description += full_structure_composition
+    description += ' and measuring '
+    description += dimensions_description_simple
+    description += ' '
+    description += 'per side' if shape_type == CUBE else 'in radius'
+    description += ', set against the backdrop of '
+    description += background_composition
+    description += '.'
+    descriptions.append(description)
+
+    # Example: Visualize a lime green cube, perfect in its construction, 6 blocks to a side, ethereally floating in an expansive void.
+    description = 'Visualize a '
+    description += structure_composition
+    description += ' '
+    description += shape_type
+    description += ', '
+    description += 'flawed' if MINECRAFT_AIR in structure_block_types else 'perfect'
+    description += ' in its construction, '
+    description += dimensions_description_simple
+    description += ' '
+    description += 'to a side' if shape_type == CUBE else 'in radius'
+    description += ', '
+    description += 'ethereally floating' if MINECRAFT_AIR in background_block_types else 'embedded'
+    description += ' in '
+    description += 'an expansive void' if len(
+        background_block_types) == 1 and MINECRAFT_AIR in background_block_types else background_composition
+    description += '.'
+    descriptions.append(description)
+
+    return descriptions
 
 
 def calculate_start_position(region_size: tuple[int], shape_dimensions: tuple[int], position_percentages: tuple[float]) -> tuple[int]:
@@ -114,7 +236,7 @@ def calculate_start_position(region_size: tuple[int], shape_dimensions: tuple[in
             max_offset += 1
 
         # Apply the percentage to calculate the actual offset
-        offset = int(max_offset * (percent / 100.0))
+        offset = round(max_offset * (percent / 100.0))
 
         # Calculate the start position
         start_pos = (region_dim // 2) + offset

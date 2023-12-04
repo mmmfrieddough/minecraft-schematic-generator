@@ -1,18 +1,20 @@
 import h5py
 from lightning import LightningDataModule
-from torch.utils.data import DataLoader, ConcatDataset
+from torch.utils.data import ConcatDataset, DataLoader
 
 from model import MinecraftDataset
 
 
 class MinecraftDataModule(LightningDataModule):
-    def __init__(self, file_path: str, batch_size: int = 32):
+    def __init__(self, file_path: str, batch_size: int = 32, num_workers: int = 0):
         super().__init__()
         self.file_path = file_path
         self.batch_size = batch_size
         self.train_datasets = []
         self.val_datasets = []
         self.test_datasets = []
+        self.num_workers = num_workers
+        self.persistent_workers = num_workers > 0
 
     def setup(self, stage=None):
         with h5py.File(self.file_path, 'r') as file:
@@ -26,10 +28,10 @@ class MinecraftDataModule(LightningDataModule):
     def train_dataloader(self):
         train_datasets = ConcatDataset(
             [dataset for _, dataset in self.train_datasets])
-        return DataLoader(train_datasets, batch_size=self.batch_size, shuffle=True, drop_last=True)
+        return DataLoader(train_datasets, batch_size=self.batch_size, shuffle=True, drop_last=True, num_workers=self.num_workers, persistent_workers=self.persistent_workers)
 
     def val_dataloader(self):
-        return [DataLoader(dataset, batch_size=self.batch_size, drop_last=True) for _, dataset in self.val_datasets]
+        return [DataLoader(dataset, batch_size=self.batch_size, drop_last=True, num_workers=self.num_workers, persistent_workers=self.persistent_workers) for _, dataset in self.val_datasets]
 
     def test_dataloader(self):
-        return [DataLoader(dataset, batch_size=self.batch_size, drop_last=True) for _, dataset in self.test_datasets]
+        return [DataLoader(dataset, batch_size=self.batch_size, drop_last=True, num_workers=self.num_workers, persistent_workers=self.persistent_workers) for _, dataset in self.test_datasets]

@@ -8,11 +8,20 @@ from model import TransformerMinecraftStructureGenerator
 
 
 class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
-    def __init__(self, num_classes, max_sequence_length, embedding_dim, freeze_encoder, learning_rate=1e-3):
+    def __init__(self, num_classes, max_sequence_length, embedding_dim, embedding_dropout, decoder_dim, num_heads, num_layers, decoder_dropout, freeze_encoder=False, learning_rate=1e-3):
         super().__init__()
         self.save_hyperparameters()
         self.model = TransformerMinecraftStructureGenerator(
-            num_classes=num_classes, max_sequence_length=max_sequence_length, embedding_dim=embedding_dim, freeze_encoder=freeze_encoder)
+            num_classes=num_classes,
+            max_sequence_length=max_sequence_length,
+            embedding_dim=embedding_dim,
+            embedding_dropout=embedding_dropout,
+            decoder_dim=decoder_dim,
+            num_heads=num_heads,
+            num_layers=num_layers,
+            decoder_dropout=decoder_dropout,
+            freeze_encoder=freeze_encoder
+        )
         self.num_classes = num_classes
         self.learning_rate = learning_rate
         self.validation_step_outputs = []
@@ -74,10 +83,9 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
-        # return optimizer
         scheduler = {
-            'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.1, patience=50, verbose=True),
-            'monitor': 'train_loss',
+            'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.1, patience=10, verbose=True),
+            'monitor': 'val_loss',
             'interval': 'epoch',
             'frequency': 1
         }

@@ -20,27 +20,13 @@ def process_schematic(sample_name: str, schematic_path: str, group: h5py.Group) 
     # Convert the schematic to an array
     schematic_data = converter.schematic_to_array(schematic)
 
-    # Make sure the datasets exist
-    if 'names' not in group:
-        group.create_dataset('names', shape=(0,), maxshape=(
-            None,), dtype=h5py.string_dtype())
-    if 'prompts' not in group:
-        group.create_dataset('prompts', shape=(
-            0,), maxshape=(None,), dtype=h5py.string_dtype())
-    if 'structures' not in group:
-        group.create_dataset('structures', shape=(0,) + schematic_data.shape,
-                             maxshape=(None,) + schematic_data.shape, dtype=schematic_data.dtype)
+    # Create the group
+    group = group.require_group(sample_name)
 
-    # Append the data to the datasets
-    names_dataset = group['names']
-    names_dataset.resize(names_dataset.shape[0] + 1, axis=0)
-    names_dataset[-1] = sample_name
-    prompts_dataset = group['prompts']
-    prompts_dataset.resize(prompts_dataset.shape[0] + 1, axis=0)
-    prompts_dataset[-1] = schematic.name
-    structures_dataset = group['structures']
-    structures_dataset.resize(structures_dataset.shape[0] + 1, axis=0)
-    structures_dataset[-1] = schematic_data
+    # Create the datasets
+    group.create_dataset(
+        'prompts', data=schematic.metadata['SchematicGenerator']['Prompts'])
+    group.create_dataset('structure', data=schematic_data)
 
 
 def split_data(generator_path: str, split_ratios: Tuple[float, float, float]) -> Dict[str, Set[str]]:
@@ -101,7 +87,7 @@ def load_schematics(schematics_dir: str, hdf5_path: str, split_ratios: Tuple[flo
                     set_type).require_group(generator_type)
 
                 files_bar = tqdm(
-                    files, desc=f"Generating set: {set_type} for generator: {generator_type}")
+                    files, desc=f"Generating set: {set_type}")
                 for i, schematic_file in enumerate(files_bar):
                     sample_name = os.path.splitext(schematic_file)[0]
                     schematic_path = os.path.join(

@@ -54,17 +54,18 @@ def process_schematic(properties: dict, schematics_directory: str, dry_run: bool
         if generator_class:
             schematic: Schematic = generator_class.generate_schematic(
                 properties)
-            description: str = generator_class.generate_description(properties)
+            descriptions: list[str] = generator_class.generate_descriptions(
+                properties)
             # Save the schematic data
             if schematic:
-                schematic.name = description
+                schematic.name = descriptions[0]
                 schematic.author = "mmmfrieddough"
                 schematic.metadata = {'SchematicGenerator': {
-                    'Hash': file_hash, 'Properties': properties}}
+                    'Hash': file_hash, 'Prompts': descriptions, 'Properties': properties}}
                 if dry_run:
                     print(
                         f'Dry run: Would have saved schematic to {schematic_path}')
-                    return
+                    return file_hash
                 schematic.save_to_file(Path(schematic_path), 2)
     return file_hash
 
@@ -91,7 +92,8 @@ def generate_samples(parameters_list: list[dict], dataset_name: str, dry_run: bo
     os.makedirs(schematics_directory, exist_ok=True)
 
     hashes = []
-    parameters_list_bar = tqdm(parameters_list, desc="Generating samples")
+    parameters_list_bar = tqdm(
+        parameters_list, desc=f"Generating samples for {dataset_name}")
     for parameters in parameters_list_bar:
         hash = process_schematic(
             parameters, schematics_directory, dry_run=dry_run)
