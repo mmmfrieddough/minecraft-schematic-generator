@@ -216,28 +216,17 @@ def generate_descriptions(properties: dict) -> list[str]:
     return descriptions
 
 
-def calculate_start_position(region_size: tuple[int], shape_dimensions: tuple[int], position_percentages: tuple[float]) -> tuple[int]:
+def calculate_start_position(region_size: tuple[int], position_offsets: tuple[int]) -> tuple[int]:
     """
-    Calculate the start position for a shape within a region based on percentage offsets.
+    Calculate the start position for a shape within a region.
     This function assumes that the shape is centered on the start position.
 
     :param region_size: Tuple of (width, height, depth) of the region.
-    :param shape_dimensions: Tuple of dimensions of the shape.
-    :param position_percentages: Tuple of percentages (x_percent, y_percent, z_percent).
+    :param position_offsets: Tuple of offsets (x_offset, y_offset, z_offset).
     :return: Tuple of (x, y, z) start position for the shape.
     """
     start_position = []
-    for region_dim, shape_dim, percent in zip(region_size, shape_dimensions, position_percentages):
-        # Calculate the maximum offset to keep the shape within the region bounds
-        max_offset = (region_dim - shape_dim) // 2
-
-        # Account for even/odd dimensions
-        if region_dim % 2 != shape_dim % 2 and percent < 0:
-            max_offset += 1
-
-        # Apply the percentage to calculate the actual offset
-        offset = round(max_offset * (percent / 100.0))
-
+    for region_dim, offset in zip(region_size, position_offsets):
         # Calculate the start position
         start_pos = (region_dim // 2) + offset
         start_position.append(start_pos)
@@ -294,18 +283,10 @@ def generate_schematic(properties):
         for x, y, z in schematic.iter_block_positions():
             schematic.set_block(x, y, z, random.choice(background_blocks))
 
-    # Get the user-defined position percentages with default to center if not provided
-    position_percentages = properties.get('position_offset')
-
-    # Calculate the dimensions of the shape
-    if shape_type == SPHERE:
-        shape_dimensions = (radius * 2 + 1, radius * 2 + 1, radius * 2 + 1)
-    elif shape_type == CUBE:
-        shape_dimensions = (side_length, side_length, side_length)
-
     # Calculate the start position for the shape
-    start_pos = calculate_start_position(
-        region_size, shape_dimensions, position_percentages)
+    position_offsets = properties.get('position_offset_x', 0), properties.get(
+        'position_offset_y', 0), properties.get('position_offset_z', 0)
+    start_pos = calculate_start_position(region_size, position_offsets)
 
     # Generate outer shape
     generate_shape(schematic, start_pos, shape_type, radius if shape_type ==
