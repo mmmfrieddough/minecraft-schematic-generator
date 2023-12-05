@@ -319,6 +319,7 @@ checkpoints
 logs
 lightning_logs
 *.zip
+*.db
 
 # Minecraft schematic files
 *.schematic

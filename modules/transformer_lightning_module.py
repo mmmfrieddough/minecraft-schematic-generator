@@ -76,8 +76,6 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         self.validation_step_outputs.clear()
 
     def on_before_optimizer_step(self, optimizer):
-        # Compute the 2-norm for each layer
-        # If using mixed precision, the gradients are already unscaled here
         norms = grad_norm(self.model, norm_type=2)
         self.log_dict(norms)
 

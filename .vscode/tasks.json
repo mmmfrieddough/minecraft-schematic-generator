@@ -34,6 +34,17 @@
                 "reveal": "always",
                 "panel": "dedicated"
             }
+        },
+        {
+            "label": "Optuna Dashboard",
+            "type": "shell",
+            "command": "optuna-dashboard",
+            "args": [
+                "sqlite:///studies.db",
+                "--host",
+                "0.0.0.0",
+            ],
+            "problemMatcher": []
         }
     ]
 }
