@@ -28,10 +28,20 @@ class MinecraftDataModule(LightningDataModule):
     def train_dataloader(self):
         train_datasets = ConcatDataset(
             [dataset for _, dataset in self.train_datasets])
+        assert len(train_datasets) > 0, "Training DataLoader is empty."
         return DataLoader(train_datasets, batch_size=self.batch_size, shuffle=True, drop_last=True, num_workers=self.num_workers, persistent_workers=self.persistent_workers)
 
     def val_dataloader(self):
-        return [DataLoader(dataset, batch_size=self.batch_size, drop_last=True, num_workers=self.num_workers, persistent_workers=self.persistent_workers) for _, dataset in self.val_datasets]
+        val_loaders = [DataLoader(dataset, batch_size=self.batch_size, drop_last=False, num_workers=self.num_workers,
+                                  persistent_workers=self.persistent_workers) for _, dataset in self.val_datasets]
+        for i, loader in enumerate(val_loaders):
+            assert len(
+                loader) > 0, f"Validation DataLoader at index {i} is empty."
+        return val_loaders
 
     def test_dataloader(self):
-        return [DataLoader(dataset, batch_size=self.batch_size, drop_last=True, num_workers=self.num_workers, persistent_workers=self.persistent_workers) for _, dataset in self.test_datasets]
+        test_loaders = [DataLoader(dataset, batch_size=self.validation_batch_size, drop_last=False,
+                                   num_workers=self.num_workers, persistent_workers=self.persistent_workers) for _, dataset in self.test_datasets]
+        for i, loader in enumerate(test_loaders):
+            assert len(loader) > 0, f"Test DataLoader at index {i} is empty."
+        return test_loaders
