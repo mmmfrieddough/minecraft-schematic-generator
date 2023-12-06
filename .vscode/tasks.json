@@ -4,8 +4,10 @@
         {
             "label": "Run TensorBoard",
             "type": "shell",
-            "command": "tensorboard",
+            "command": "${command:python.interpreterPath}",
             "args": [
+                "-m",
+                "tensorboard.main",
                 "--logdir",
                 "${workspaceFolder}",
                 "--bind_all"
@@ -38,11 +40,22 @@
         {
             "label": "Optuna Dashboard",
             "type": "shell",
-            "command": "optuna-dashboard",
+            "command": "${command:python.interpreterPath}",
             "args": [
+                "-m",
+                "optuna-dashboard",
                 "sqlite:///studies.db",
                 "--host",
                 "0.0.0.0",
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Start All",
+            "dependsOn": [
+                "Start Server",
+                "Run TensorBoard",
+                "Optuna Dashboard"
             ],
             "problemMatcher": []
         }

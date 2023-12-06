@@ -320,6 +320,7 @@ logs
 lightning_logs
 *.zip
 *.db
+*.sql
 
 # Minecraft schematic files
 *.schematic
