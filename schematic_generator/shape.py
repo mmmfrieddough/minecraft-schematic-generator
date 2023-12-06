@@ -216,17 +216,17 @@ def generate_descriptions(properties: dict) -> list[str]:
     return descriptions
 
 
-def calculate_start_position(region_size: tuple[int], position_offsets: tuple[int]) -> tuple[int]:
+def calculate_start_position(region_size: tuple[int], position_offset: tuple[int]) -> tuple[int]:
     """
     Calculate the start position for a shape within a region.
     This function assumes that the shape is centered on the start position.
 
     :param region_size: Tuple of (width, height, depth) of the region.
-    :param position_offsets: Tuple of offsets (x_offset, y_offset, z_offset).
+    :param position_offset: Tuple of offsets (x_offset, y_offset, z_offset).
     :return: Tuple of (x, y, z) start position for the shape.
     """
     start_position = []
-    for region_dim, offset in zip(region_size, position_offsets):
+    for region_dim, offset in zip(region_size, position_offset):
         # Calculate the start position
         start_pos = (region_dim // 2) + offset
         start_position.append(start_pos)
@@ -284,9 +284,8 @@ def generate_schematic(properties):
             schematic.set_block(x, y, z, random.choice(background_blocks))
 
     # Calculate the start position for the shape
-    position_offsets = properties.get('position_offset_x', 0), properties.get(
-        'position_offset_y', 0), properties.get('position_offset_z', 0)
-    start_pos = calculate_start_position(region_size, position_offsets)
+    start_pos = calculate_start_position(
+        region_size, properties['position_offset'])
 
     # Generate outer shape
     generate_shape(schematic, start_pos, shape_type, radius if shape_type ==
