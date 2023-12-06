@@ -6,9 +6,10 @@ import torch
 from converter import SchematicArrayConverter
 from modules import LightningTransformerMinecraftStructureGenerator
 
-model_version = 31
+model_version = 15
 output_dir = 'schematic_viewer/public/schematics/'
 checkpoint_path = f'lightning_logs/minecraft_structure_generator/version_{model_version}/checkpoints/last.ckpt'
+# checkpoint_path = f'version_{model_version}/checkpoints/last.ckpt'
 model = LightningTransformerMinecraftStructureGenerator.load_from_checkpoint(
     checkpoint_path)
 model.eval()
