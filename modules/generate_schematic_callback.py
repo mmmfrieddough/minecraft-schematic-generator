@@ -10,14 +10,14 @@ from converter import SchematicArrayConverter
 
 
 class GenerateSchematicCallback(Callback):
-    def __init__(self, save_path, data_module, generate_train=False, generate_val=True, generate_every_n_epochs=1, generate_all_datasets=True, autoregressive=True):
+    def __init__(self, save_path, data_module, generate_train=False, generate_val=True, generate_every_n_epochs=1, generate_all_datasets=True, temperature=1.0):
         self.save_path = save_path
         self.data_module = data_module
         self.generate_train = generate_train
         self.generate_val = generate_val
         self.generate_every_n_epochs = generate_every_n_epochs
         self.generate_all_datasets = generate_all_datasets
-        self.autoregressive = autoregressive
+        self.temperature = temperature
         self.schematic_array_converter = SchematicArrayConverter()
 
     def setup(self, trainer, pl_module, stage) -> None:
@@ -40,7 +40,7 @@ class GenerateSchematicCallback(Callback):
         # Generate a sample using the model
         module.eval()
         with torch.no_grad():
-            generated_sample = module.generate(prompt, self.autoregressive)
+            generated_sample = module.generate(prompt, self.temperature)
         module.train()
 
         # Convert the sample to the desired format using the provided function

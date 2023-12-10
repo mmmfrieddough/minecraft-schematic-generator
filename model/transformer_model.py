@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from torch import nn
 from transformers import DistilBertModel, DistilBertTokenizer
 
@@ -16,7 +17,7 @@ class PositionalEncoding(nn.Module):
 
 
 class TransformerMinecraftStructureGenerator(nn.Module):
-    def __init__(self, num_classes, max_sequence_length, embedding_dim, embedding_dropout, decoder_dim, num_heads, num_layers, decoder_dropout, freeze_encoder=False):
+    def __init__(self, num_classes, max_sequence_length, embedding_dim, embedding_dropout, num_heads, num_layers, decoder_dropout, freeze_encoder=False):
         super().__init__()
         self.num_classes = num_classes
         self.max_sequence_length = max_sequence_length
@@ -30,23 +31,21 @@ class TransformerMinecraftStructureGenerator(nn.Module):
         if freeze_encoder:
             for param in self.encoder.parameters():
                 param.requires_grad = False
-
-        self.encoder_output_projection = nn.Linear(
-            self.encoder.config.dim, decoder_dim)
         self.embedding = nn.Embedding(num_classes, embedding_dim)
         self.positional_encoding = PositionalEncoding(
             embedding_dim, max_sequence_length)
         self.embedding_dropout = nn.Dropout(embedding_dropout)
-        self.embedding_upsample = nn.Linear(embedding_dim, decoder_dim)
+        self.embedding_upsample = nn.Linear(
+            embedding_dim, self.encoder.config.dim)
         decoder_layer = nn.TransformerDecoderLayer(
-            decoder_dim, num_heads, dropout=decoder_dropout)
+            self.encoder.config.dim, num_heads, dropout=decoder_dropout)
         self.decoder = nn.TransformerDecoder(decoder_layer, num_layers)
-        self.embedding_downsample = nn.Linear(decoder_dim, embedding_dim)
+        self.embedding_downsample = nn.Linear(
+            self.encoder.config.dim, embedding_dim)
         self.output_layer = nn.Linear(embedding_dim, num_classes)
 
     def encode_prompt(self, prompt_tokens: torch.Tensor) -> torch.Tensor:
         prompt_encodings = self.encoder(**prompt_tokens)[0]
-        prompt_encodings = self.encoder_output_projection(prompt_encodings)
         return prompt_encodings
 
     def predict_next_blocks(self, prompt_encodings: torch.Tensor, sequence: torch.Tensor) -> torch.Tensor:
@@ -108,7 +107,7 @@ class TransformerMinecraftStructureGenerator(nn.Module):
 
         return output
 
-    def generate_structure(self, prompt: str, autoregressive: bool = True) -> torch.Tensor:
+    def generate_structure(self, prompt: str, temperature: float) -> torch.Tensor:
         self.eval()
         # Initialize the current sequence tensor with the appropriate shape and device
         current_sequence = torch.full(
@@ -119,25 +118,22 @@ class TransformerMinecraftStructureGenerator(nn.Module):
                 prompt, return_tensors='pt', padding=True, truncation=True).to(self.encoder.device)
             prompt_encodings = self.encode_prompt(prompt_tokens)
 
-            if autoregressive:
-                # Loop through each position
-                for i in range(1, self.max_sequence_length + 1):
-                    # Run the model on the current structure
-                    current_subsequence = current_sequence[:, :i]
-                    output = self.predict_next_blocks(
-                        prompt_encodings, current_subsequence)
-
-                    # Get the most likely block for the next position
-                    block = output[0, :, -1].argmax().item()
-
-                    # Add the block to the structure
-                    current_sequence[0, i] = block
-            else:
+            # Loop through each position
+            for i in range(1, self.max_sequence_length + 1):
+                # Run the model on the current structure
+                current_subsequence = current_sequence[:, :i]
                 output = self.predict_next_blocks(
-                    prompt_encodings, current_sequence)
+                    prompt_encodings, current_subsequence)
 
-                # Get the most likely blocks
-                current_sequence = output.argmax(dim=1)
+                # Apply temperature scaling to logits
+                scaled_logits = output[0, :, -1] / temperature
+                probabilities = F.softmax(scaled_logits, dim=-1)
+
+                # Sample from the probability distribution
+                block = torch.multinomial(probabilities, num_samples=1).item()
+
+                # Add the block to the structure
+                current_sequence[0, i] = block
 
         current_sequence = current_sequence[0, 1:]
         structure = current_sequence.view(8, 8, 8)

@@ -8,7 +8,7 @@ from model import TransformerMinecraftStructureGenerator
 
 
 class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
-    def __init__(self, num_classes, max_sequence_length, embedding_dim, embedding_dropout, decoder_dim, num_heads, num_layers, decoder_dropout, freeze_encoder=False, learning_rate=1e-3):
+    def __init__(self, num_classes, max_sequence_length, embedding_dim, embedding_dropout, num_heads, num_layers, decoder_dropout, freeze_encoder=False, learning_rate=1e-3):
         super().__init__()
         self.save_hyperparameters()
         self.model = TransformerMinecraftStructureGenerator(
@@ -16,7 +16,6 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
             max_sequence_length=max_sequence_length,
             embedding_dim=embedding_dim,
             embedding_dropout=embedding_dropout,
-            decoder_dim=decoder_dim,
             num_heads=num_heads,
             num_layers=num_layers,
             decoder_dropout=decoder_dropout,
@@ -29,8 +28,8 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
     def forward(self, prompt, structure):
         return self.model(prompt, structure)
 
-    def generate(self, prompt: str, autoregressive: bool):
-        return self.model.generate_structure(prompt, autoregressive)
+    def generate(self, prompt: str, temperature: float):
+        return self.model.generate_structure(prompt, temperature)
 
     def loss_function(self, predictions, targets):
         return torch.nn.functional.cross_entropy(predictions, targets)
@@ -82,7 +81,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
         scheduler = {
-            'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.1, patience=10, verbose=True),
+            'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True, threshold=1e-5),
             'monitor': 'val_loss',
             'interval': 'epoch',
             'frequency': 1
