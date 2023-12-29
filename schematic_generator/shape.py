@@ -11,8 +11,9 @@ SPHERE = 'sphere'
 CUBE = 'cube'
 
 
-def blocks_to_names(blocks):
-    names = [block['names']['singular'][0] for block in blocks]
+def blocks_to_names(blocks, plural: bool = False) -> str:
+    names = [block['names']['plural' if plural else 'singular'][0]
+             for block in blocks]
     if len(names) > 2:
         return f'{", ".join(names[:-1])}, and {names[-1]}'
     elif len(names) > 1:
@@ -38,14 +39,40 @@ def get_dimensions_description(properties, description_simple):
         raise ValueError(f"Invalid shape type: {shape_type}")
 
 
-def get_composition_description(block_types):
+def get_composition_descriptions(block_types: list[dict], suffix: bool = False) -> list[str]:
     ending = ''
     for block_type in block_types:
         if block_type['id'] == MINECRAFT_AIR:
             block_types.remove(block_type)
             ending = ', interspersed with pockets of air'
             break
-    return blocks_to_names(block_types) + ending
+    if suffix:
+        names = blocks_to_names(block_types, True)
+        descriptions = [
+            f'made of {names}' + ending,
+            f'composed of {names}' + ending,
+            f'constructed of {names}' + ending
+        ]
+        if len(block_types) == 1:
+            descriptions.extend([
+                f'made entirely of {names}' + ending,
+                f'composed entirely of {names}' + ending,
+                f'constructed entirely of {names}' + ending
+            ])
+        else:
+            descriptions.extend([
+                f'made of a mixture of {names}' + ending,
+                f'composed of a mixture of {names}' + ending,
+                f'constructed of a mixture of {names}' + ending
+            ])
+    else:
+        names = blocks_to_names(block_types, False)
+        descriptions = [
+            f'{names}' + ending,
+            f'{names}' + ending,
+            f'{names}' + ending
+        ]
+    return descriptions
 
 
 def generate_permutations(pattern):
@@ -95,71 +122,108 @@ def generate_combinations(pattern):
                 for prefix_combination in generate_prefix_combinations(cleaned_elements):
                     start = pattern['start']
                     start = start[1] if prefix_combination[1].lower(
-                    ) in 'aeiou' else start[0]
+                    ) in 'aeiou8' else start[0]
                     yield start + prefix_combination + '.'
 
 
 def generate_descriptions(properties: dict) -> list[str]:
-    structure_block_types = properties['structure_block_types']
+    # structure_block_types = properties['structure_block_types']
 
-    # It is considered hollow only if it is filled with air, otherwise it is solid
+    # # It is considered hollow only if it is filled with air, otherwise it is solid
+    # structure_fill_block_types = properties.get(
+    #     'structure_fill_block_types', [])
+
+    # shape_type = properties['shape_type']
+    # dimensions_description_simple = get_dimensions_description_simple(
+    #     properties)
+    # dimensions_description = get_dimensions_description(
+    #     properties, dimensions_description_simple)
+
+    # # We only describe the layer if it is different from the structure blocks
+    # thickness = properties.get('thickness')
+    # if structure_fill_block_types != structure_block_types:
+    #     layer = f'a {thickness} block thick layer of '
+    # else:
+    #     layer = ''
+
+    # # We only describe the filling if it is different from the structure blocks and not air
+    # if structure_fill_block_types != [] and structure_fill_block_types != structure_block_types and not is_hollow:
+    #     filling = f' and filled with {blocks_to_names(structure_fill_block_types)}'
+    # else:
+    #     filling = ''
+
+    # # It is considered floating only if it is floating in air, otherwise it is embedded
+    # background_block_types = properties.get('background_block_types', [])
+    # if len(background_block_types) == 1 and background_block_types[0]['id'] == MINECRAFT_AIR:
+    #     position = 'floating'
+    #     background_composition = 'an empty void'
+    # else:
+    #     position = 'embedded'
+    #     background_composition = get_composition_description(
+    #         background_block_types)
+
+    structure_block_types = properties['structure_block_types']
     structure_fill_block_types = properties.get(
         'structure_fill_block_types', [])
+    background_block_types = properties.get('background_block_types', [])
+    shape_type = properties['shape_type']
+
     is_hollow = len(
         structure_fill_block_types) == 1 and structure_fill_block_types[0]['id'] == MINECRAFT_AIR
     hollow = 'hollow' if is_hollow else 'solid'
-
-    shape_type = properties['shape_type']
-    dimensions_description_simple = get_dimensions_description_simple(
-        properties)
-    dimensions_description = get_dimensions_description(
-        properties, dimensions_description_simple)
-
-    # We only describe the layer if it is different from the structure blocks
-    thickness = properties.get('thickness')
-    if structure_fill_block_types != structure_block_types:
-        layer = f'a {thickness} block thick layer of '
-    else:
-        layer = ''
-
-    structure_composition = get_composition_description(structure_block_types)
-
-    # We only describe the filling if it is different from the structure blocks and not air
-    if structure_fill_block_types != [] and structure_fill_block_types != structure_block_types and not is_hollow:
-        filling = f' and filled with {blocks_to_names(structure_fill_block_types)}'
-    else:
-        filling = ''
-
-    # It is considered floating only if it is floating in air, otherwise it is embedded
-    background_block_types = properties.get('background_block_types', [])
-    if len(background_block_types) == 1 and background_block_types[0]['id'] == MINECRAFT_AIR:
-        position = 'floating'
-        background_composition = 'an empty void'
-    else:
-        position = 'embedded'
-        background_composition = get_composition_description(
-            background_block_types)
-
-    full_structure_composition = f'{layer}{structure_composition}{filling}'
-    dimension = properties['radius'] if shape_type == SPHERE else properties['side_length']
+    composition_descriptions_prefix = get_composition_descriptions(
+        structure_block_types, False)
+    composition_descriptions_suffix = get_composition_descriptions(
+        structure_block_types, True)
     contains_air = any(
         block['id'] == MINECRAFT_AIR for block in structure_block_types)
+    background_contains_air = any(
+        block['id'] == MINECRAFT_AIR for block in background_block_types)
+    perfection = ['imperfect', 'flawed', 'imperfectly constructed', 'flawed in its construction'] if contains_air else [
+        'perfect', 'immaculate', 'flawless', 'pristine', 'unblemished', 'impeccably constructed', 'meticulously crafted', 'perfect in its construction']
+    geometry_prefix = [
+        'imperfectly geometric' if contains_air else 'perfectly geometric']
+    geometry_suffix = ['imperfect in geometry', 'imperfectly geometric'] if contains_air else [
+        'perfect in geometry', 'perfectly geometric']
+
+    if shape_type == CUBE:
+        length = properties['radius'] if shape_type == SPHERE else properties['side_length']
+        dimensions_prefix = [f'{length} block wide', f'{length} meter wide', f'{length} block long', f'{length} meter long', f'{length} block tall', f'{length} meter tall', f'{length} block high',
+                             f'{length} meter high', f'{length} block thick', f'{length} meter thick', f'{length} block deep', f'{length} meter deep', f'{length}x{length}x{length}', f'{length} by {length} by {length}']
+        dimensions_suffix = [f'a side length of {length} blocks', f'a side length of {length} meters',
+                             f'{length} blocks per side', f'{length} meters per side']
+    elif shape_type == SPHERE:
+        radius = properties['radius']
+        diameter = radius * 2 + 1
+        dimensions_prefix = [f'{radius} block radius', f'{radius} meter radius', f'{diameter} block diameter',
+                             f'{radius} meter diameter', f'{diameter} block wide', f'{diameter} meter wide']
+        dimensions_suffix = [f'a radius of {radius} block' if radius == 1 else f'a radius of {radius} blocks', f'a radius of {radius} meter' if radius ==
+                             1 else f'a radius of {radius} meters', f'a diameter of {diameter} blocks', f'a diameter of {diameter} meters']
+    else:
+        raise ValueError(
+            f"Dimensions not defined for shape type: {shape_type}")
+
+    if background_contains_air:
+        background = ['floating within an empty void', 'floating immaculately in a void', 'floating in a void', 'floating in an empty void',
+                      'set against the backdrop of an empty void', 'ethereally floating in an expansive void', 'floating in the air']
+    else:
+        raise ValueError('Non-air background not implemented yet')
 
     base_pattern = {
         'start': ('A', 'An'),
         'base': ([''], [shape_type]),
         'prefixes': [
-            ([','], ['imperfect' if contains_air else 'perfect']),
+            ([','], perfection[:1]),
             ([','], [hollow])
         ],
         'ambifixes': [
-            (([','], [f'{dimensions_description_simple} wide' if shape_type == CUBE else f'{dimensions_description_simple} radius']),
-             ([', with', '. It has'], [f'a side length of {dimensions_description_simple}' if shape_type == CUBE else f'a radius of {dimensions_description_simple}'])),
-            (([','], [structure_composition]),
-             ([',', '. It is'], [f'made of {structure_composition}']))
+            (([','], dimensions_prefix[:1]),
+             ([', with', '. It has'], dimensions_suffix[:1])),
+            (([','], composition_descriptions_prefix[:1]),
+             ([',', '. It is'], composition_descriptions_suffix[:1]))
         ],
         'suffixes': [
-            ([',', '. It is'], ['floating within an empty void'])
+            ([',', '. It is'], background[:1])
         ]
     }
 
@@ -167,18 +231,17 @@ def generate_descriptions(properties: dict) -> list[str]:
         'start': ('A', 'An'),
         'base': ([''], [shape_type]),
         'prefixes': [
-            ([','], ['imperfect', 'flawed', 'imperfectly constructed', 'flawed in its construction'] if contains_air else [
-             'perfect', 'immaculate', 'flawless', 'pristine', 'unblemished', 'impeccably constructed', 'meticulously crafted', 'perfect in its construction']),
+            ([','], perfection),
             ([','], [hollow])
         ],
         'ambifixes': [
-            (([','], [structure_composition]),
-             ([','], [f'made of {structure_composition}'])),
-            (([','], ['imperfectly geometric' if contains_air else 'perfectly geometric']),
-             ([',', '. It is'], ['imperfect in geometry', 'imperfectly geometric'] if contains_air else ['perfect in geometry', 'perfectly geometric']))
+            (([','], composition_descriptions_prefix[:1]),
+             ([','], composition_descriptions_suffix[:1])),
+            (([','], geometry_prefix),
+             ([','], geometry_suffix))
         ],
         'suffixes': [
-            ([','], ['floating within an empty void'])
+            ([','], background[:1])
         ]
     }
 
@@ -189,13 +252,13 @@ def generate_descriptions(properties: dict) -> list[str]:
             ([','], [hollow])
         ],
         'ambifixes': [
-            (([','], [f'{dimension} block wide', f'{dimension} meter wide', f'{dimension} block long', f'{dimension} meter long', f'{dimension} block tall', f'{dimension} meter tall', f'{dimension} block high', f'{dimension} meter high', f'{dimension} block thick', f'{dimension} meter thick', f'{dimension} block deep', f'{dimension} meter deep', f'{dimension}x{dimension}x{dimension}', f'{dimension} by {dimension} by {dimension}']),
-             ([', with', '. It has'], [f'a side length of {dimension} blocks', f'a side length of {dimension} meters', f'{dimension} blocks per side', f'{dimension} meters per side'])),
-            (([','], [structure_composition]),
-             ([',', '. It is'], [f'made of {structure_composition}']))
+            (([','], dimensions_prefix),
+             ([', with', '. It has'], dimensions_suffix)),
+            (([','], composition_descriptions_prefix[:1]),
+             ([',', '. It is'], composition_descriptions_suffix[:1])),
         ],
         'suffixes': [
-            ([',', '. It is'], ['floating within an empty void'])
+            ([',', '. It is'], background[:1])
         ]
     }
 
@@ -206,19 +269,35 @@ def generate_descriptions(properties: dict) -> list[str]:
             ([','], [hollow])
         ],
         'ambifixes': [
-            (([','], [f'{dimensions_description_simple} wide' if shape_type == CUBE else f'{dimensions_description_simple} radius']),
-             ([', with', '. It has'], [f'a side length of {dimensions_description_simple}' if shape_type == CUBE else f'a radius of {dimensions_description_simple}'])),
-            (([','], [structure_composition]),
-             ([',', '. It is'], [f'made of {structure_composition}']))
+            (([','], dimensions_prefix[:1]),
+             ([', with', '. It has'], dimensions_suffix[:1])),
+            (([','], composition_descriptions_prefix[:1]),
+             ([',', '. It is'], composition_descriptions_suffix[:1])),
         ],
         'suffixes': [
-            ([',', '. It is'], ['floating within an empty void', 'floating immaculately in a void', 'floating in a void', 'floating in an empty void',
-                                'set against the backdrop of an empty void', 'ethereally floating in an expansive void', 'floating in the air'])
+            ([',', '. It is'], background)
+        ]
+    }
+
+    composition_pattern = {
+        'start': ('A', 'An'),
+        'base': ([''], [shape_type]),
+        'prefixes': [
+            ([','], [hollow])
+        ],
+        'ambifixes': [
+            (([','], dimensions_prefix[:1]),
+             ([', with', '. It has'], dimensions_suffix[:1])),
+            (([','], composition_descriptions_prefix),
+             ([',', '. It is'], composition_descriptions_suffix)),
+        ],
+        'suffixes': [
+            ([',', '. It is'], background[:1])
         ]
     }
 
     patterns = [base_pattern, condition_pattern,
-                size_pattern, background_pattern]
+                size_pattern, background_pattern, composition_pattern]
     descriptions = []
     for pattern in patterns:
         combinations = list(generate_combinations(pattern))

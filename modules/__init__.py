@@ -3,3 +3,4 @@ from .embedding_visualization_callback import EmbeddingVisualizationCallback
 from .generate_schematic_callback import GenerateSchematicCallback
 from .lightning_model import LightningMinecraftStructureGenerator
 from .transformer_lightning_module import LightningTransformerMinecraftStructureGenerator
+from .vae_lightning_module import VAELightningModule

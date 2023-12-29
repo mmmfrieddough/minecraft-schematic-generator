@@ -81,7 +81,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
         scheduler = {
-            'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True, threshold=1e-5),
+            'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5, verbose=True, threshold=1e-5),
             'monitor': 'val_loss',
             'interval': 'epoch',
             'frequency': 1

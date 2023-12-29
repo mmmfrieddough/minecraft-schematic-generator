@@ -3,7 +3,6 @@ import json
 import os
 from pathlib import Path
 
-from openai import OpenAI
 from schempy import Schematic
 from tqdm import tqdm
 
@@ -11,8 +10,6 @@ from common.file_paths import SCHEMATICS_DIR
 
 from . import shape
 from .configs import expand_configs
-
-client = OpenAI()
 
 
 def generate_file_hash(properties: dict) -> str:

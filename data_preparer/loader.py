@@ -15,7 +15,12 @@ def process_schematic(sample_name: str, schematic_path: str, group: h5py.Group) 
     # print(f"Processing schematic: {sample_name}")
 
     # Load the schematic
-    schematic = Schematic.from_file(Path(schematic_path))
+    try:
+        schematic = Schematic.from_file(Path(schematic_path))
+    except Exception as e:
+        print(f"Failed to load schematic: {sample_name}")
+        print(e)
+        return
 
     # Convert the schematic to an array
     schematic_data = converter.schematic_to_array(schematic)
@@ -70,11 +75,14 @@ def split_data(generator_path: str, split_ratios: Tuple[float, float, float]) ->
     return splits
 
 
-def load_schematics(schematics_dir: str, hdf5_path: str, split_ratios: Tuple[float, float, float]) -> None:
+def load_schematics(schematics_dir: str, hdf5_path: str, split_ratios: Tuple[float, float, float], generator_types: list[str] = None) -> None:
     with h5py.File(hdf5_path, 'w') as hdf5_file:
         print(f"Loading schematics from {schematics_dir} into {hdf5_path}")
 
         for generator_type in os.listdir(schematics_dir):
+            if generator_types and generator_type not in generator_types:
+                continue
+
             generator_path = os.path.join(schematics_dir, generator_type)
 
             print(f"Processing generator type: {generator_type}")
