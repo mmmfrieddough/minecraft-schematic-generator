@@ -127,40 +127,9 @@ def generate_combinations(pattern):
 
 
 def generate_descriptions(properties: dict) -> list[str]:
-    # structure_block_types = properties['structure_block_types']
-
-    # # It is considered hollow only if it is filled with air, otherwise it is solid
-    # structure_fill_block_types = properties.get(
-    #     'structure_fill_block_types', [])
-
-    # shape_type = properties['shape_type']
-    # dimensions_description_simple = get_dimensions_description_simple(
-    #     properties)
-    # dimensions_description = get_dimensions_description(
-    #     properties, dimensions_description_simple)
-
-    # # We only describe the layer if it is different from the structure blocks
-    # thickness = properties.get('thickness')
-    # if structure_fill_block_types != structure_block_types:
-    #     layer = f'a {thickness} block thick layer of '
-    # else:
-    #     layer = ''
-
-    # # We only describe the filling if it is different from the structure blocks and not air
-    # if structure_fill_block_types != [] and structure_fill_block_types != structure_block_types and not is_hollow:
-    #     filling = f' and filled with {blocks_to_names(structure_fill_block_types)}'
-    # else:
-    #     filling = ''
-
-    # # It is considered floating only if it is floating in air, otherwise it is embedded
-    # background_block_types = properties.get('background_block_types', [])
-    # if len(background_block_types) == 1 and background_block_types[0]['id'] == MINECRAFT_AIR:
-    #     position = 'floating'
-    #     background_composition = 'an empty void'
-    # else:
-    #     position = 'embedded'
-    #     background_composition = get_composition_description(
-    #         background_block_types)
+    num_descriptions = properties['descriptions']
+    if num_descriptions <= 0:
+        return []
 
     structure_block_types = properties['structure_block_types']
     structure_fill_block_types = properties.get(
@@ -302,7 +271,7 @@ def generate_descriptions(properties: dict) -> list[str]:
     for pattern in patterns:
         combinations = list(generate_combinations(pattern))
         combinations = random.sample(combinations, min(
-            properties['descriptions'] // len(patterns), len(combinations)))
+            num_descriptions // len(patterns), len(combinations)))
         descriptions.extend(combinations)
     return descriptions
 

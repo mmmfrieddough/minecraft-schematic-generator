@@ -28,9 +28,7 @@ def process_schematic(sample_name: str, schematic_path: str, group: h5py.Group) 
     # Create the group
     group = group.require_group(sample_name)
 
-    # Create the datasets
-    group.create_dataset(
-        'prompts', data=schematic.metadata['SchematicGenerator']['Prompts'])
+    # Create the dataset
     group.create_dataset('structure', data=schematic_data)
 
 

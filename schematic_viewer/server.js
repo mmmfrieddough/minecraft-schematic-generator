@@ -40,24 +40,35 @@ server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 
-const watchDirectory = path.join(__dirname, './public/schematics');
-console.log(`Watching directory: ${watchDirectory}`);
+const watchDirectory1 = path.join(__dirname, './public/schematics/masked');
+const watchDirectory2 = path.join(__dirname, './public/schematics/filled'); // Second directory to watch
 
-// Set up file watcher
-const watcher = chokidar.watch(watchDirectory, {ignored: /^\./, persistent: true});
+console.log(`Watching directories: ${watchDirectory1} and ${watchDirectory2}`);
 
-watcher
-  .on('error', error => console.log(`Watcher error: ${error}`))
-  .on('ready', () => console.log(`Initial scan complete. Ready for changes in ${watchDirectory}`));
+// Set up file watcher for the first directory
+const watcher1 = chokidar.watch(watchDirectory1, {ignored: /^\./, persistent: true});
 
-const handleFileUpdate = (filePath) => {
+watcher1
+  .on('error', error => console.log(`Watcher1 error: ${error}`))
+  .on('ready', () => console.log(`Initial scan complete. Ready for changes in ${watchDirectory1}`))
+  .on('add', filePath => handleFileUpdate(filePath, 'file-update-1')) // Emit a specific event for directory 1
+  .on('change', filePath => handleFileUpdate(filePath, 'file-update-1'));
+
+// Set up file watcher for the second directory
+const watcher2 = chokidar.watch(watchDirectory2, {ignored: /^\./, persistent: true});
+
+watcher2
+  .on('error', error => console.log(`Watcher2 error: ${error}`))
+  .on('ready', () => console.log(`Initial scan complete. Ready for changes in ${watchDirectory2}`))
+  .on('add', filePath => handleFileUpdate(filePath, 'file-update-2')) // Emit a specific event for directory 2
+  .on('change', filePath => handleFileUpdate(filePath, 'file-update-2'));
+
+// Handle file updates and emit events to the browser
+const handleFileUpdate = (filePath, event) => {
   console.log(`File ${filePath} has been added or changed`);
   const filename = path.basename(filePath);
-  const browserPath = `/schematics/${filename}`;
-  io.emit('file-update', { path: browserPath });
+  const browserPath = event === 'file-update-1' ? `/schematics/masked/${filename}` : `/schematics/filled/${filename}`;
+  io.emit(event, { path: browserPath });
 };
-  
-watcher
-  .on('add', handleFileUpdate)
 
-console.log('Watching directory for changes...');
+console.log('Watching directories for changes...');

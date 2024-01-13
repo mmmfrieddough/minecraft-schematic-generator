@@ -55,7 +55,7 @@ def process_schematic(properties: dict, schematics_directory: str, dry_run: bool
                 properties)
             # Save the schematic data
             if schematic:
-                schematic.name = descriptions[0]
+                schematic.name = descriptions[0] if descriptions else "Unknown"
                 schematic.author = "mmmfrieddough"
                 schematic.metadata = {'SchematicGenerator': {
                     'Hash': file_hash, 'Prompts': descriptions, 'Properties': properties}}

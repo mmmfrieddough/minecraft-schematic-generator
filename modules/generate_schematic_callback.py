@@ -10,8 +10,9 @@ from converter import SchematicArrayConverter
 
 
 class GenerateSchematicCallback(Callback):
-    def __init__(self, save_path, data_module, generate_train=False, generate_val=True, generate_every_n_epochs=1, generate_all_datasets=True, temperature=1.0):
-        self.save_path = save_path
+    def __init__(self, masked_path, filled_path, data_module, generate_train=False, generate_val=True, generate_every_n_epochs=1, generate_all_datasets=True, temperature=1.0):
+        self.masked_path = masked_path
+        self.filled_path = filled_path
         self.data_module = data_module
         self.generate_train = generate_train
         self.generate_val = generate_val
@@ -22,42 +23,53 @@ class GenerateSchematicCallback(Callback):
 
     def setup(self, trainer, pl_module, stage) -> None:
         # Create the save directory if it doesn't exist
-        os.makedirs(self.save_path, exist_ok=True)
+        os.makedirs(self.masked_path, exist_ok=True)
+        os.makedirs(self.filled_path, exist_ok=True)
 
         # Delete all existing samples
-        for filename in os.listdir(self.save_path):
-            filepath = os.path.join(self.save_path, filename)
+        for filename in os.listdir(self.masked_path):
+            filepath = os.path.join(self.masked_path, filename)
+            os.remove(filepath)
+        for filename in os.listdir(self.filled_path):
+            filepath = os.path.join(self.filled_path, filename)
             os.remove(filepath)
 
     def generate_sample(self, module, dataloader):
         # Pick a random sample from the dataloader
         i = random.randint(0, len(dataloader.dataset) - 1)
-        _, prompt, _ = dataloader.dataset[i]
+        masked_structure, _ = dataloader.dataset[i]
 
-        # Move the sample to the same device as the model
-        # features = features.to(module.device)
+        masked_structure_copy = masked_structure.clone()
+
+        # Move the sample to the device
+        masked_structure_copy = masked_structure_copy.to(module.device)
 
         # Generate a sample using the model
-        module.eval()
-        with torch.no_grad():
-            generated_sample = module.generate(prompt, self.temperature)
-        module.train()
+        filled_structure = module.complete_structure(
+            masked_structure_copy, self.temperature)
 
         # Convert the sample to the desired format using the provided function
-        schematic: Schematic = self.schematic_array_converter.array_to_schematic(
-            generated_sample)
-        schematic.name = prompt
+        filled_structure_schematic = self.schematic_array_converter.array_to_schematic(
+            filled_structure)
+        filled_structure_schematic.name = 'Test'
+        masked_structure_schematic = self.schematic_array_converter.array_to_schematic(
+            masked_structure)
+        masked_structure_schematic.name = 'Test'
 
-        return schematic
+        return filled_structure_schematic, masked_structure_schematic
 
     def _generate_and_save_sample(self, trainer, module, dataloader, dataset_name):
         # Generate a sample
-        schematic = self.generate_sample(module, dataloader)
+        filled_structure_schematic, masked_structure_schematic = self.generate_sample(
+            module, dataloader)
 
         # Save the sample
         epoch = trainer.current_epoch
         filename = f'sample_epoch_{epoch}_dataloader_{dataset_name}.schem'
-        self.save_sample(schematic, epoch, filename)
+        filepath = os.path.join(self.filled_path, filename)
+        filled_structure_schematic.save_to_file(Path(filepath), 2)
+        filepath = os.path.join(self.masked_path, filename)
+        masked_structure_schematic.save_to_file(Path(filepath), 2)
 
     def on_train_epoch_end(self, trainer, module):
         epoch = trainer.current_epoch
@@ -93,7 +105,3 @@ class GenerateSchematicCallback(Callback):
                 # Generate a sample
                 self._generate_and_save_sample(
                     trainer, module, val_loader, name)
-
-    def save_sample(self, schematic: Schematic, epoch: int, filename: str):
-        filepath = os.path.join(self.save_path, filename)
-        schematic.save_to_file(Path(filepath), 2)
