@@ -128,7 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Schematic loaded!');
       } catch (error) {
         console.error('Failed to load schematic:', error);
-        alert('Failed to load schematic: ' + error.message);
       }
     };
   
