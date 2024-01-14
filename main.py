@@ -24,7 +24,7 @@ class Block(BaseModel):
 
 block_token_mapper = BlockTokenMapper()
 
-model_version = 47
+model_version = 67
 output_dir = 'schematic_viewer/public/schematics/'
 checkpoint_path = f'lightning_logs/version_{model_version}/checkpoints/last.ckpt'
 model = LightningTransformerMinecraftStructureGenerator.load_from_checkpoint(
@@ -36,6 +36,7 @@ app = FastAPI()
 
 @app.post("/complete-structure/")
 async def complete_structure(input: Request):
+    print(input)
     try:
         [[[print(block_str) for block_str in y]
           for y in z] for z in input.structure]
