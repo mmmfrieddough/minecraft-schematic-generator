@@ -624,17 +624,6 @@ class WorldSampler:
     def _collect_samples(self, directory: str) -> None:
         """Collects samples from the world at the identified positions"""
 
-        # Clear the schematics directory
-        for file in os.listdir(self.schematic_directory):
-            file_path = os.path.join(self.schematic_directory, file)
-            try:
-                if os.path.isfile(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print(f"Failed to delete {file_path}. Reason: {e}")
-
         # Load progress
         _, all_sample_positions = self._load_sample_progress(directory)
 
@@ -675,20 +664,11 @@ class WorldSampler:
                 process.start()
                 processes.append(process)
 
-            start_time = time.time()
-
             # Update the progress bar based on the progress queue
             while any(p.is_alive() for p in processes):
                 while not sampled_positions_queue.empty():
                     sampled_positions_queue.get()
                     pbar.update(1)
-
-                # Check if a minute has passed
-                if time.time() - start_time >= 60:
-                    print(
-                        f"Progress after 1 minute: {pbar.n} samples collected")
-                    return
-
                 time.sleep(0.1)
 
             # Wait for all processes to finish
