@@ -1,3 +1,5 @@
+import os
+import threading
 from data_sampler import WorldSampler
 
 
@@ -9,11 +11,12 @@ def main():
         chunk_mark_radius=2,
         sample_offset=8,
         sample_size=11,
-        sample_interested_block_threshold=30,
-        sample_progress_save_interval=100,
-        num_workers=16
+        sample_interested_block_threshold=50,
+        sample_progress_save_interval=1000,
+        sampling_purge_interval=3,
+        num_workers=1
     )
-    world_sampler.sample_directory('data/worlds/')
+    world_sampler.sample_directory('data/worlds')
 
 
 if __name__ == '__main__':

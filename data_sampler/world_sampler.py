@@ -1,4 +1,4 @@
-import logging  # noqa
+import logging
 
 logging.getLogger('amulet').setLevel(logging.WARNING)  # noqa
 logging.getLogger('PyMCTranslate').setLevel(logging.WARNING)  # noqa
@@ -9,9 +9,12 @@ import os
 import shutil
 import time
 from multiprocessing import Process, Queue
+from queue import Empty
 
 import amulet
 import numpy as np
+from amulet.api.chunk import Chunk
+from amulet.api.level import World
 from amulet.api.selection import SelectionBox, SelectionGroup
 from amulet.level.formats.sponge_schem import SpongeSchemFormatWrapper
 from amulet.utils.world_utils import chunk_coords_to_block_coords
@@ -184,6 +187,7 @@ class WorldSampler:
                  sample_size,
                  sample_interested_block_threshold,
                  sample_progress_save_interval,
+                 sampling_purge_interval,
                  num_workers=os.cpu_count()):
         self.schematic_directory = schematic_directory
         self.temp_directory = temp_directory
@@ -193,6 +197,7 @@ class WorldSampler:
         self.sample_size = sample_size
         self.sample_interested_block_threshold = sample_interested_block_threshold
         self.sample_progress_save_interval = sample_progress_save_interval
+        self.sampling_purge_interval = sampling_purge_interval
         self.num_workers = num_workers
 
         self.worker_directories = None
@@ -318,15 +323,19 @@ class WorldSampler:
         # Remove visited chunks from the list
         remaining_chunk_coords = all_chunk_coords - visited_chunks
         if len(remaining_chunk_coords) == 0:
-            print("All chunks have already been visited")
+            print(
+                f"All {len(all_chunk_coords)} chunks have already been visited")
             return
 
         # Set up worker directories
         self.setup_worker_directories(directory)
 
         # Create a tqdm progress bar
-        pbar = tqdm(total=len(all_chunk_coords), desc="Marking chunks")
-        pbar.update(len(visited_chunks))
+        pbar = tqdm(
+            total=len(all_chunk_coords),
+            initial=len(visited_chunks),
+            desc="Marking chunks"
+        )
         pbar.set_postfix({"relevant_chunks": len(relevant_chunks)})
 
         # Create a queue and add all chunk coordinates to it
@@ -339,30 +348,38 @@ class WorldSampler:
         visited_chunks_queue = Queue()
         relevant_chunks_queue = Queue()
 
-        # Create and start worker processes
         processes = []
-        for i in range(self.num_workers):
-            process = Process(target=self._mark_chunks_worker, args=(
-                self.worker_directories[i], all_chunks_queue, visited_chunks_queue, relevant_chunks_queue))
-            process.start()
-            processes.append(process)
+        try:
+            # Create and start worker processes
+            for i in range(self.num_workers):
+                process = Process(target=self._mark_chunks_worker, args=(
+                    self.worker_directories[i], all_chunks_queue, visited_chunks_queue, relevant_chunks_queue))
+                process.start()
+                processes.append(process)
 
-        # Update the progress bar based on the progress queue
-        while any(p.is_alive() for p in processes):
-            while not visited_chunks_queue.empty():
-                pbar.update(1)
-                visited_chunks.add(visited_chunks_queue.get())
-                if len(visited_chunks) % self.chunk_progress_save_interval == 0:
-                    self._save_chunk_progress(
-                        directory, visited_chunks, relevant_chunks)
-            while not relevant_chunks_queue.empty():
-                relevant_chunks.add(relevant_chunks_queue.get())
-                pbar.set_postfix({"relevant_chunks": len(relevant_chunks)})
-            time.sleep(0.1)
+            # Update the progress bar based on the progress queue
+            while any(p.is_alive() for p in processes):
+                while not visited_chunks_queue.empty():
+                    pbar.update(1)
+                    visited_chunks.add(visited_chunks_queue.get())
+                    if len(visited_chunks) % self.chunk_progress_save_interval == 0:
+                        self._save_chunk_progress(
+                            directory, visited_chunks, relevant_chunks)
+                while not relevant_chunks_queue.empty():
+                    relevant_chunks.add(relevant_chunks_queue.get())
+                    pbar.set_postfix({"relevant_chunks": len(relevant_chunks)})
+                time.sleep(0.1)
 
-        # Wait for all processes to finish
-        for process in processes:
-            process.join()
+            # Wait for all processes to finish
+            for process in processes:
+                process.join()
+        finally:
+            # Empty the queue
+            while True:
+                try:
+                    all_chunks_queue.get_nowait()
+                except Empty:
+                    break
 
         # Final save
         self._save_chunk_progress(directory, all_chunk_coords, relevant_chunks)
@@ -375,7 +392,7 @@ class WorldSampler:
                 interested_indices.add(i)
         return interested_indices
 
-    def _identify_samples_in_chunk(self, world, translator, chunk_coords) -> set:
+    def _identify_samples_in_chunk(self, world: World, translator, chunk_coords) -> set:
         """Collects samples from a chunk"""
 
         sample_positions = set()
@@ -388,8 +405,13 @@ class WorldSampler:
             num_chunks)] for _ in range(num_chunks)]
         for dx in range(num_chunks):
             for dz in range(num_chunks):
-                chunk = world.level_wrapper.load_chunk(
-                    chunk_coords[0] + dx, chunk_coords[1] + dz, 'minecraft:overworld')
+                inner_chunk_coords = (
+                    chunk_coords[0] + dx, chunk_coords[1] + dz)
+                if world.has_chunk(*inner_chunk_coords, 'minecraft:overworld'):
+                    chunk = world.level_wrapper.load_chunk(
+                        *inner_chunk_coords, 'minecraft:overworld')
+                else:
+                    chunk = Chunk(*inner_chunk_coords)
                 chunk_blocks[dx][dz] = np.asarray(chunk.blocks[:, -64:320, :])
                 interested_indices[dx][dz] = self._get_interested_palette_indices(
                     chunk, translator)
@@ -487,16 +509,19 @@ class WorldSampler:
         # Get all relevant chunks that have not been sampled
         remaining_relevant_chunks = relevant_chunks - sampled_chunks
         if len(remaining_relevant_chunks) == 0:
-            print("All relevant chunks have already had samples identified")
+            print(
+                f"All {len(relevant_chunks)} relevant chunks have already been sampled")
             return
 
         # Set up worker directories
         self.setup_worker_directories(directory)
 
         # Create a tqdm progress bar
-        pbar = tqdm(total=len(relevant_chunks),
-                    desc="Identifying samples from chunks")
-        pbar.update(len(sampled_chunks))
+        pbar = tqdm(
+            total=len(relevant_chunks),
+            initial=len(sampled_chunks),
+            desc="Identifying samples from chunks"
+        )
         pbar.set_postfix({"sample_positions": len(sample_positions)})
 
         # Create a queue and add all chunk coordinates to it
@@ -509,30 +534,39 @@ class WorldSampler:
         sampled_chunks_queue = Queue()
         sample_positions_queue = Queue()
 
-        # Create and start worker processes
         processes = []
-        for i in range(self.num_workers):
-            process = Process(target=self._identify_samples_worker, args=(
-                self.worker_directories[i], relevant_chunks_queue, sampled_chunks_queue, sample_positions_queue))
-            process.start()
-            processes.append(process)
+        try:
+            # Create and start worker processes
+            for i in range(self.num_workers):
+                process = Process(target=self._identify_samples_worker, args=(
+                    self.worker_directories[i], relevant_chunks_queue, sampled_chunks_queue, sample_positions_queue))
+                process.start()
+                processes.append(process)
 
-        # Update the progress bar based on the progress queue
-        while any(p.is_alive() for p in processes):
-            while not sampled_chunks_queue.empty():
-                pbar.update(1)
-                sampled_chunks.add(sampled_chunks_queue.get())
-                if len(sampled_chunks) % self.sample_progress_save_interval == 0:
-                    self._save_sample_progress(
-                        directory, sampled_chunks, sample_positions)
-            while not sample_positions_queue.empty():
-                sample_positions.update(sample_positions_queue.get())
-                pbar.set_postfix({"sample_positions": len(sample_positions)})
-            time.sleep(0.1)
+            # Update the progress bar based on the progress queue
+            while any(p.is_alive() for p in processes):
+                while not sampled_chunks_queue.empty():
+                    pbar.update(1)
+                    sampled_chunks.add(sampled_chunks_queue.get())
+                    if len(sampled_chunks) % self.sample_progress_save_interval == 0:
+                        self._save_sample_progress(
+                            directory, sampled_chunks, sample_positions)
+                while not sample_positions_queue.empty():
+                    sample_positions.update(sample_positions_queue.get())
+                    pbar.set_postfix(
+                        {"sample_positions": len(sample_positions)})
+                time.sleep(0.1)
 
-        # Wait for all processes to finish
-        for process in processes:
-            process.join()
+            # Wait for all processes to finish
+            for process in processes:
+                process.join()
+        finally:
+            # Empty the queue
+            while True:
+                try:
+                    relevant_chunks_queue.get_nowait()
+                except Empty:
+                    break
 
         # Final save
         self._save_sample_progress(directory, sampled_chunks, sample_positions)
@@ -545,14 +579,14 @@ class WorldSampler:
                             world_name, file_hash + '.schem')
         return path
 
-    def _collect_samples_worker(self, directory: str, sample_positions_queue: Queue, sampled_positions_queue: Queue) -> None:
+    def _collect_samples_worker(self, directory: str, world_name: str, sample_positions_queue: Queue, sampled_positions_queue: Queue) -> None:
         """Worker function for collecting samples"""
 
         try:
             # Load the world data from the directory
             world = amulet.load_level(directory)
-            world_name = world.level_wrapper.level_name
 
+            purge_counter = 0
             while True:
                 position = sample_positions_queue.get()
                 if position is None:
@@ -562,42 +596,66 @@ class WorldSampler:
                 path = self._get_schematic_path(world_name, position)
                 x, y, z = position
 
-                if not os.path.exists(path):
-                    selection = SelectionBox(
-                        (x, y, z), (x + self.sample_size, y + self.sample_size, z + self.sample_size))
-                    structure = world.extract_structure(
-                        selection, 'minecraft:overworld')
+                selection = SelectionBox(
+                    (x, y, z), (x + self.sample_size, y + self.sample_size, z + self.sample_size))
+                structure = world.extract_structure(
+                    selection, 'minecraft:overworld')
 
+                try:
                     wrapper = SpongeSchemFormatWrapper(path)
                     wrapper.create_and_open(
                         'java', 3578, bounds=SelectionGroup(structure.bounds('minecraft:overworld')), overwrite=True)
                     structure.save(wrapper)
+                finally:
                     wrapper.close()
 
+                purge_counter += 1
+                if purge_counter >= self.sampling_purge_interval:
+                    purge_counter = 0
+                    world.close()
+                    world = amulet.load_level(directory)
+
                 sampled_positions_queue.put(position)
+        except KeyboardInterrupt:
+            pass
         finally:
             world.close()
 
     def _collect_samples(self, directory: str) -> None:
         """Collects samples from the world at the identified positions"""
 
+        # Clear the schematics directory
+        for file in os.listdir(self.schematic_directory):
+            file_path = os.path.join(self.schematic_directory, file)
+            try:
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print(f"Failed to delete {file_path}. Reason: {e}")
+
         # Load progress
         _, all_sample_positions = self._load_sample_progress(directory)
 
         # Filter out positions that already have a schematic
-        _, world_name = os.path.split(directory)
+        world_name = os.path.basename(directory)
         sample_positions = [p for p in all_sample_positions if not os.path.exists(
             self._get_schematic_path(world_name, p))]
         if len(sample_positions) == 0:
-            print("All samples have already been collected")
+            print(
+                f"All {len(all_sample_positions)} samples have already been collected")
             return
 
         # Set up worker directories
         self.setup_worker_directories(directory)
 
         # Create a tqdm progress bar
-        pbar = tqdm(total=len(all_sample_positions), desc="Collecting samples")
-        pbar.update(len(all_sample_positions) - len(sample_positions))
+        pbar = tqdm(
+            total=len(all_sample_positions),
+            initial=(len(all_sample_positions) - len(sample_positions)),
+            desc="Collecting samples"
+        )
 
         # Create a queue and add all positions to it
         sample_positions_queue = Queue()
@@ -608,37 +666,60 @@ class WorldSampler:
         # Create a progress queue
         sampled_positions_queue = Queue()
 
-        # Create and start worker processes
         processes = []
-        for i in range(self.num_workers):
-            process = Process(target=self._collect_samples_worker, args=(
-                self.worker_directories[i], sample_positions_queue, sampled_positions_queue))
-            process.start()
-            processes.append(process)
+        try:
+            # Create and start worker processes
+            for i in range(self.num_workers):
+                process = Process(target=self._collect_samples_worker, args=(
+                    self.worker_directories[i], world_name, sample_positions_queue, sampled_positions_queue))
+                process.start()
+                processes.append(process)
 
-        # Update the progress bar based on the progress queue
-        while any(p.is_alive() for p in processes):
-            while not sampled_positions_queue.empty():
-                sampled_positions_queue.get()
-                pbar.update(1)
-            time.sleep(0.1)
+            start_time = time.time()
 
-        # Wait for all processes to finish
-        for process in processes:
-            process.join()
+            # Update the progress bar based on the progress queue
+            while any(p.is_alive() for p in processes):
+                while not sampled_positions_queue.empty():
+                    sampled_positions_queue.get()
+                    pbar.update(1)
+
+                # Check if a minute has passed
+                if time.time() - start_time >= 60:
+                    print(
+                        f"Progress after 1 minute: {pbar.n} samples collected")
+                    return
+
+                time.sleep(0.1)
+
+            # Wait for all processes to finish
+            for process in processes:
+                process.join()
+        finally:
+            # Empty the queue
+            while True:
+                try:
+                    sample_positions_queue.get_nowait()
+                except Empty:
+                    break
 
     def sample_directory(self, directory: str) -> None:
         """Samples a directory of worlds"""
-        print(f"Sampling directory: {directory}")
-        for subdir in os.listdir(directory):
-            if os.path.isdir(os.path.join(directory, subdir)):
-                self.sample_world(os.path.join(directory, subdir))
-        print("Done sampling directory")
+        try:
+            print(f"Sampling directory: {directory}")
+            for subdir in os.listdir(directory):
+                if os.path.isdir(os.path.join(directory, subdir)):
+                    self.sample_world(os.path.join(directory, subdir))
+            print("Done sampling directory")
+        except KeyboardInterrupt:
+            pass
 
     def sample_world(self, directory: str) -> None:
         """Samples a world"""
-        print(f"Sampling world: {directory}")
-        self._mark_chunks(directory)
-        self._identify_samples(directory)
-        self._collect_samples(directory)
-        print("Done sampling world")
+        try:
+            print(f"Sampling world: {directory}")
+            self._mark_chunks(directory)
+            self._identify_samples(directory)
+            self._collect_samples(directory)
+            print("Done sampling world")
+        except KeyboardInterrupt:
+            pass
