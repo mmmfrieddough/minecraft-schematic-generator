@@ -601,13 +601,19 @@ class WorldSampler:
                 structure = world.extract_structure(
                     selection, 'minecraft:overworld')
 
+                tmp_path = f'{directory}/tmp.schem'
+
                 try:
-                    wrapper = SpongeSchemFormatWrapper(path)
+                    # Save the schematic to a temporary file
+                    wrapper = SpongeSchemFormatWrapper(tmp_path)
                     wrapper.create_and_open(
                         'java', 3578, bounds=SelectionGroup(structure.bounds('minecraft:overworld')), overwrite=True)
                     structure.save(wrapper)
                 finally:
                     wrapper.close()
+
+                # Move the temporary file to the final location
+                os.replace(tmp_path, path)
 
                 purge_counter += 1
                 if purge_counter >= self.sampling_purge_interval:
@@ -635,6 +641,10 @@ class WorldSampler:
             print(
                 f"All {len(all_sample_positions)} samples have already been collected")
             return
+
+        # Create the schematic directory if it doesn't exist
+        os.makedirs(os.path.join(self.schematic_directory,
+                    world_name), exist_ok=True)
 
         # Set up worker directories
         self.setup_worker_directories(directory)
