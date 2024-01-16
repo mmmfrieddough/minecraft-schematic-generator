@@ -1,7 +1,7 @@
 import logging
 
-logging.getLogger('amulet').setLevel(logging.WARNING)  # noqa
-logging.getLogger('PyMCTranslate').setLevel(logging.WARNING)  # noqa
+logging.getLogger('amulet').setLevel(logging.CRITICAL)  # noqa
+logging.getLogger('PyMCTranslate').setLevel(logging.ERROR)  # noqa
 
 import hashlib
 import json
@@ -14,6 +14,7 @@ from queue import Empty
 import amulet
 import numpy as np
 from amulet.api.chunk import Chunk
+from amulet.api.errors import ChunkDoesNotExist, ChunkLoadError
 from amulet.api.level import World
 from amulet.api.selection import SelectionBox, SelectionGroup
 from amulet.level.formats.sponge_schem import SpongeSchemFormatWrapper
@@ -278,13 +279,16 @@ class WorldSampler:
         self.sampling_purge_interval = sampling_purge_interval
         self.num_workers = num_workers
 
-        self.worker_directories = None
+    def get_worker_directory(self, src_directory: str, worker_id: int) -> str:
+        """Returns the directory for a given worker"""
+        _, src_dir_name = os.path.split(src_directory)
+        worker_directory_name = f"worker_{worker_id}"
+        worker_directory = os.path.join(
+            self.temp_directory, src_dir_name, worker_directory_name)
+        return worker_directory
 
     def setup_worker_directories(self, src_directory: str) -> None:
         """Sets up worker directories for a given source directory"""
-        if self.worker_directories:
-            return
-        self.worker_directories = {}
 
         # Get the parent directory and the name of the source directory
         _, src_dir_name = os.path.split(src_directory)
@@ -293,16 +297,21 @@ class WorldSampler:
         copies_directory = os.path.join(self.temp_directory, src_dir_name)
         os.makedirs(copies_directory, exist_ok=True)
 
+        # Check if the worker directories have already been set up
+        for i in range(self.num_workers):
+            worker_directory = self.get_worker_directory(src_directory, i)
+            if not os.path.exists(worker_directory):
+                break
+        else:
+            return
+
         # Create a copy of the source directory for each worker
         pbar = tqdm(range(self.num_workers),
                     desc="Setting up worker directories")
         for i in pbar:
-            worker_directory_name = f"worker_{i}"
-            worker_directory = os.path.join(
-                copies_directory, worker_directory_name)
+            worker_directory = self.get_worker_directory(src_directory, i)
             if not os.path.exists(worker_directory):
                 shutil.copytree(src_directory, worker_directory)
-            self.worker_directories[i] = worker_directory
 
     def _check_block(self, block, target_blocks, translator):
         """Returns True if the block is one of the target blocks"""
@@ -386,15 +395,22 @@ class WorldSampler:
                     all_chunks_queue.put(None)
                     break
 
-                chunk = world.level_wrapper.load_chunk(
-                    *chunk_coords, dimension)
-                if self._chunk_contains_target_blocks(chunk, self.chunk_target_blocks[dimension], translator):
-                    # Add this chunk and its neighbors
-                    for dx in range(-self.chunk_mark_radius, self.chunk_mark_radius + 1):
-                        for dz in range(-self.chunk_mark_radius, self.chunk_mark_radius + 1):
-                            relevant_chunks_queue.put(
-                                (chunk_coords[0] + dx, chunk_coords[1] + dz))
-                visited_chunks_queue.put(chunk_coords)
+                try:
+                    chunk = world.level_wrapper.load_chunk(
+                        *chunk_coords, dimension)
+                    if self._chunk_contains_target_blocks(chunk, self.chunk_target_blocks[dimension], translator):
+                        # Add this chunk and its neighbors
+                        for dx in range(-self.chunk_mark_radius, self.chunk_mark_radius + 1):
+                            for dz in range(-self.chunk_mark_radius, self.chunk_mark_radius + 1):
+                                relevant_chunks_queue.put(
+                                    (chunk_coords[0] + dx, chunk_coords[1] + dz))
+                    successful = True
+                except (ChunkDoesNotExist, ChunkLoadError):
+                    successful = False
+                except Exception as e:
+                    print(f'Unknown error loading chunk {chunk_coords}: {e}')
+                    successful = False
+                visited_chunks_queue.put((chunk_coords, successful))
         except KeyboardInterrupt:
             pass
         finally:
@@ -444,22 +460,27 @@ class WorldSampler:
         try:
             # Create and start worker processes
             for i in range(self.num_workers):
-                process = Process(target=self._mark_chunks_worker, args=(
-                    self.worker_directories[i], dimension, all_chunks_queue, visited_chunks_queue, relevant_chunks_queue))
+                process = Process(target=self._mark_chunks_worker, args=(self.get_worker_directory(
+                    directory, i), dimension, all_chunks_queue, visited_chunks_queue, relevant_chunks_queue))
                 process.start()
                 processes.append(process)
 
             # Update the progress bar based on the visited chunks
+            unsuccessful_chunks_count = 0
             while any(p.is_alive() for p in processes):
                 while not visited_chunks_queue.empty():
                     pbar.update(1)
-                    visited_chunks.add(visited_chunks_queue.get())
+                    chunk_coords, successful = visited_chunks_queue.get()
+                    visited_chunks.add(chunk_coords)
+                    if not successful:
+                        unsuccessful_chunks_count += 1
                     if len(visited_chunks) % self.chunk_progress_save_interval == 0:
                         self._save_chunk_progress(
                             directory, dimension, visited_chunks, relevant_chunks)
                 while not relevant_chunks_queue.empty():
                     relevant_chunks.add(relevant_chunks_queue.get())
-                    pbar.set_postfix({"relevant_chunks": len(relevant_chunks)})
+                pbar.set_postfix({"relevant_chunks": len(
+                    relevant_chunks), "unsuccessful_chunks": unsuccessful_chunks_count})
                 time.sleep(0.1)
 
             # Wait for all processes to finish
@@ -491,6 +512,7 @@ class WorldSampler:
         sample_positions = set()
         min_height = world.bounds(dimension).min_y
         max_height = world.bounds(dimension).max_y
+        world.get_block
 
         # Load all chunks that a selection starting in this chunk could possibly intersect
         num_chunks = self.sample_size // 16 + 2
@@ -503,8 +525,8 @@ class WorldSampler:
                 inner_chunk_coords = (
                     chunk_coords[0] + dx, chunk_coords[1] + dz)
                 if world.has_chunk(*inner_chunk_coords, dimension):
-                    chunk = world.level_wrapper.load_chunk(
-                        *inner_chunk_coords, dimension)
+                    chunk = world.get_chunk(*inner_chunk_coords, dimension)
+                    world.purge()
                 else:
                     chunk = Chunk(*inner_chunk_coords)
                 chunk_blocks[dx][dz] = np.asarray(
@@ -585,12 +607,19 @@ class WorldSampler:
                     relevant_chunks_queue.put(None)
                     break
 
-                if world.has_chunk(*chunk_coords, dimension):
-                    samples = self._identify_samples_in_chunk(
-                        world, dimension, translator, chunk_coords)
-                    sample_positions_queue.put(samples)
-
-                sampled_chunks_queue.put(chunk_coords)
+                try:
+                    if world.has_chunk(*chunk_coords, dimension):
+                        samples = self._identify_samples_in_chunk(
+                            world, dimension, translator, chunk_coords)
+                        sample_positions_queue.put(samples)
+                    successful = True
+                except ChunkLoadError:
+                    successful = False
+                except Exception as e:
+                    print(
+                        f'Unknown error identifying samples in chunk {chunk_coords}: {e}')
+                    successful = False
+                sampled_chunks_queue.put((chunk_coords, successful))
         except KeyboardInterrupt:
             pass
         finally:
@@ -636,23 +665,27 @@ class WorldSampler:
         try:
             # Create and start worker processes
             for i in range(self.num_workers):
-                process = Process(target=self._identify_samples_worker, args=(
-                    self.worker_directories[i], dimension, relevant_chunks_queue, sampled_chunks_queue, sample_positions_queue))
+                process = Process(target=self._identify_samples_worker, args=(self.get_worker_directory(
+                    directory, i), dimension, relevant_chunks_queue, sampled_chunks_queue, sample_positions_queue))
                 process.start()
                 processes.append(process)
 
             # Update the progress bar based on the progress queue
+            unsuccessful_chunks_count = 0
             while any(p.is_alive() for p in processes):
                 while not sampled_chunks_queue.empty():
                     pbar.update(1)
-                    sampled_chunks.add(sampled_chunks_queue.get())
+                    chunk_coords, successful = sampled_chunks_queue.get()
+                    sampled_chunks.add(chunk_coords)
+                    if not successful:
+                        unsuccessful_chunks_count += 1
                     if len(sampled_chunks) % self.sample_progress_save_interval == 0:
                         self._save_sample_progress(
                             directory, dimension, sampled_chunks, sample_positions)
                 while not sample_positions_queue.empty():
                     sample_positions.update(sample_positions_queue.get())
-                    pbar.set_postfix(
-                        {"sample_positions": len(sample_positions)})
+                pbar.set_postfix({"sample_positions": len(
+                    sample_positions), "unsuccessful_chunks": unsuccessful_chunks_count})
                 time.sleep(0.1)
 
             # Wait for all processes to finish
@@ -769,8 +802,8 @@ class WorldSampler:
         try:
             # Create and start worker processes
             for i in range(self.num_workers):
-                process = Process(target=self._collect_samples_worker, args=(
-                    self.worker_directories[i], dimension, world_name, sample_positions_queue, sampled_positions_queue))
+                process = Process(target=self._collect_samples_worker, args=(self.get_worker_directory(
+                    directory, i), dimension, world_name, sample_positions_queue, sampled_positions_queue))
                 process.start()
                 processes.append(process)
 
@@ -805,10 +838,10 @@ class WorldSampler:
 
     def sample_world(self, directory: str) -> None:
         """Samples a world"""
-        print(f"Sampling world: {directory}")
+        print(f"Sampling {directory}")
         for dimension in ['minecraft:overworld', 'minecraft:the_nether', 'minecraft:the_end']:
             print(f"Sampling dimension: {dimension}")
             self._mark_chunks(directory, dimension)
             self._identify_samples(directory, dimension)
             self._collect_samples(directory, dimension)
-        print("Done sampling world")
+        print(f"Done sampling {directory}")

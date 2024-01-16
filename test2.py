@@ -1,5 +1,3 @@
-import os
-import threading
 from data_sampler import WorldSampler
 
 
@@ -14,7 +12,7 @@ def main():
         sample_interested_block_threshold=50,
         sample_progress_save_interval=1000,
         sampling_purge_interval=3,
-        num_workers=1
+        num_workers=16
     )
     world_sampler.sample_directory('data/worlds')
 
