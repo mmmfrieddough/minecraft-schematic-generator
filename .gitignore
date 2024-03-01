@@ -318,6 +318,7 @@ runs
 checkpoints
 logs
 lightning_logs
+wandb
 *.zip
 *.db
 *.sql

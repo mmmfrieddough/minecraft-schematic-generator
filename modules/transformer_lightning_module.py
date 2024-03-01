@@ -9,9 +9,8 @@ from model import TransformerMinecraftStructureGenerator
 
 
 class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
-    def __init__(self, num_classes, max_sequence_length, embedding_dropout, model_dim, num_heads, num_layers, decoder_dropout, learning_rate=1e-3):
+    def __init__(self, num_classes, max_sequence_length, embedding_dropout, model_dim, num_heads, num_layers, decoder_dropout, max_learning_rate, warmup_steps):
         super().__init__()
-        self.save_hyperparameters()
         self.model = TransformerMinecraftStructureGenerator(
             num_classes=num_classes,
             max_sequence_length=max_sequence_length,
@@ -22,38 +21,41 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
             decoder_dropout=decoder_dropout
         )
         self.num_classes = num_classes
-        self.learning_rate = learning_rate
+        self.max_learning_rate = max_learning_rate
+        self.warmup_steps = warmup_steps
         self.validation_step_outputs = []
+        self.save_hyperparameters()
 
     def forward(self, structure):
         return self.model(structure)
 
     def loss_function(self, predictions, targets):
-        return torch.nn.functional.cross_entropy(predictions, targets)
+        return torch.nn.functional.cross_entropy(predictions, targets, ignore_index=0)
 
-    def _forward_and_loss(self, batch):
-        masked_structure, full_structure = batch
-        masked_structure = masked_structure.view(masked_structure.size(0), -1)
-        full_structure = full_structure.view(full_structure.size(0), -1)
+    def _forward_and_loss(self, batch: torch.Tensor):
+        # Get the structures
+        full_structures, masked_structures = batch
 
-        filled_structure = self(masked_structure)
+        # Flatten the structures
+        full_structures = full_structures.view(full_structures.size(0), -1)
+        masked_structures = masked_structures.view(
+            masked_structures.size(0), -1)
 
-        # Create a mask for positions that were originally zero (masked)
-        mask = (masked_structure == 0)
+        # Zero out the non-masked elements so we don't compute the loss for them
+        full_structures[:, masked_structures[0] != 0] = 0
 
-        # Apply the mask to select only the logits for the masked positions
-        filled_structure_masked = torch.masked_select(
-            filled_structure.transpose(1, 2), mask.unsqueeze(2)).view(-1, self.num_classes)
-        full_structure_masked = torch.masked_select(full_structure, mask)
+        # Make the predictions
+        predicted_structures = self(masked_structures)
 
-        # Compute loss and accuracy only on the masked positions
-        loss = self.loss_function(
-            filled_structure_masked, full_structure_masked)
-        predictions = torch.argmax(filled_structure_masked, dim=1)
-        acc = accuracy(predictions, full_structure_masked,
-                       num_classes=self.num_classes, task='multiclass')
+        # Compute the loss
+        loss = self.loss_function(predicted_structures, full_structures)
 
-        return filled_structure, loss, acc
+        # Compute the accuracy
+        predictions = torch.argmax(predicted_structures, dim=1)
+        acc = accuracy(predictions, full_structures,
+                       num_classes=self.num_classes, task='multiclass', ignore_index=0)
+
+        return predicted_structures, loss, acc
 
     def training_step(self, batch, batch_idx):
         _, loss, acc = self._forward_and_loss(batch)
@@ -64,11 +66,9 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         predictions, loss, acc = self._forward_and_loss(batch)
         data_module = self.trainer.datamodule
-        generator_type, _ = data_module.val_datasets[dataloader_idx]
-        self.log(f'val_loss/{generator_type}',
-                 loss, add_dataloader_idx=False)
-        self.log(f'val_accuracy/{generator_type}',
-                 acc, add_dataloader_idx=False)
+        dataset_name = data_module.get_val_dataset_name(dataloader_idx)
+        self.log(f'val_loss/{dataset_name}', loss, add_dataloader_idx=False)
+        self.log(f'val_accuracy/{dataset_name}', acc, add_dataloader_idx=False)
         self.validation_step_outputs.append(
             {'val_loss': loss, 'val_accuracy': acc, 'num_samples': predictions.size(0)})
 
@@ -149,21 +149,45 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
 
         self.train()
 
-    def complete_structure(self, structure, temperature=1.0, fill_order='random'):
-        for _ in self.fill_structure(structure, temperature, fill_order):
-            pass
-        return structure
+    def complete_structure(self, masked_structure, temperature=1.0, fill_order='random'):
+        for predicted_token, z, y, x in self.fill_structure(masked_structure, temperature, fill_order):
+            masked_structure[z, y, x] = predicted_token
+        return masked_structure
 
     def on_before_optimizer_step(self, optimizer):
         norms = grad_norm(self.model, norm_type=2)
         self.log_dict(norms)
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
-        scheduler = {
-            'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=25, verbose=True, threshold=1e-5),
-            'monitor': 'val_loss',
-            'interval': 'epoch',
+        optimizer = optim.Adam(self.parameters(), lr=self.max_learning_rate)
+
+        # Warmup scheduler
+        def lr_lambda(step): return min((step + 1) / self.warmup_steps, 1.0)
+        warmup_scheduler = {
+            'scheduler': torch.optim.lr_scheduler.LambdaLR(
+                optimizer,
+                lr_lambda=lr_lambda
+            ),
+            'interval': 'step',
             'frequency': 1
         }
-        return {'optimizer': optimizer, 'lr_scheduler': scheduler}
+
+        # Reduce on plateau scheduler
+        plateau_scheduler = {
+            'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer,
+                mode='min',
+                factor=0.5,
+                patience=50,
+                verbose=True,
+                threshold=1e-4
+            ),
+            'monitor': 'val_loss',
+            'interval': 'step',
+            'frequency': max(1, int(self.trainer.val_check_interval * len(self.trainer.datamodule.train_dataloader())))
+        }
+
+        return (
+            [optimizer],
+            [warmup_scheduler, plateau_scheduler]
+        )

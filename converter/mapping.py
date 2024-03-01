@@ -44,7 +44,7 @@ class BlockTokenMapper:
 
     def token_to_block(self, token: int) -> Block:
         # Get the block ID from the reverse mapping
-        id = self.token_to_block_id_map.get(token, 'air')
+        id = self.token_to_block_id_map[token]
 
         # Decode the block ID and return it
         block_id = self.id_to_block(id)

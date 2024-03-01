@@ -9,7 +9,7 @@
                 "-m",
                 "tensorboard.main",
                 "--logdir",
-                "${workspaceFolder}",
+                "${workspaceFolder}/lightning_logs",
                 "--bind_all"
             ],
             "problemMatcher": [],

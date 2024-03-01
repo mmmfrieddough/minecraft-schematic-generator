@@ -1,16 +1,19 @@
 import os
-from pathlib import Path
 import random
+from pathlib import Path
 
-import torch
 from lightning.pytorch.callbacks import Callback
-from schempy import Schematic
+import torch
+from torch.utils.data import DataLoader
 
 from converter import SchematicArrayConverter
+from .transformer_lightning_module import LightningTransformerMinecraftStructureGenerator
 
 
 class GenerateSchematicCallback(Callback):
-    def __init__(self, masked_path, filled_path, data_module, generate_train=False, generate_val=True, generate_every_n_epochs=1, generate_all_datasets=True, temperature=1.0):
+    def __init__(self, full_path, masked_path, filled_path, data_module, generate_train=False, generate_val=True, generate_every_n_epochs=1, generate_all_datasets=True, temperature=1.0):
+        super().__init__()
+        self.full_path = full_path
         self.masked_path = masked_path
         self.filled_path = filled_path
         self.data_module = data_module
@@ -34,42 +37,40 @@ class GenerateSchematicCallback(Callback):
             filepath = os.path.join(self.filled_path, filename)
             os.remove(filepath)
 
-    def generate_sample(self, module, dataloader):
+    def generate_sample(self, module: LightningTransformerMinecraftStructureGenerator, dataloader: DataLoader) -> tuple:
         # Pick a random sample from the dataloader
         i = random.randint(0, len(dataloader.dataset) - 1)
-        masked_structure, _ = dataloader.dataset[i]
-
-        masked_structure_copy = masked_structure.clone()
-
-        # Move the sample to the device
-        masked_structure_copy = masked_structure_copy.to(module.device)
+        full_structure, masked_structure = dataloader.dataset[i]
 
         # Generate a sample using the model
         filled_structure = module.complete_structure(
-            masked_structure_copy, self.temperature)
+            masked_structure.clone(), temperature=self.temperature)
 
-        # Convert the sample to the desired format using the provided function
-        filled_structure_schematic = self.schematic_array_converter.array_to_schematic(
-            filled_structure)
-        filled_structure_schematic.name = 'Test'
+        # Convert the samples to schematics
+        full_structure_schematic = self.schematic_array_converter.array_to_schematic(
+            full_structure)
         masked_structure_schematic = self.schematic_array_converter.array_to_schematic(
             masked_structure)
-        masked_structure_schematic.name = 'Test'
+        filled_structure_schematic = self.schematic_array_converter.array_to_schematic(
+            filled_structure)
 
-        return filled_structure_schematic, masked_structure_schematic
+        return full_structure_schematic, masked_structure_schematic, filled_structure_schematic
 
     def _generate_and_save_sample(self, trainer, module, dataloader, dataset_name):
         # Generate a sample
-        filled_structure_schematic, masked_structure_schematic = self.generate_sample(
+        full_structure_schematic, masked_structure_schematic, filled_structure_schematic = self.generate_sample(
             module, dataloader)
 
         # Save the sample
         epoch = trainer.current_epoch
-        filename = f'sample_epoch_{epoch}_dataloader_{dataset_name}.schem'
-        filepath = os.path.join(self.filled_path, filename)
-        filled_structure_schematic.save_to_file(Path(filepath), 2)
+        global_step = trainer.global_step
+        filename = f'sample_epoch_{epoch}_step_{global_step}_dataloader_{dataset_name}.schem'
+        filepath = os.path.join(self.full_path, filename)
+        full_structure_schematic.save_to_file(Path(filepath), 2)
         filepath = os.path.join(self.masked_path, filename)
         masked_structure_schematic.save_to_file(Path(filepath), 2)
+        filepath = os.path.join(self.filled_path, filename)
+        filled_structure_schematic.save_to_file(Path(filepath), 2)
 
     def on_train_epoch_end(self, trainer, module):
         epoch = trainer.current_epoch
@@ -83,7 +84,7 @@ class GenerateSchematicCallback(Callback):
         self._generate_and_save_sample(
             trainer, module, train_dataloader, 'train')
 
-    def on_validation_epoch_end(self, trainer, module):
+    def on_validation_end(self, trainer, module):
         epoch = trainer.current_epoch
         if not self.generate_val or (epoch + 1) % self.generate_every_n_epochs != 0:
             return

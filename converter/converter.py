@@ -14,19 +14,20 @@ class SchematicArrayConverter:
         """
         Convert schematic to an array.
         """
-        # Create a 3D NumPy array initialized with the default token
-        air_token = self.block_token_mapper.block_to_token(
-            Block('minecraft:air'))
-        array = np.full((schematic.length, schematic.height,
-                        schematic.width), fill_value=air_token, dtype=int)
+        # Get block data from the schematic and create an empty copy
+        orgiinal_block_data = schematic.get_raw_block_data()
+        converted_block_data = np.zeros_like(orgiinal_block_data)
 
-        # Loop through all blocks in the region
-        for x, y, z in schematic.iter_block_positions():
-            block = schematic.get_block(x, y, z)
+        # Go through each block in the palette
+        for block, index in schematic.get_block_palette().items():
+            # Map the block to a token
             token = self.block_token_mapper.block_to_token(block)
-            array[z, y, x] = token
 
-        return array
+            # Replace positions in the array with the token
+            converted_block_data[orgiinal_block_data == index] = token
+
+        # Swap the dimensions of the array
+        return np.swapaxes(converted_block_data, 0, 1)
 
     def array_to_schematic(self, array: np.ndarray, schematic: Optional[Schematic] = None):
         """
@@ -39,7 +40,10 @@ class SchematicArrayConverter:
         # Loop through all blocks in the schematic
         for x, y, z in schematic.iter_block_positions():
             token = array[z, y, x].item()
-            block = self.block_token_mapper.token_to_block(token)
+            try:
+                block = self.block_token_mapper.token_to_block(token)
+            except KeyError:
+                block = Block('minecraft:air')
             schematic.set_block(x, y, z, block)
 
         return schematic

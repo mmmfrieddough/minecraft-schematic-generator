@@ -1,8 +1,10 @@
 import random
+
 import h5py
+import numpy as np
 import torch
-from torch.utils.data import Dataset
 from torch.nn.functional import conv3d
+from torch.utils.data import Dataset
 
 
 class MinecraftDataset(Dataset):
@@ -11,13 +13,10 @@ class MinecraftDataset(Dataset):
         self.split: str = split
         self.generator: str = generator
         with h5py.File(self.file_path, 'r') as file:
-            self.names = list(file[split][generator].keys())
-            self.length: int = len(self.names)
+            group = file[self.split][self.generator]
+            self.length = len(group['names'])
 
-    def __len__(self):
-        return self.length
-
-    def _apply_mask_type(self, structure: torch.Tensor, min_d: int, max_d: int, min_h: int, max_h: int, min_w: int, max_w: int) -> torch.Tensor:
+    def _apply_mask_type(structure: torch.Tensor, min_d: int, max_d: int, min_h: int, max_h: int, min_w: int, max_w: int) -> torch.Tensor:
         masked_structure = structure.clone()
 
         block_counts = torch.bincount(masked_structure.view(-1))
@@ -174,17 +173,22 @@ class MinecraftDataset(Dataset):
 
         return masked_structure
 
-    def _mask_structure(self, structure: torch.Tensor) -> torch.Tensor:
+    def _mask_structure(structure: torch.Tensor, name: str) -> torch.Tensor:
         # Find the bounding box of the object within the air or water
         object_coords = ((structure != 1) & (
             structure != 2)).nonzero(as_tuple=True)
+
+        if len(object_coords[0]) == 0:
+            print(f'No object found for {name}')
+            return structure
+
         min_d, max_d = object_coords[0].min(), object_coords[0].max()
         min_h, max_h = object_coords[1].min(), object_coords[1].max()
         min_w, max_w = object_coords[2].min(), object_coords[2].max()
 
         # Apply a mask to the structure
-        for i in range(10):
-            masked_structure = self._apply_mask_type(
+        for _ in range(10):
+            masked_structure = MinecraftDataset._apply_mask_type(
                 structure, min_d, max_d, min_h, max_h, min_w, max_w)
 
             # Check if there is at least one non-air or non-water block left
@@ -226,12 +230,14 @@ class MinecraftDataset(Dataset):
 
         return masked_structure
 
+    def __len__(self):
+        return self.length
+
     def __getitem__(self, idx):
-        name = self.names[idx]
         with h5py.File(self.file_path, 'r') as file:
-            group = file[self.split][self.generator][name]
-            structure = torch.from_numpy(group['structure'][:]).long()
-
-        masked_structure = self._mask_structure(structure)
-
-        return masked_structure, structure
+            group = file[self.split][self.generator]
+            name = group['names'][idx].decode('utf-8')
+            structure = torch.from_numpy(
+                group['structures'][idx].astype(np.int64)).long()
+        masked_structure = MinecraftDataset._mask_structure(structure, name)
+        return structure, masked_structure
