@@ -15,8 +15,8 @@ class SchematicArrayConverter:
         Convert schematic to an array.
         """
         # Get block data from the schematic and create an empty copy
-        orgiinal_block_data = schematic.get_raw_block_data()
-        converted_block_data = np.zeros_like(orgiinal_block_data)
+        original_block_data = schematic.get_raw_block_data()
+        converted_block_data = np.zeros_like(original_block_data)
 
         # Go through each block in the palette
         for block, index in schematic.get_block_palette().items():
@@ -24,7 +24,7 @@ class SchematicArrayConverter:
             token = self.block_token_mapper.block_to_token(block)
 
             # Replace positions in the array with the token
-            converted_block_data[orgiinal_block_data == index] = token
+            converted_block_data[original_block_data == index] = token
 
         # Swap the dimensions of the array
         return np.swapaxes(converted_block_data, 0, 1)

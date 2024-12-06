@@ -50,17 +50,20 @@ class BlockTokenMapper:
         block_id = self.id_to_block(id)
         return block_id
 
-    def block_to_token(self, block: Block) -> int:
-        # Encode the block ID
-        id = str(block)
-
+    def block_str_to_token(self, block_str: str) -> int:
         # If the block ID has not been tokenized, assign a new token
-        if id not in self.block_id_to_token_map:
-            self.block_id_to_token_map[id] = self.next_available_token
+        if block_str not in self.block_id_to_token_map:
+            self.block_id_to_token_map[block_str] = self.next_available_token
             # Update the reverse mapping as well
-            self.token_to_block_id_map[self.next_available_token] = id
+            self.token_to_block_id_map[self.next_available_token] = block_str
             self.next_available_token += 1
             self.save_mapping()
 
         # Return the token
-        return self.block_id_to_token_map[id]
+        return self.block_id_to_token_map[block_str]
+
+    def block_to_token(self, block: Block) -> int:
+        # Encode the block ID
+        block_str = str(block)
+
+        return self.block_str_to_token(block_str)

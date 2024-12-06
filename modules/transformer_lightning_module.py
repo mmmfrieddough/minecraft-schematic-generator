@@ -26,6 +26,17 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         self.validation_step_outputs = []
         self.save_hyperparameters()
 
+        # Precompute center-out order for 11x11x11 structure
+        self.center_out_order = self._precompute_center_out_order()
+        self.center_out_order = self.center_out_order.to(self.device)
+
+    def _precompute_center_out_order(self):
+        shape = (11, 11, 11)
+        indices = torch.arange(11*11*11).reshape(shape)
+        center = torch.tensor(shape) // 2
+        distances = torch.sum((indices.nonzero() - center) ** 2, dim=1)
+        return distances.argsort()
+
     def forward(self, structure):
         return self.model(structure)
 
@@ -36,13 +47,19 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         # Get the structures
         full_structures, masked_structures = batch
 
-        # Flatten the structures
-        full_structures = full_structures.view(full_structures.size(0), -1)
-        masked_structures = masked_structures.view(
-            masked_structures.size(0), -1)
+        # Create a mask for elements that are zero and adjacent to a value > 1
+        masked_structures = masked_structures.unsqueeze(1)
+        mask = self.generate_neighbor_mask(masked_structures)
+        mask = mask.squeeze(1)
 
-        # Zero out the non-masked elements so we don't compute the loss for them
-        full_structures[:, masked_structures[0] != 0] = 0
+        # Flatten the structures and mask
+        batch_size = full_structures.size(0)
+        full_structures = full_structures.view(batch_size, -1)
+        masked_structures = masked_structures.view(batch_size, -1)
+        mask = mask.view(batch_size, -1)
+
+        # Zero out the non-masked elements in full_structures
+        full_structures = full_structures * mask
 
         # Make the predictions
         predicted_structures = self(masked_structures)
@@ -58,6 +75,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         return predicted_structures, loss, acc
 
     def training_step(self, batch, batch_idx):
+        full_structures, masked_structures = batch
         _, loss, acc = self._forward_and_loss(batch)
         self.log('train_loss', loss)
         self.log('train_accuracy', acc)
@@ -106,7 +124,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         # Combine both conditions
         return neighbors_greater_than_1 & is_zero
 
-    def fill_structure(self, structure, temperature=1.0, fill_order='random'):
+    def fill_structure(self, structure, temperature=1.0, fill_order='center_out'):
         self.eval()
         structure = structure.to(self.device)
 
@@ -118,8 +136,17 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         num_elements = structure.size(2) * structure.size(3)
         structure_view = structure.squeeze(0).view(1, -1)
 
+        self.center_out_order = self.center_out_order.to(structure.device)
+
+        # Pre-calculate distance biases
+        all_indices = torch.arange(11*11*11, device=structure.device)
+        distance_ranks = torch.searchsorted(self.center_out_order, all_indices)
+        distance_biases = (distance_ranks.float() /
+                           len(self.center_out_order)) * 1000  # Scale by 10
+
         with torch.no_grad():
-            while True:
+            for i in range(100):
+                print(f"Step {i}")
                 # Generate mask of valid next elements
                 mask = self.generate_neighbor_mask(structure)
                 if not mask.any():
@@ -131,21 +158,41 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
                     indices = indices[indices[:, 3].argsort(descending=False)]
                 elif fill_order == 'random':
                     indices = indices[torch.randperm(indices.size(0))]
+                elif fill_order == 'center_out':
+                    flat_indices = indices[:, 2] * 121 + \
+                        indices[:, 3] * 11 + indices[:, 4]
+                    order = torch.argsort(torch.searchsorted(
+                        self.center_out_order, flat_indices))
+                    indices = indices[order]
                 else:
                     raise ValueError(f"Unknown fill order: {fill_order}")
 
                 for idx in indices:
                     z, y, x = idx[2], idx[3], idx[4]
                     linear_index = num_elements * z + structure.size(3) * y + x
+                    flat_index = z * 121 + y * 11 + x
 
                     logits = self(structure_view).squeeze(0)
                     logits_for_position = logits[:, linear_index]
+                    # + distance_biases[flat_index]
+                    logits_for_position[1] += 2 * i
                     probabilities = F.softmax(
                         logits_for_position / temperature, dim=-1)
                     predicted_token = torch.multinomial(
                         probabilities, num_samples=1).item()
+                    # print(distance_biases[flat_index].item())
+                    # predicted_token = round(
+                    #     distance_biases[flat_index].item()) + 1
+
                     yield predicted_token, z, y, x
                     structure[0, 0, z, y, x] = predicted_token
+
+            # Find any remaining elements with value 0 and yield them as value 1
+            remaining_zeros = (structure == 0).nonzero(as_tuple=False)
+            for idx in remaining_zeros:
+                z, y, x = idx[2], idx[3], idx[4]
+                yield 1, z, y, x
+                structure[0, 0, z, y, x] = 1
 
         self.train()
 
@@ -178,7 +225,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
                 optimizer,
                 mode='min',
                 factor=0.5,
-                patience=50,
+                patience=10,
                 verbose=True,
                 threshold=1e-4
             ),

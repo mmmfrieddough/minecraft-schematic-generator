@@ -3,6 +3,7 @@ from typing import List
 import h5py
 from lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader
+from tqdm import tqdm
 
 from model import MinecraftDataset
 
@@ -24,14 +25,23 @@ class MinecraftDataModule(LightningDataModule):
     def get_val_dataset_name(self, dataloader_idx: int):
         return self.val_dataset_names[dataloader_idx]
 
-    def setup(self, stage=None):
+    def setup(self, stage=None, index: int = None):
         with h5py.File(self.file_path, 'r') as file:
+            if index is not None:
+                train_keys = [list(file['train'].keys())[index]]
+                val_keys = [list(file['validation'].keys())[index]]
+                test_keys = [list(file['test'].keys())[index]]
+            else:
+                train_keys = file['train'].keys()
+                val_keys = file['validation'].keys()
+                test_keys = file['test'].keys()
+
             self.train_datasets = [(generator_type, MinecraftDataset(
-                self.file_path, 'train', generator_type)) for generator_type in file['train'].keys()]
+                self.file_path, 'train', generator_type)) for generator_type in tqdm(train_keys, desc="Loading training datasets")]
             self.val_datasets = [(generator_type, MinecraftDataset(
-                self.file_path, 'validation', generator_type)) for generator_type in file['validation'].keys()]
+                self.file_path, 'validation', generator_type)) for generator_type in tqdm(val_keys, desc="Loading validation datasets")]
             self.test_datasets = [(generator_type, MinecraftDataset(
-                self.file_path, 'test', generator_type)) for generator_type in file['test'].keys()]
+                self.file_path, 'test', generator_type)) for generator_type in tqdm(test_keys, desc="Loading test datasets")]
 
     def train_dataloader(self):
         train_datasets = ConcatDataset(

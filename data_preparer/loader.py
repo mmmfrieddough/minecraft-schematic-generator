@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Dict, Set, Tuple
 
 import h5py
-from schempy import Schematic
+from schempy import Schematic, Block
 from tqdm import tqdm
 
 from converter import SchematicArrayConverter
@@ -34,18 +34,22 @@ block_id_contains_properties_to_remove = {
 }
 
 
+def clean_block_properties(block: Block) -> None:
+    if not block or not block.properties:
+        return
+    for block_id, properties in block_properties_to_remove.items():
+        if block.id == block_id:
+            for property in properties:
+                block.properties.pop(property, None)
+    for block_id_contains, properties in block_id_contains_properties_to_remove.items():
+        if block_id_contains in block.id:
+            for property in properties:
+                block.properties.pop(property, None)
+
+
 def clean_schematic(schematic: Schematic) -> None:
     for block in schematic.get_block_palette().keys():
-        if not block or not block.properties:
-            continue
-        for block_id, properties in block_properties_to_remove.items():
-            if block.id == block_id:
-                for property in properties:
-                    block.properties.pop(property, None)
-        for block_id_contains, properties in block_id_contains_properties_to_remove.items():
-            if block_id_contains in block.id:
-                for property in properties:
-                    block.properties.pop(property, None)
+        clean_block_properties(block)
 
 
 def get_schematic_data(sample_name: str, schematic_path: str) -> None:
@@ -110,50 +114,62 @@ def load_schematics(schematics_dir: str, hdf5_path: str, split_ratios: Tuple[flo
         print(f"Loading schematics from {schematics_dir} into {hdf5_path}")
 
         total_files = sum([len(files)
-                          for r, d, files in os.walk(schematics_dir)])
-        pbar = tqdm(total=total_files, desc="Processing schematic files")
+                          for _, _, files in os.walk(schematics_dir)])
+        pbar_overral = tqdm(total=total_files,
+                            desc="Processing schematic files")
 
-        for dataset in os.listdir(schematics_dir):
-            if dataset_names and dataset not in dataset_names:
-                continue
+        for root, dirs, files in os.walk(schematics_dir):
+            for dataset in dirs:
+                if dataset_names and dataset not in dataset_names:
+                    continue
 
-            dataset_path = os.path.join(schematics_dir, dataset)
+                dataset_path = os.path.join(root, dataset)
 
-            # Split the data
-            if dataset in validation_only_datasets:
-                splits = {'validation': set()}
-                for file_name in os.listdir(dataset_path):
-                    splits['validation'].add(file_name)
-            else:
-                splits = split_data(dataset_path, split_ratios)
+                # Check if the directory contains any schematic files, break as soon as one is found
+                has_schematic = False
+                for file in os.listdir(dataset_path):
+                    if file.endswith('.schem'):
+                        has_schematic = True
+                        break
 
-            for set_type, files in splits.items():
-                set_group = hdf5_file.require_group(
-                    set_type).require_group(dataset)
+                if not has_schematic:
+                    continue  # Skip this directory if no schematic files are found
 
-                names_dataset = set_group.create_dataset(
-                    'names', (len(files),), dtype=h5py.string_dtype())
-                structures_dataset = set_group.create_dataset(
-                    'structures', (len(files), 11, 11, 11), dtype='uint16')
+                # Split the data
+                if dataset in validation_only_datasets:
+                    splits = {'validation': set()}
+                    for file_name in os.listdir(dataset_path):
+                        splits['validation'].add(file_name)
+                else:
+                    splits = split_data(dataset_path, split_ratios)
 
-                pbar.set_postfix(dataset=dataset, set_type=set_type)
-                for i, schematic_file in enumerate(files):
-                    sample_name = os.path.splitext(schematic_file)[0]
-                    schematic_path = os.path.join(
-                        dataset_path, schematic_file)
-                    try:
-                        structure = get_schematic_data(
-                            sample_name, schematic_path)
-                        names_dataset[i] = sample_name
-                        structures_dataset[i] = structure
-                    except Exception as e:
-                        print(
-                            f"Failed to process schematic: {schematic_file}")
-                        print(e)
-                        continue
-                    finally:
-                        pbar.update()
+                for set_type, files in splits.items():
+                    set_group = hdf5_file.require_group(
+                        set_type).require_group(dataset)
 
-        pbar.close()
+                    names = []
+                    structures = []
+
+                    pbar_set = tqdm(
+                        files, desc=f'Processing {dataset} {set_type}', leave=False)
+                    for file in pbar_set:
+                        sample_name = os.path.splitext(file)[0]
+                        schematic_path = os.path.join(
+                            dataset_path, file)
+                        try:
+                            structure = get_schematic_data(
+                                sample_name, schematic_path)
+                            names.append(sample_name)
+                            structures.append(structure)
+                        except Exception as e:
+                            print(
+                                f"Failed to process schematic: {file}")
+                            print(e)
+                            continue
+
+                    set_group.create_dataset('names', data=names)
+                    set_group.create_dataset('structures', data=structures)
+
+                    pbar_overral.update(len(files))
 
         print("Finished updating HDF5 file.")
