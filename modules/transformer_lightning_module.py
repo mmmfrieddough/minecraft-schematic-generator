@@ -26,17 +26,6 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         self.validation_step_outputs = []
         self.save_hyperparameters()
 
-        # Precompute center-out order for 11x11x11 structure
-        self.center_out_order = self._precompute_center_out_order()
-        self.center_out_order = self.center_out_order.to(self.device)
-
-    def _precompute_center_out_order(self):
-        shape = (11, 11, 11)
-        indices = torch.arange(11*11*11).reshape(shape)
-        center = torch.tensor(shape) // 2
-        distances = torch.sum((indices.nonzero() - center) ** 2, dim=1)
-        return distances.argsort()
-
     def forward(self, structure):
         return self.model(structure)
 
@@ -124,7 +113,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         # Combine both conditions
         return neighbors_greater_than_1 & is_zero
 
-    def fill_structure(self, structure, temperature=1.0, fill_order='center_out'):
+    def fill_structure(self, structure, temperature=1.0):
         self.eval()
         structure = structure.to(self.device)
 
@@ -132,57 +121,45 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         if structure.dim() == 3:
             structure = structure.unsqueeze(0).unsqueeze(0)
 
-        # Precompute constants
-        num_elements = structure.size(2) * structure.size(3)
-        structure_view = structure.squeeze(0).view(1, -1)
-
-        self.center_out_order = self.center_out_order.to(structure.device)
-
-        # Pre-calculate distance biases
-        all_indices = torch.arange(11*11*11, device=structure.device)
-        distance_ranks = torch.searchsorted(self.center_out_order, all_indices)
-        distance_biases = (distance_ranks.float() /
-                           len(self.center_out_order)) * 1000  # Scale by 10
+        flattened_structure = structure.view(1, -1)
 
         with torch.no_grad():
-            for i in range(100):
-                print(f"Step {i}")
+            for i in range(100):  # Safety limit
                 # Generate mask of valid next elements
                 mask = self.generate_neighbor_mask(structure)
                 if not mask.any():
                     break  # Exit if no more elements to update
 
-                # Get traversal indices based on the specified fill order
-                indices = mask.nonzero(as_tuple=False)
-                if fill_order == 'bottom_up':
-                    indices = indices[indices[:, 3].argsort(descending=False)]
-                elif fill_order == 'random':
-                    indices = indices[torch.randperm(indices.size(0))]
-                elif fill_order == 'center_out':
-                    flat_indices = indices[:, 2] * 121 + \
-                        indices[:, 3] * 11 + indices[:, 4]
-                    order = torch.argsort(torch.searchsorted(
-                        self.center_out_order, flat_indices))
-                    indices = indices[order]
-                else:
-                    raise ValueError(f"Unknown fill order: {fill_order}")
+                # Get positions that need filling
+                valid_positions = mask.squeeze().nonzero()
 
-                for idx in indices:
-                    z, y, x = idx[2], idx[3], idx[4]
-                    linear_index = num_elements * z + structure.size(3) * y + x
-                    flat_index = z * 121 + y * 11 + x
+                # Calculate center coordinates (assuming 11x11x11 structure)
+                center = torch.tensor(
+                    [5.0, 5.0, 5.0], device=valid_positions.device)
 
-                    logits = self(structure_view).squeeze(0)
-                    logits_for_position = logits[:, linear_index]
-                    # + distance_biases[flat_index]
-                    logits_for_position[1] += 2 * i
+                # Calculate distances from center for each position
+                distances = torch.norm(valid_positions.float() - center, dim=1)
+
+                # Sort positions by distance from center
+                ordered_positions = valid_positions[torch.argsort(distances)]
+
+                # Process each position in center-out order
+                for pos in ordered_positions:
+                    z, y, x = pos
+
+                    # Perform forward pass for current state
+                    logits = self(flattened_structure)
+                    flat_idx = z * 11 * 11 + y * 11 + x
+                    logits_for_position = logits[0, :, flat_idx]
+
+                    # Probability of air (token 1) goes up each iteration
+                    # logits_for_position[1] += i
+
+                    # Apply temperature and sample
                     probabilities = F.softmax(
                         logits_for_position / temperature, dim=-1)
                     predicted_token = torch.multinomial(
                         probabilities, num_samples=1).item()
-                    # print(distance_biases[flat_index].item())
-                    # predicted_token = round(
-                    #     distance_biases[flat_index].item()) + 1
 
                     yield predicted_token, z, y, x
                     structure[0, 0, z, y, x] = predicted_token
@@ -196,8 +173,8 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
 
         self.train()
 
-    def complete_structure(self, masked_structure, temperature=1.0, fill_order='random'):
-        for predicted_token, z, y, x in self.fill_structure(masked_structure, temperature, fill_order):
+    def complete_structure(self, masked_structure, temperature=1.0):
+        for predicted_token, z, y, x in self.fill_structure(masked_structure, temperature):
             masked_structure[z, y, x] = predicted_token
         return masked_structure
 
