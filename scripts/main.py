@@ -1,20 +1,18 @@
 import traceback
-from pathlib import Path
 from typing import List
 
 import torch
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from schempy.components import BlockPalette
 
 from minecraft_schematic_generator.converter import BlockTokenMapper
-from minecraft_schematic_generator.converter.converter import \
-    SchematicArrayConverter
 from minecraft_schematic_generator.data_preparer import clean_block_properties
-from minecraft_schematic_generator.modules import \
-    LightningTransformerMinecraftStructureGenerator
+from minecraft_schematic_generator.modules import (
+    LightningTransformerMinecraftStructureGenerator,
+)
 
 
 class Request(BaseModel):
@@ -38,11 +36,12 @@ class Block(BaseModel):
 block_token_mapper = BlockTokenMapper()
 
 model_version = 12
-output_dir = 'schematic_viewer/public/schematics/'
-checkpoint_path = f'lightning_logs/center_data/version_{
-    model_version}/checkpoints/last.ckpt'
+output_dir = "schematic_viewer/public/schematics/"
+checkpoint_path = f"lightning_logs/center_data/version_{
+    model_version}/checkpoints/last.ckpt"
 model = LightningTransformerMinecraftStructureGenerator.load_from_checkpoint(
-    checkpoint_path)
+    checkpoint_path
+)
 model.eval()
 
 app = FastAPI()
@@ -51,10 +50,7 @@ app = FastAPI()
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     print(f"Validation error details: {exc.errors()}")
-    return JSONResponse(
-        status_code=422,
-        content={"detail": exc.errors()}
-    )
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 
 @app.post("/complete-structure/")
@@ -80,7 +76,9 @@ async def complete_structure(input: Request):
 
         # Convert the string values to IDs
         input_structure_ids = [
-            [[convert(block_str) for block_str in y] for y in z] for z in input.structure]
+            [[convert(block_str) for block_str in y] for y in z]
+            for z in input.structure
+        ]
 
         # Convert the input data to a torch tensor
         input_tensor = torch.tensor(input_structure_ids)
@@ -100,7 +98,14 @@ async def complete_structure(input: Request):
 
         # Generate the structure
         def generate():
-            for block, z, y, x in model.fill_structure(input_tensor, input.temperature, input.start_radius, input.max_iterations, input.max_blocks, input.air_probability_iteration_scaling):
+            for block, z, y, x in model.fill_structure(
+                input_tensor,
+                input.temperature,
+                input.start_radius,
+                input.max_iterations,
+                input.max_blocks,
+                input.air_probability_iteration_scaling,
+            ):
                 # Convert the token back to a block
                 block = block_token_mapper.token_to_block(block)
 
@@ -116,6 +121,8 @@ async def complete_structure(input: Request):
         print(traceback_str)
         raise HTTPException(status_code=500, detail=str(e))
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000, timeout_keep_alive=5)

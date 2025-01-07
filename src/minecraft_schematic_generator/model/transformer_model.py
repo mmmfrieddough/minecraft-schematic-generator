@@ -9,62 +9,75 @@ class PositionalEncoding(nn.Module):
         self.d_model = d_model
 
         # Calculate the dimensions of the cubic grid
-        cube_side = round(max_len ** (1/3))
+        cube_side = round(max_len ** (1 / 3))
 
         # Ensure the sequence can form a perfect cube
-        assert cube_side ** 3 == max_len, "max_len must be a perfect cube"
+        assert cube_side**3 == max_len, "max_len must be a perfect cube"
 
         # Create the positional embedding layer
         self.positional_embedding = nn.Embedding(max_len, d_model)
 
         # Initialize the positional embeddings with 3D spatial encoding
         self.positional_embedding.weight.data.copy_(
-            self._3d_spatial_encoding(cube_side))
+            self._3d_spatial_encoding(cube_side)
+        )
 
-        self.register_buffer('positions', torch.arange(
-            max_len).expand((1, max_len)))
+        self.register_buffer("positions", torch.arange(max_len).expand((1, max_len)))
 
     def _3d_spatial_encoding(self, cube_side):
         # Generate a 3D grid
-        z_grid, y_grid, x_grid = torch.meshgrid(torch.linspace(0, 1, cube_side),
-                                                torch.linspace(
-                                                    0, 1, cube_side),
-                                                torch.linspace(
-                                                    0, 1, cube_side),
-                                                indexing='ij')
+        z_grid, y_grid, x_grid = torch.meshgrid(
+            torch.linspace(0, 1, cube_side),
+            torch.linspace(0, 1, cube_side),
+            torch.linspace(0, 1, cube_side),
+            indexing="ij",
+        )
 
         # Flatten the grid
         grid = torch.stack((z_grid, y_grid, x_grid), dim=-1).view(-1, 3)
 
         # Encode each dimension into higher dimensions
-        div_term = torch.exp(torch.arange(
-            0, self.d_model // 3, 2) * -(np.log(10000.0) / (self.d_model // 3)))
+        div_term = torch.exp(
+            torch.arange(0, self.d_model // 3, 2)
+            * -(np.log(10000.0) / (self.d_model // 3))
+        )
         pos_encoding = torch.zeros((grid.shape[0], self.d_model))
         for i in range(3):  # For each of the z, y, x dimensions
             pos_encoding[:, i::6] = torch.sin(
-                grid[:, i:i+1] * div_term)  # Sine for even indices
-            pos_encoding[:, (i+1)::6] = torch.cos(grid[:, i:i+1]
-                                                  * div_term)  # Cosine for odd indices
+                grid[:, i : i + 1] * div_term
+            )  # Sine for even indices
+            pos_encoding[:, (i + 1) :: 6] = torch.cos(
+                grid[:, i : i + 1] * div_term
+            )  # Cosine for odd indices
 
         return pos_encoding
 
     def forward(self, x):
-        x = x + self.positional_embedding(self.positions[:, :x.size(1)])
+        x = x + self.positional_embedding(self.positions[:, : x.size(1)])
         return x
 
 
 class TransformerMinecraftStructureGenerator(nn.Module):
-    def __init__(self, num_classes, max_sequence_length, embedding_dropout, model_dim, num_heads, num_layers, decoder_dropout):
+    def __init__(
+        self,
+        num_classes,
+        max_sequence_length,
+        embedding_dropout,
+        model_dim,
+        num_heads,
+        num_layers,
+        decoder_dropout,
+    ):
         super().__init__()
         self.num_classes = num_classes
         self.max_sequence_length = max_sequence_length
 
         self.embedding = nn.Embedding(num_classes, model_dim)
-        self.positional_encoding = PositionalEncoding(
-            model_dim, max_sequence_length)
+        self.positional_encoding = PositionalEncoding(model_dim, max_sequence_length)
         self.embedding_dropout = nn.Dropout(embedding_dropout)
         decoder_layer = nn.TransformerDecoderLayer(
-            model_dim, num_heads, dropout=decoder_dropout)
+            model_dim, num_heads, dropout=decoder_dropout
+        )
         self.decoder = nn.TransformerDecoder(decoder_layer, num_layers)
         self.output_layer = nn.Linear(model_dim, num_classes)
 

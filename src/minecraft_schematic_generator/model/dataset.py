@@ -13,92 +13,111 @@ from minecraft_schematic_generator.converter import BlockTokenMapper
 class MinecraftDataset(Dataset):
     def __init__(self, file_path: str, split: str, generator: str):
         natural_block_strings = [
-            'minecraft:dirt',
-            'minecraft:stone',
-            'minecraft:grass_block[snowy=false]',
-            'minecraft:grass_block[snowy=true]',
-            'minecraft:water[level=0]',
-            'minecraft:netherrack',
-            'minecraft:bedrock',
-            'minecraft:basalt[axis=y]',
-            'minecraft:blackstone',
-            'minecraft:gravel',
-            'minecraft:dripstone_block',
-            'minecraft:moss_block',
-            'minecraft:deepslate[axis=y]'
-            'minecraft:tuff',
-            'minecraft:snow_block',
-            'minecraft:ice',
-            'minecraft:packed_ice',
-            'minecraft:lava[level=0]',
-            'minecraft:sand',
-            'minecraft:sandstone',
-            'minecraft:terracotta',
-            'minecraft:red_terracotta',
-            'minecraft:orange_terracotta',
-            'minecraft:yellow_terracotta',
-            'minecraft:brown_terracotta',
-            'minecraft:white_terracotta',
-            'minecraft:light_gray_terracotta',
-            'minecraft:end_stone'
+            "minecraft:dirt",
+            "minecraft:stone",
+            "minecraft:grass_block[snowy=false]",
+            "minecraft:grass_block[snowy=true]",
+            "minecraft:water[level=0]",
+            "minecraft:netherrack",
+            "minecraft:bedrock",
+            "minecraft:basalt[axis=y]",
+            "minecraft:blackstone",
+            "minecraft:gravel",
+            "minecraft:dripstone_block",
+            "minecraft:moss_block",
+            "minecraft:deepslate[axis=y]" "minecraft:tuff",
+            "minecraft:snow_block",
+            "minecraft:ice",
+            "minecraft:packed_ice",
+            "minecraft:lava[level=0]",
+            "minecraft:sand",
+            "minecraft:sandstone",
+            "minecraft:terracotta",
+            "minecraft:red_terracotta",
+            "minecraft:orange_terracotta",
+            "minecraft:yellow_terracotta",
+            "minecraft:brown_terracotta",
+            "minecraft:white_terracotta",
+            "minecraft:light_gray_terracotta",
+            "minecraft:end_stone",
         ]
         mapper = BlockTokenMapper()
         self.natural_block_tokens = torch.tensor(
-            [mapper.block_str_to_token(block) for block in natural_block_strings])
+            [mapper.block_str_to_token(block) for block in natural_block_strings]
+        )
 
-        with h5py.File(file_path, 'r') as file:
+        with h5py.File(file_path, "r") as file:
             group = file[split][generator]
-            self.length = len(group['names'])
-            self.structures = [torch.from_numpy(structure.astype(
-                np.int64)).long() for structure in tqdm(group['structures'], desc=f'Loading {split} {generator} dataset', leave=False)]
+            self.length = len(group["names"])
+            self.structures = [
+                torch.from_numpy(structure.astype(np.int64)).long()
+                for structure in tqdm(
+                    group["structures"],
+                    desc=f"Loading {split} {generator} dataset",
+                    leave=False,
+                )
+            ]
 
-    def _create_point_noise(tensor: torch.Tensor, point: tuple[int, int, int], bias: float, min_radius: int, max_radius: int, min_prob: float, max_prob: float) -> torch.Tensor:
+    def _create_point_noise(
+        tensor: torch.Tensor,
+        point: tuple[int, int, int],
+        bias: float,
+        min_radius: int,
+        max_radius: int,
+        min_prob: float,
+        max_prob: float,
+    ) -> torch.Tensor:
         # Get the dimensions of the tensor
         D, H, W = tensor.shape
 
         # Create a grid of coordinates
         d_coords, h_coords, w_coords = torch.meshgrid(
-            torch.arange(D), torch.arange(H), torch.arange(W), indexing='ij')
+            torch.arange(D), torch.arange(H), torch.arange(W), indexing="ij"
+        )
 
         # Calculate the distance from the point
         distances = torch.sqrt(
-            (d_coords - point[0])**2 + (h_coords - point[1])**2 + (w_coords - point[2])**2)
+            (d_coords - point[0]) ** 2
+            + (h_coords - point[1]) ** 2
+            + (w_coords - point[2]) ** 2
+        )
 
         # Apply min and max radius
         mask = (distances >= min_radius) & (distances <= max_radius)
 
         # Normalize distances to range [0, 1] within the valid radius
-        max_distance = min(max_radius, torch.sqrt(
-            torch.tensor(D**2 + H**2 + W**2, dtype=torch.float32)))
+        max_distance = min(
+            max_radius,
+            torch.sqrt(torch.tensor(D**2 + H**2 + W**2, dtype=torch.float32)),
+        )
         normalized_distances = torch.where(
-            mask, distances / max_distance, torch.ones_like(distances))
+            mask, distances / max_distance, torch.ones_like(distances)
+        )
 
         # Apply bias to the normalized distances
         if bias >= 0:
-            biased_distances = normalized_distances ** bias
+            biased_distances = normalized_distances**bias
         else:
             biased_distances = 1 - (1 - normalized_distances) ** abs(bias)
 
         # Calculate probabilities based on biased distances
-        probabilities = min_prob + \
-            (max_prob - min_prob) * (1 - biased_distances)
+        probabilities = min_prob + (max_prob - min_prob) * (1 - biased_distances)
 
         # Clamp probabilities to [0, 1] range
         probabilities = torch.clamp(probabilities, 0, 1)
 
         # Additional safeguard: replace any NaN or inf values with 0.5
-        probabilities = torch.nan_to_num(
-            probabilities, nan=0.5, posinf=0.5, neginf=0.5)
+        probabilities = torch.nan_to_num(probabilities, nan=0.5, posinf=0.5, neginf=0.5)
 
         # Generate noise based on the biased distances, only within the valid radius
         try:
-            noise = torch.where(mask, torch.bernoulli(
-                probabilities), torch.zeros_like(probabilities)).bool()
+            noise = torch.where(
+                mask, torch.bernoulli(probabilities), torch.zeros_like(probabilities)
+            ).bool()
         except RuntimeError as e:
-            # print(f"Error in torch.bernoulli: {e}")
-            # print(f"probabilities shape: {probabilities.shape}")
-            # print(
-            #     f"probabilities unique values: {torch.unique(probabilities)}")
+            print(f"Error in torch.bernoulli: {e}")
+            print(f"probabilities shape: {probabilities.shape}")
+            print(f"probabilities unique values: {torch.unique(probabilities)}")
             raise
 
         # Set values less than the min radius to True if bias is negative, or greater than the max radius if bias is positive
@@ -109,10 +128,21 @@ class MinecraftDataset(Dataset):
 
         return noise
 
-    def _mask_operation(structure: torch.Tensor, position: torch.Tensor, block_types: torch.Tensor, bias: float, min_radius: int, max_radius: int, min_prob: float, max_prob: float, require_adjacent_air: bool) -> torch.Tensor:
+    def _mask_operation(
+        structure: torch.Tensor,
+        position: torch.Tensor,
+        block_types: torch.Tensor,
+        bias: float,
+        min_radius: int,
+        max_radius: int,
+        min_prob: float,
+        max_prob: float,
+        require_adjacent_air: bool,
+    ) -> torch.Tensor:
         # Create noise around the point
         mask = MinecraftDataset._create_point_noise(
-            structure, position, bias, min_radius, max_radius, min_prob, max_prob)
+            structure, position, bias, min_radius, max_radius, min_prob, max_prob
+        )
 
         # Find the block types to mask
         if block_types is not None:
@@ -127,7 +157,7 @@ class MinecraftDataset(Dataset):
             structure_padded = structure[None, None, ...]
 
             # Find blocks next to air
-            air = (structure_padded == 1)
+            air = structure_padded == 1
             blocks_next_to_air = conv3d(air.float(), kernel, padding=1) > 0
 
             # Remove the extra dimensions
@@ -141,7 +171,17 @@ class MinecraftDataset(Dataset):
 
         return structure
 
-    def _mask_blocks(structure: torch.Tensor, block_types: torch.Tensor, min_d: int, max_d: int, min_h: int, max_h: int, min_w: int, max_w: int, max_dim: int) -> torch.Tensor:
+    def _mask_blocks(
+        structure: torch.Tensor,
+        block_types: torch.Tensor,
+        min_d: int,
+        max_d: int,
+        min_h: int,
+        max_h: int,
+        min_w: int,
+        max_w: int,
+        max_dim: int,
+    ) -> torch.Tensor:
         # print(f'block_types: {block_types}')
 
         # Randomize parameters
@@ -149,8 +189,11 @@ class MinecraftDataset(Dataset):
             bias = random.uniform(-2.0, -0.001)
         else:
             bias = random.uniform(0.001, 2.0)
-        position = (random.randint(min_d, max_d), random.randint(
-            min_h, max_h), random.randint(min_w, max_w))
+        position = (
+            random.randint(min_d, max_d),
+            random.randint(min_h, max_h),
+            random.randint(min_w, max_w),
+        )
         min_radius = random.randint(0, max_dim)
         max_radius = random.randint(min_radius, max_dim)
         min_prob = random.uniform(0.0, 0.3)
@@ -167,19 +210,38 @@ class MinecraftDataset(Dataset):
 
         # Apply a mask to the structure
         masked_structure = MinecraftDataset._mask_operation(
-            structure, position, block_types, bias, min_radius, max_radius, min_prob, max_prob, adj_air)
+            structure,
+            position,
+            block_types,
+            bias,
+            min_radius,
+            max_radius,
+            min_prob,
+            max_prob,
+            adj_air,
+        )
 
         return masked_structure
 
-    def _find_structure_bounds(structure: torch.Tensor, ignore_blocks: torch.Tensor) -> tuple[int, int, int, int, int, int]:
+    def _find_structure_bounds(
+        structure: torch.Tensor, ignore_blocks: torch.Tensor
+    ) -> tuple[int, int, int, int, int, int]:
         # Find the bounding box of the structure we're interested in
-        object_coords = ((structure != 1) & ~torch.isin(
-            structure, ignore_blocks)).nonzero(as_tuple=True)
+        object_coords = (
+            (structure != 1) & ~torch.isin(structure, ignore_blocks)
+        ).nonzero(as_tuple=True)
 
         # No object is found
         if len(object_coords[0]) == 0:
             # Return the full size of the structure
-            return 0, structure.shape[0] - 1, 0, structure.shape[1] - 1, 0, structure.shape[2] - 1
+            return (
+                0,
+                structure.shape[0] - 1,
+                0,
+                structure.shape[1] - 1,
+                0,
+                structure.shape[2] - 1,
+            )
 
         min_d, max_d = object_coords[0].min(), object_coords[0].max()
         min_h, max_h = object_coords[1].min(), object_coords[1].max()
@@ -202,8 +264,9 @@ class MinecraftDataset(Dataset):
                 ignore_blocks = torch.tensor([])
 
             # Find the bounds of the structure
-            min_d, max_d, min_h, max_h, min_w, max_w = MinecraftDataset._find_structure_bounds(
-                masked_structure, ignore_blocks)
+            min_d, max_d, min_h, max_h, min_w, max_w = (
+                MinecraftDataset._find_structure_bounds(masked_structure, ignore_blocks)
+            )
             # print(f'min_d: {min_d}, max_d: {max_d}')
             # print(f'min_h: {min_h}, max_h: {max_h}')
             # print(f'min_w: {min_w}, max_w: {max_w}')
@@ -213,22 +276,41 @@ class MinecraftDataset(Dataset):
 
             # Get unique block types ignore_blocks
             unique_blocks = torch.unique(masked_structure)
-            unique_blocks = unique_blocks[~torch.isin(
-                unique_blocks, ignore_blocks)]
+            unique_blocks = unique_blocks[~torch.isin(unique_blocks, ignore_blocks)]
             # print(f'unique_blocks: {unique_blocks}')
 
             # Apply for all blocks
             masked_structure = MinecraftDataset._mask_blocks(
-                masked_structure, unique_blocks, min_d, max_d, min_h, max_h, min_w, max_w, max_dim)
+                masked_structure,
+                unique_blocks,
+                min_d,
+                max_d,
+                min_h,
+                max_h,
+                min_w,
+                max_w,
+                max_dim,
+            )
 
             # Apply again for sampling of block types
-            for block in random.sample(unique_blocks.tolist(), random.randint(0, min(3, len(unique_blocks)))):
+            for block in random.sample(
+                unique_blocks.tolist(), random.randint(0, min(3, len(unique_blocks)))
+            ):
                 # print(f'block: {block}')
 
                 # Decide whether to apply the mask or remove the block entirely
                 if random.choice([True, False]):
-                    masked_structure = MinecraftDataset._mask_blocks(masked_structure, torch.tensor(
-                        [block]), min_d, max_d, min_h, max_h, min_w, max_w, max_dim)
+                    masked_structure = MinecraftDataset._mask_blocks(
+                        masked_structure,
+                        torch.tensor([block]),
+                        min_d,
+                        max_d,
+                        min_h,
+                        max_h,
+                        min_w,
+                        max_w,
+                        max_dim,
+                    )
                 else:
                     # print('Removing block entirely')
                     masked_structure[masked_structure == block] = 0
@@ -237,14 +319,22 @@ class MinecraftDataset(Dataset):
             if random.random() < 0.3:
                 # print('Removing some air')
                 masked_structure = MinecraftDataset._mask_blocks(
-                    masked_structure, torch.tensor([1]), min_d, max_d, min_h, max_h, min_w, max_w, max_dim)
+                    masked_structure,
+                    torch.tensor([1]),
+                    min_d,
+                    max_d,
+                    min_h,
+                    max_h,
+                    min_w,
+                    max_w,
+                    max_dim,
+                )
 
             # Fill back in middle block
             mid_d = masked_structure.shape[0] // 2
             mid_h = masked_structure.shape[1] // 2
             mid_w = masked_structure.shape[2] // 2
-            masked_structure[mid_d, mid_h,
-                             mid_w] = structure[mid_d, mid_h, mid_w]
+            masked_structure[mid_d, mid_h, mid_w] = structure[mid_d, mid_h, mid_w]
 
         # Remove air
         if random.random() < 0.1:
@@ -269,8 +359,7 @@ class MinecraftDataset(Dataset):
             adjacent_to_non_air = adjacent_to_non_air.squeeze()
 
             # Set air blocks not adjacent to non-air blocks to 0
-            masked_structure[(masked_structure == 1) &
-                             ~adjacent_to_non_air] = 0
+            masked_structure[(masked_structure == 1) & ~adjacent_to_non_air] = 0
 
         return masked_structure
 

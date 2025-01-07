@@ -1,45 +1,46 @@
-import logging
-import random
-
-logging.getLogger('amulet').setLevel(logging.CRITICAL)  # noqa
-logging.getLogger('PyMCTranslate').setLevel(logging.CRITICAL)  # noqa
-
 import hashlib
 import json
+import logging
 import os
+import random
 import shutil
 import time
 from collections import Counter
 from multiprocessing import Process, Queue
 from queue import Empty
 
-import amulet
-import matplotlib.pyplot as plt
-import numpy as np
-from amulet.api.chunk import Chunk
-from amulet.api.errors import ChunkDoesNotExist, ChunkLoadError
-from amulet.api.level import World
-from amulet.api.selection import SelectionBox, SelectionGroup
-from amulet.level.formats.sponge_schem import SpongeSchemFormatWrapper
-from amulet.utils.world_utils import chunk_coords_to_block_coords
-from tqdm import tqdm
+logging.getLogger("amulet").setLevel(logging.CRITICAL)
+logging.getLogger("PyMCTranslate").setLevel(logging.CRITICAL)
+
+import amulet  # noqa: E402
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+from amulet.api.chunk import Chunk  # noqa: E402
+from amulet.api.errors import ChunkDoesNotExist, ChunkLoadError  # noqa: E402
+from amulet.api.level import World  # noqa: E402
+from amulet.api.selection import SelectionBox, SelectionGroup  # noqa: E402
+from amulet.level.formats.sponge_schem import SpongeSchemFormatWrapper  # noqa: E402
+from amulet.utils.world_utils import chunk_coords_to_block_coords  # noqa: E402
+from tqdm import tqdm  # noqa: E402
 
 
 class WorldSampler:
-    def __init__(self,
-                 schematic_directory,
-                 temp_directory,
-                 chunk_progress_save_interval,
-                 chunk_mark_radius,
-                 sample_offset,
-                 sample_size,
-                 sample_interested_block_threshold,
-                 sample_progress_save_interval,
-                 sampling_purge_interval,
-                 clear_worker_directories=True,
-                 chunks_limit=None,
-                 samples_limit=None,
-                 num_workers=os.cpu_count()):
+    def __init__(
+        self,
+        schematic_directory,
+        temp_directory,
+        chunk_progress_save_interval,
+        chunk_mark_radius,
+        sample_offset,
+        sample_size,
+        sample_interested_block_threshold,
+        sample_progress_save_interval,
+        sampling_purge_interval,
+        clear_worker_directories=True,
+        chunks_limit=None,
+        samples_limit=None,
+        num_workers=os.cpu_count(),
+    ):
         self.schematic_directory = schematic_directory
         self.temp_directory = temp_directory
         self.chunk_progress_save_interval = chunk_progress_save_interval
@@ -57,37 +58,37 @@ class WorldSampler:
     def load_interested_blocks(self, directory: str) -> None:
         """Loads the interested blocks from the file"""
         # Check if a custom interested blocks file exists
-        filename = 'interested_blocks.json'
+        filename = "interested_blocks.json"
         if os.path.exists(os.path.join(directory, filename)):
             config_path = os.path.join(directory, filename)
-            print(f'Using custom interested blocks file: {config_path}')
+            print(f"Using custom interested blocks file: {config_path}")
         else:
-            config_path = os.path.join(
-                os.path.dirname(__file__), filename)
+            config_path = os.path.join(os.path.dirname(__file__), filename)
 
         # Load the interested blocks from the file
-        with open(config_path, 'r') as file:
+        with open(config_path, "r") as file:
             interested_blocks = json.load(file)
 
         # Set the interested blocks
         self.chunk_target_blocks = {
-            'minecraft:overworld': set(interested_blocks['chunk']['overworld']),
-            'minecraft:the_nether': set(interested_blocks['chunk']['nether']),
-            'minecraft:the_end': set(interested_blocks['chunk']['end'])
+            "minecraft:overworld": set(interested_blocks["chunk"]["overworld"]),
+            "minecraft:the_nether": set(interested_blocks["chunk"]["nether"]),
+            "minecraft:the_end": set(interested_blocks["chunk"]["end"]),
         }
         self.sample_target_blocks = {
-            'minecraft:overworld': set(interested_blocks['sample']['overworld']),
-            'minecraft:the_nether': set(interested_blocks['sample']['nether']),
-            'minecraft:the_end': set(interested_blocks['sample']['end'])
+            "minecraft:overworld": set(interested_blocks["sample"]["overworld"]),
+            "minecraft:the_nether": set(interested_blocks["sample"]["nether"]),
+            "minecraft:the_end": set(interested_blocks["sample"]["end"]),
         }
 
-    def get_worker_directory(self, root_directory: str, src_directory: str, worker_id: int) -> str:
+    def get_worker_directory(
+        self, root_directory: str, src_directory: str, worker_id: int
+    ) -> str:
         """Returns the directory for a given worker"""
         rel_path = os.path.relpath(src_directory, root_directory)
         copies_directory = os.path.join(self.temp_directory, rel_path)
         worker_directory_name = f"worker_{worker_id}"
-        worker_directory = os.path.join(
-            copies_directory, worker_directory_name)
+        worker_directory = os.path.join(copies_directory, worker_directory_name)
         return worker_directory
 
     def setup_worker_directories(self, root_directory: str, src_directory: str) -> None:
@@ -96,22 +97,25 @@ class WorldSampler:
         # Check if the worker directories have already been set up
         for i in range(self.num_workers):
             worker_directory = self.get_worker_directory(
-                root_directory, src_directory, i)
+                root_directory, src_directory, i
+            )
             if not os.path.exists(worker_directory):
                 break
         else:
             return
 
         # Create a copy of the source directory for each worker
-        pbar = tqdm(range(self.num_workers),
-                    desc="Setting up worker directories")
+        pbar = tqdm(range(self.num_workers), desc="Setting up worker directories")
         for i in pbar:
             worker_directory = self.get_worker_directory(
-                root_directory, src_directory, i)
+                root_directory, src_directory, i
+            )
             if not os.path.exists(worker_directory):
                 shutil.copytree(src_directory, worker_directory)
 
-    def _clear_worker_directories(self, root_directory: str, src_directory: str) -> None:
+    def _clear_worker_directories(
+        self, root_directory: str, src_directory: str
+    ) -> None:
         """Clears the worker directories for a given source directory"""
 
         rel_path = os.path.relpath(src_directory, root_directory)
@@ -124,10 +128,10 @@ class WorldSampler:
     def _check_block(self, block, target_blocks, translator):
         """Returns True if the block is one of the target blocks"""
         block, _, _ = translator.block.from_universal(block)
-        if 'universal' in block.namespaced_name:
-            print(f'Conversion failed for {block.namespaced_name}')
+        if "universal" in block.namespaced_name:
+            print(f"Conversion failed for {block.namespaced_name}")
             return False
-        name = block.namespaced_name + '|'
+        name = block.namespaced_name + "|"
         for target_block in target_blocks:
             if target_block in name:
                 return True
@@ -140,65 +144,85 @@ class WorldSampler:
                 return True
         return False
 
-    def _save_chunk_progress(self, directory: str, dimension: str, visited_chunks: set, relevant_chunks: set) -> None:
+    def _save_chunk_progress(
+        self, directory: str, dimension: str, visited_chunks: set, relevant_chunks: set
+    ) -> None:
         """Save the current chunk progress to a file"""
-        dimension = dimension.replace(':', '_')
+        dimension = dimension.replace(":", "_")
         temp_file_path = os.path.join(
-            directory, f'{dimension}_chunk_progress_temp.json')
-        final_file_path = os.path.join(
-            directory, f'{dimension}_chunk_progress.json')
-        with open(temp_file_path, 'w') as file:
-            json.dump({'visited_chunks': list(visited_chunks),
-                       'relevant_chunks': list(relevant_chunks)}, file)
+            directory, f"{dimension}_chunk_progress_temp.json"
+        )
+        final_file_path = os.path.join(directory, f"{dimension}_chunk_progress.json")
+        with open(temp_file_path, "w") as file:
+            json.dump(
+                {
+                    "visited_chunks": list(visited_chunks),
+                    "relevant_chunks": list(relevant_chunks),
+                },
+                file,
+            )
         os.replace(temp_file_path, final_file_path)
 
     def _load_chunk_progress(self, directory: str, dimension: str) -> tuple:
         """Load the current chunk progress from a file"""
-        dimension = dimension.replace(':', '_')
-        path = os.path.join(directory, f'{dimension}_chunk_progress.json')
+        dimension = dimension.replace(":", "_")
+        path = os.path.join(directory, f"{dimension}_chunk_progress.json")
         if os.path.exists(path):
-            with open(path, 'r') as file:
+            with open(path, "r") as file:
                 data = json.load(file)
-            visited_chunks = set(tuple(c) for c in data['visited_chunks'])
-            relevant_chunks = set(tuple(c) for c in data['relevant_chunks'])
+            visited_chunks = set(tuple(c) for c in data["visited_chunks"])
+            relevant_chunks = set(tuple(c) for c in data["relevant_chunks"])
         else:
             visited_chunks = set()
             relevant_chunks = set()
         return visited_chunks, relevant_chunks
 
-    def _save_sample_progress(self, directory: str, dimension: str, sampled_chunks: set, sample_positions: set) -> None:
+    def _save_sample_progress(
+        self, directory: str, dimension: str, sampled_chunks: set, sample_positions: set
+    ) -> None:
         """Save the current sample progress to a file"""
-        dimension = dimension.replace(':', '_')
+        dimension = dimension.replace(":", "_")
         temp_file_path = os.path.join(
-            directory, f'{dimension}_sample_progress_temp.json')
-        final_file_path = os.path.join(
-            directory, f'{dimension}_sample_progress.json')
-        with open(temp_file_path, 'w') as file:
-            json.dump({'sampled_chunks': list(sampled_chunks),
-                       'sample_positions': list(sample_positions)}, file)
+            directory, f"{dimension}_sample_progress_temp.json"
+        )
+        final_file_path = os.path.join(directory, f"{dimension}_sample_progress.json")
+        with open(temp_file_path, "w") as file:
+            json.dump(
+                {
+                    "sampled_chunks": list(sampled_chunks),
+                    "sample_positions": list(sample_positions),
+                },
+                file,
+            )
         os.replace(temp_file_path, final_file_path)
 
     def _load_sample_progress(self, directory: str, dimension: str) -> tuple:
         """Load the current sample progress from a file"""
-        dimension = dimension.replace(':', '_')
-        path = os.path.join(directory, f'{dimension}_sample_progress.json')
+        dimension = dimension.replace(":", "_")
+        path = os.path.join(directory, f"{dimension}_sample_progress.json")
         if os.path.exists(path):
-            with open(path, 'r') as file:
+            with open(path, "r") as file:
                 data = json.load(file)
-            sampled_chunks = set(tuple(c) for c in data['sampled_chunks'])
-            sample_positions = set(tuple(c) for c in data['sample_positions'])
+            sampled_chunks = set(tuple(c) for c in data["sampled_chunks"])
+            sample_positions = set(tuple(c) for c in data["sample_positions"])
         else:
             sampled_chunks = set()
             sample_positions = set()
         return sampled_chunks, sample_positions
 
-    def _mark_chunks_worker(self, directory: str, dimension: str, all_chunks_queue: Queue, visited_chunks_queue: Queue, relevant_chunks_queue: Queue) -> None:
+    def _mark_chunks_worker(
+        self,
+        directory: str,
+        dimension: str,
+        all_chunks_queue: Queue,
+        visited_chunks_queue: Queue,
+        relevant_chunks_queue: Queue,
+    ) -> None:
         """Worker function for marking chunks"""
         try:
             # Load the world data from the directory
             world = amulet.load_level(directory)
-            translator = world.translation_manager.get_version(
-                'java', (1, 20, 4))
+            translator = world.translation_manager.get_version("java", (1, 20, 4))
 
             while True:
                 chunk_coords = all_chunks_queue.get()
@@ -207,19 +231,25 @@ class WorldSampler:
                     break
 
                 try:
-                    chunk = world.level_wrapper.load_chunk(
-                        *chunk_coords, dimension)
-                    if self._chunk_contains_target_blocks(chunk, self.chunk_target_blocks[dimension], translator):
+                    chunk = world.level_wrapper.load_chunk(*chunk_coords, dimension)
+                    if self._chunk_contains_target_blocks(
+                        chunk, self.chunk_target_blocks[dimension], translator
+                    ):
                         # Add this chunk and its neighbors
-                        for dx in range(-self.chunk_mark_radius, self.chunk_mark_radius + 1):
-                            for dz in range(-self.chunk_mark_radius, self.chunk_mark_radius + 1):
+                        for dx in range(
+                            -self.chunk_mark_radius, self.chunk_mark_radius + 1
+                        ):
+                            for dz in range(
+                                -self.chunk_mark_radius, self.chunk_mark_radius + 1
+                            ):
                                 relevant_chunks_queue.put(
-                                    (chunk_coords[0] + dx, chunk_coords[1] + dz))
+                                    (chunk_coords[0] + dx, chunk_coords[1] + dz)
+                                )
                     successful = True
                 except (ChunkDoesNotExist, ChunkLoadError):
                     successful = False
                 except Exception as e:
-                    print(f'Unknown error loading chunk {chunk_coords}: {e}')
+                    print(f"Unknown error loading chunk {chunk_coords}: {e}")
                     successful = False
                 visited_chunks_queue.put((chunk_coords, successful))
         except KeyboardInterrupt:
@@ -227,18 +257,28 @@ class WorldSampler:
         finally:
             world.close()
 
-    def _create_visualization(self, directory: str, dimension: str, x_coords, z_coords, intensities, title: str, colorbar: str = None) -> None:
+    def _create_visualization(
+        self,
+        directory: str,
+        dimension: str,
+        x_coords,
+        z_coords,
+        intensities,
+        title: str,
+        colorbar: str = None,
+    ) -> None:
         # Set the background for dark mode
-        plt.style.use('dark_background')
+        plt.style.use("dark_background")
 
         # Plotting
         plt.figure(figsize=(10, 10))
         # s is the size of the point
-        plt.scatter(x_coords, z_coords, c=intensities,
-                    cmap='cool', edgecolor='none', s=10)
+        plt.scatter(
+            x_coords, z_coords, c=intensities, cmap="cool", edgecolor="none", s=10
+        )
         plt.colorbar(label=colorbar)
-        plt.xlabel('X Coordinate')
-        plt.ylabel('Z Coordinate')
+        plt.xlabel("X Coordinate")
+        plt.ylabel("Z Coordinate")
         plt.title(title)
 
         # Adjust axes limits to have the same range for a square aspect ratio
@@ -251,14 +291,16 @@ class WorldSampler:
 
         plt.gca().invert_yaxis()
 
-        plt.gca().set_aspect('equal', adjustable='box')
+        plt.gca().set_aspect("equal", adjustable="box")
 
         # Save the plot as an image
-        dimension = dimension.replace(':', '_')
-        plt.savefig(os.path.join(directory, f'{dimension}_{title}.png'))
+        dimension = dimension.replace(":", "_")
+        plt.savefig(os.path.join(directory, f"{dimension}_{title}.png"))
         plt.close()
 
-    def _visualize_marked_chunks(self, directory: str, dimension: str, relevant_chunks: set) -> None:
+    def _visualize_marked_chunks(
+        self, directory: str, dimension: str, relevant_chunks: set
+    ) -> None:
         if len(relevant_chunks) == 0:
             return
 
@@ -270,9 +312,12 @@ class WorldSampler:
 
         # Create visualization
         self._create_visualization(
-            directory, dimension, x_coords, z_coords, intensities, 'selected_chunks')
+            directory, dimension, x_coords, z_coords, intensities, "selected_chunks"
+        )
 
-    def _visualize_sample_positions(self, directory: str, dimension: str, sample_positions: set) -> None:
+    def _visualize_sample_positions(
+        self, directory: str, dimension: str, sample_positions: set
+    ) -> None:
         if len(sample_positions) == 0:
             return
 
@@ -281,24 +326,32 @@ class WorldSampler:
             return x // 16, z // 16
 
         # Convert sample positions to chunk coordinates and count samples per chunk
-        chunk_coordinates = [world_to_chunk(x, z)
-                             for x, _, z in sample_positions]
+        chunk_coordinates = [world_to_chunk(x, z) for x, _, z in sample_positions]
         samples_per_chunk = Counter(chunk_coordinates)
 
         # Prepare data for plotting
         x_coords, z_coords, intensities = zip(
-            *[(x, z, samples_per_chunk[(x, z)]) for x, z in samples_per_chunk])
+            *[(x, z, samples_per_chunk[(x, z)]) for x, z in samples_per_chunk]
+        )
 
         # Create visualization for sample positions with intensity based on sample count
-        self._create_visualization(directory, dimension, x_coords,
-                                   z_coords, intensities, 'sample_positions', 'Sample Count')
+        self._create_visualization(
+            directory,
+            dimension,
+            x_coords,
+            z_coords,
+            intensities,
+            "sample_positions",
+            "Sample Count",
+        )
 
     def _mark_chunks(self, root_directory: str, directory: str, dimension: str) -> set:
         """Looks through chunks in a world and marks them as relevant or not relevant"""
 
         # Load progress
         visited_chunks, relevant_chunks = self._load_chunk_progress(
-            directory, dimension)
+            directory, dimension
+        )
 
         # return relevant_chunks
 
@@ -310,8 +363,7 @@ class WorldSampler:
         # Remove visited chunks from the list
         remaining_chunk_coords = all_chunk_coords - visited_chunks
         if len(remaining_chunk_coords) == 0:
-            print(
-                f"All {len(all_chunk_coords)} chunks have already been visited")
+            print(f"All {len(all_chunk_coords)} chunks have already been visited")
             return relevant_chunks
 
         # Set up worker directories
@@ -321,15 +373,16 @@ class WorldSampler:
         pbar = tqdm(
             total=len(all_chunk_coords),
             initial=len(visited_chunks),
-            desc="Marking chunks"
+            desc="Marking chunks",
         )
         pbar.set_postfix({"relevant_chunks": len(relevant_chunks)})
 
         # Create a queue and add all chunk coordinates to it
         all_chunks_queue = Queue()
         if self.chunks_limit:
-            remaining_chunk_coords = set(random.sample(
-                remaining_chunk_coords, self.chunks_limit))
+            remaining_chunk_coords = set(
+                random.sample(remaining_chunk_coords, self.chunks_limit)
+            )
         for chunk_coords in remaining_chunk_coords:
             all_chunks_queue.put(chunk_coords)
         all_chunks_queue.put(None)
@@ -342,8 +395,16 @@ class WorldSampler:
         try:
             # Create and start worker processes
             for i in range(self.num_workers):
-                process = Process(target=self._mark_chunks_worker, args=(self.get_worker_directory(
-                    root_directory, directory, i), dimension, all_chunks_queue, visited_chunks_queue, relevant_chunks_queue))
+                process = Process(
+                    target=self._mark_chunks_worker,
+                    args=(
+                        self.get_worker_directory(root_directory, directory, i),
+                        dimension,
+                        all_chunks_queue,
+                        visited_chunks_queue,
+                        relevant_chunks_queue,
+                    ),
+                )
                 process.start()
                 processes.append(process)
 
@@ -358,11 +419,16 @@ class WorldSampler:
                         unsuccessful_chunks_count += 1
                     if len(visited_chunks) % self.chunk_progress_save_interval == 0:
                         self._save_chunk_progress(
-                            directory, dimension, visited_chunks, relevant_chunks)
+                            directory, dimension, visited_chunks, relevant_chunks
+                        )
                 while not relevant_chunks_queue.empty():
                     relevant_chunks.add(relevant_chunks_queue.get())
-                pbar.set_postfix({"relevant_chunks": len(
-                    relevant_chunks), "unsuccessful_chunks": unsuccessful_chunks_count})
+                pbar.set_postfix(
+                    {
+                        "relevant_chunks": len(relevant_chunks),
+                        "unsuccessful_chunks": unsuccessful_chunks_count,
+                    }
+                )
                 time.sleep(0.1)
 
             # Wait for all processes to finish
@@ -378,15 +444,20 @@ class WorldSampler:
 
         # Final save
         self._save_chunk_progress(
-            directory, dimension, all_chunk_coords, relevant_chunks)
+            directory, dimension, all_chunk_coords, relevant_chunks
+        )
 
         return relevant_chunks
 
-    def _get_interested_palette_indices(self, chunk: Chunk, translator, dimension: str) -> set:
+    def _get_interested_palette_indices(
+        self, chunk: Chunk, translator, dimension: str
+    ) -> set:
         """Returns a set of indices of blocks from the chunk palette that we are interested in"""
         interested_indices = set()
         for i, block in enumerate(chunk.block_palette):
-            if self._check_block(block, self.sample_target_blocks[dimension], translator):
+            if self._check_block(
+                block, self.sample_target_blocks[dimension], translator
+            ):
                 interested_indices.add(i)
         return interested_indices
 
@@ -398,13 +469,14 @@ class WorldSampler:
         # Convert the hash to an integer
         hash_int = int(hash_obj.hexdigest(), base=16)
         # Generate three offsets using different ranges of the hash
-        x_offset = (hash_int % self.sample_offset)
-        y_offset = ((hash_int // self.sample_offset) % self.sample_offset)
-        z_offset = ((hash_int // (self.sample_offset ** 2)) %
-                    self.sample_offset)
+        x_offset = hash_int % self.sample_offset
+        y_offset = (hash_int // self.sample_offset) % self.sample_offset
+        z_offset = (hash_int // (self.sample_offset**2)) % self.sample_offset
         return x_offset, y_offset, z_offset
 
-    def _identify_samples_in_chunk(self, world: World, dimension: str, translator, chunk_coords) -> set:
+    def _identify_samples_in_chunk(
+        self, world: World, dimension: str, translator, chunk_coords
+    ) -> set:
         """Collects samples from a chunk"""
 
         sample_positions = set()
@@ -414,23 +486,24 @@ class WorldSampler:
 
         # Load all chunks that a selection starting in this chunk could possibly intersect
         num_chunks = self.sample_size // 16 + 2
-        chunk_blocks = [[None for _ in range(
-            num_chunks)] for _ in range(num_chunks)]
-        interested_indices = [[None for _ in range(
-            num_chunks)] for _ in range(num_chunks)]
+        chunk_blocks = [[None for _ in range(num_chunks)] for _ in range(num_chunks)]
+        interested_indices = [
+            [None for _ in range(num_chunks)] for _ in range(num_chunks)
+        ]
         for dx in range(num_chunks):
             for dz in range(num_chunks):
-                inner_chunk_coords = (
-                    chunk_coords[0] + dx, chunk_coords[1] + dz)
+                inner_chunk_coords = (chunk_coords[0] + dx, chunk_coords[1] + dz)
                 if world.has_chunk(*inner_chunk_coords, dimension):
                     chunk = world.get_chunk(*inner_chunk_coords, dimension)
                     world.purge()
                 else:
                     chunk = Chunk(*inner_chunk_coords)
                 chunk_blocks[dx][dz] = np.asarray(
-                    chunk.blocks[:, min_height:max_height, :])
+                    chunk.blocks[:, min_height:max_height, :]
+                )
                 interested_indices[dx][dz] = self._get_interested_palette_indices(
-                    chunk, translator, dimension)
+                    chunk, translator, dimension
+                )
 
         # Precompute interesting block positions
         max_pos = 15 + self.sample_size
@@ -450,14 +523,16 @@ class WorldSampler:
                     block_value = blocks[x, y, z]
                     original_block[i, j, k] = block_value
                     chunk_interesting_indices = interested_indices[chunk_x][chunk_z]
-                    block[i, j, k] = 1 if block_value in chunk_interesting_indices else 0
+                    block[i, j, k] = (
+                        1 if block_value in chunk_interesting_indices else 0
+                    )
 
-        marked_count = np.cumsum(
-            np.cumsum(np.cumsum(block, axis=0), axis=1), axis=2)
+        marked_count = np.cumsum(np.cumsum(np.cumsum(block, axis=0), axis=1), axis=2)
 
         # Iterate through grid of possible selection start positions
         x_offset, y_offset, z_offset = self._get_deterministic_random_offsets(
-            chunk_coords)
+            chunk_coords
+        )
         m = self.sample_size
         y_limit = y_size - m
         middle_offset = m // 2
@@ -469,23 +544,24 @@ class WorldSampler:
                 found_valid_position_y = False
                 k = z_offset
                 while k < 16:
-                    if original_block[i + middle_offset, j + middle_offset, k + middle_offset] == 0:
+                    if (
+                        original_block[
+                            i + middle_offset, j + middle_offset, k + middle_offset
+                        ]
+                        == 0
+                    ):
                         k += 1
                         continue
                     found_valid_position_y = True
 
-                    total_marked = marked_count[i +
-                                                m - 1][j + m - 1][k + m - 1]
+                    total_marked = marked_count[i + m - 1][j + m - 1][k + m - 1]
 
                     if i > 0:
-                        total_marked -= marked_count[i -
-                                                     1][j + m - 1][k + m - 1]
+                        total_marked -= marked_count[i - 1][j + m - 1][k + m - 1]
                     if j > 0:
-                        total_marked -= marked_count[i +
-                                                     m - 1][j - 1][k + m - 1]
+                        total_marked -= marked_count[i + m - 1][j - 1][k + m - 1]
                     if k > 0:
-                        total_marked -= marked_count[i +
-                                                     m - 1][j + m - 1][k - 1]
+                        total_marked -= marked_count[i + m - 1][j + m - 1][k - 1]
 
                     if i > 0 and j > 0:
                         total_marked += marked_count[i - 1][j - 1][k + m - 1]
@@ -518,14 +594,20 @@ class WorldSampler:
 
         return sample_positions
 
-    def _identify_samples_worker(self, directory: str, dimension: str, relevant_chunks_queue: Queue, sampled_chunks_queue: Queue, sample_positions_queue: Queue) -> None:
+    def _identify_samples_worker(
+        self,
+        directory: str,
+        dimension: str,
+        relevant_chunks_queue: Queue,
+        sampled_chunks_queue: Queue,
+        sample_positions_queue: Queue,
+    ) -> None:
         """Worker function for identifying samples"""
 
         try:
             # Load the world data from the directory
             world = amulet.load_level(directory)
-            translator = world.translation_manager.get_version(
-                'java', (1, 20, 4))
+            translator = world.translation_manager.get_version("java", (1, 20, 4))
 
             while True:
                 chunk_coords = relevant_chunks_queue.get()
@@ -536,14 +618,16 @@ class WorldSampler:
                 try:
                     if world.has_chunk(*chunk_coords, dimension):
                         samples = self._identify_samples_in_chunk(
-                            world, dimension, translator, chunk_coords)
+                            world, dimension, translator, chunk_coords
+                        )
                         sample_positions_queue.put(samples)
                     successful = True
                 except ChunkLoadError:
                     successful = False
                 except Exception as e:
                     print(
-                        f'Unknown error identifying samples in chunk {chunk_coords}: {e}')
+                        f"Unknown error identifying samples in chunk {chunk_coords}: {e}"
+                    )
                     successful = False
                 sampled_chunks_queue.put((chunk_coords, successful))
         except KeyboardInterrupt:
@@ -551,13 +635,16 @@ class WorldSampler:
         finally:
             world.close()
 
-    def _identify_samples(self, root_directory: str, directory: str, dimension: str) -> set:
+    def _identify_samples(
+        self, root_directory: str, directory: str, dimension: str
+    ) -> set:
         """Identifies samples from the marked chunks"""
 
         # Load progress
         _, relevant_chunks = self._load_chunk_progress(directory, dimension)
         sampled_chunks, sample_positions = self._load_sample_progress(
-            directory, dimension)
+            directory, dimension
+        )
 
         # return sample_positions
 
@@ -565,7 +652,8 @@ class WorldSampler:
         remaining_relevant_chunks = relevant_chunks - sampled_chunks
         if len(remaining_relevant_chunks) == 0:
             print(
-                f"All {len(relevant_chunks)} relevant chunks have already been sampled")
+                f"All {len(relevant_chunks)} relevant chunks have already been sampled"
+            )
             return sample_positions
 
         # Set up worker directories
@@ -575,15 +663,16 @@ class WorldSampler:
         pbar = tqdm(
             total=len(relevant_chunks),
             initial=len(sampled_chunks),
-            desc="Identifying samples from chunks"
+            desc="Identifying samples from chunks",
         )
         pbar.set_postfix({"sample_positions": len(sample_positions)})
 
         # Create a queue and add all chunk coordinates to it
         relevant_chunks_queue = Queue()
         if self.samples_limit:
-            remaining_relevant_chunks = set(random.sample(
-                remaining_relevant_chunks, self.samples_limit))
+            remaining_relevant_chunks = set(
+                random.sample(remaining_relevant_chunks, self.samples_limit)
+            )
         for chunk_coords in remaining_relevant_chunks:
             relevant_chunks_queue.put(chunk_coords)
         relevant_chunks_queue.put(None)
@@ -596,8 +685,16 @@ class WorldSampler:
         try:
             # Create and start worker processes
             for i in range(self.num_workers):
-                process = Process(target=self._identify_samples_worker, args=(self.get_worker_directory(
-                    root_directory, directory, i), dimension, relevant_chunks_queue, sampled_chunks_queue, sample_positions_queue))
+                process = Process(
+                    target=self._identify_samples_worker,
+                    args=(
+                        self.get_worker_directory(root_directory, directory, i),
+                        dimension,
+                        relevant_chunks_queue,
+                        sampled_chunks_queue,
+                        sample_positions_queue,
+                    ),
+                )
                 process.start()
                 processes.append(process)
 
@@ -612,11 +709,16 @@ class WorldSampler:
                         unsuccessful_chunks_count += 1
                     if len(sampled_chunks) % self.sample_progress_save_interval == 0:
                         self._save_sample_progress(
-                            directory, dimension, sampled_chunks, sample_positions)
+                            directory, dimension, sampled_chunks, sample_positions
+                        )
                 while not sample_positions_queue.empty():
                     sample_positions.update(sample_positions_queue.get())
-                pbar.set_postfix({"sample_positions": len(
-                    sample_positions), "unsuccessful_chunks": unsuccessful_chunks_count})
+                pbar.set_postfix(
+                    {
+                        "sample_positions": len(sample_positions),
+                        "unsuccessful_chunks": unsuccessful_chunks_count,
+                    }
+                )
                 time.sleep(0.1)
 
             # Wait for all processes to finish
@@ -632,19 +734,28 @@ class WorldSampler:
 
         # Final save
         self._save_sample_progress(
-            directory, dimension, sampled_chunks, sample_positions)
+            directory, dimension, sampled_chunks, sample_positions
+        )
 
         return sample_positions
 
-    def _get_schematic_path(self, world_name: str, dimension: str, position: tuple) -> str:
+    def _get_schematic_path(
+        self, world_name: str, dimension: str, position: tuple
+    ) -> str:
         """Returns the path to the schematic file for the given position"""
         filename = world_name + dimension + str(position)
         file_hash = hashlib.sha256(filename.encode()).hexdigest()
-        path = os.path.join(self.schematic_directory,
-                            world_name, file_hash + '.schem')
+        path = os.path.join(self.schematic_directory, world_name, file_hash + ".schem")
         return path
 
-    def _collect_samples_worker(self, directory: str, dimension: str, world_name: str, sample_positions_queue: Queue, sampled_positions_queue: Queue) -> None:
+    def _collect_samples_worker(
+        self,
+        directory: str,
+        dimension: str,
+        world_name: str,
+        sample_positions_queue: Queue,
+        sampled_positions_queue: Queue,
+    ) -> None:
         """Worker function for collecting samples"""
 
         try:
@@ -658,21 +769,26 @@ class WorldSampler:
                     sample_positions_queue.put(None)
                     break
 
-                path = self._get_schematic_path(
-                    world_name, dimension, position)
+                path = self._get_schematic_path(world_name, dimension, position)
                 x, y, z = position
 
                 selection = SelectionBox(
-                    (x, y, z), (x + self.sample_size, y + self.sample_size, z + self.sample_size))
+                    (x, y, z),
+                    (x + self.sample_size, y + self.sample_size, z + self.sample_size),
+                )
                 structure = world.extract_structure(selection, dimension)
 
-                tmp_path = f'{directory}/tmp.schem'
+                tmp_path = f"{directory}/tmp.schem"
 
                 try:
                     # Save the schematic to a temporary file
                     wrapper = SpongeSchemFormatWrapper(tmp_path)
                     wrapper.create_and_open(
-                        'java', 3578, bounds=SelectionGroup(structure.bounds(dimension)), overwrite=True)
+                        "java",
+                        3578,
+                        bounds=SelectionGroup(structure.bounds(dimension)),
+                        overwrite=True,
+                    )
                     structure.save(wrapper)
                 finally:
                     wrapper.close()
@@ -692,25 +808,29 @@ class WorldSampler:
         finally:
             world.close()
 
-    def _collect_samples(self, root_directory: str, directory: str, dimension: str) -> None:
+    def _collect_samples(
+        self, root_directory: str, directory: str, dimension: str
+    ) -> None:
         """Collects samples from the world at the identified positions"""
 
         # Load progress
-        _, all_sample_positions = self._load_sample_progress(
-            directory, dimension)
+        _, all_sample_positions = self._load_sample_progress(directory, dimension)
 
         # Filter out positions that already have a schematic
         world_name = os.path.relpath(directory, root_directory)
-        sample_positions = [p for p in all_sample_positions if not os.path.exists(
-            self._get_schematic_path(world_name, dimension, p))]
+        sample_positions = [
+            p
+            for p in all_sample_positions
+            if not os.path.exists(self._get_schematic_path(world_name, dimension, p))
+        ]
         if len(sample_positions) == 0:
             print(
-                f"All {len(all_sample_positions)} samples have already been collected")
+                f"All {len(all_sample_positions)} samples have already been collected"
+            )
             return
 
         # Create the schematic directory if it doesn't exist
-        os.makedirs(os.path.join(self.schematic_directory,
-                    world_name), exist_ok=True)
+        os.makedirs(os.path.join(self.schematic_directory, world_name), exist_ok=True)
 
         # Set up worker directories
         self.setup_worker_directories(root_directory, directory)
@@ -719,7 +839,7 @@ class WorldSampler:
         pbar = tqdm(
             total=len(all_sample_positions),
             initial=(len(all_sample_positions) - len(sample_positions)),
-            desc="Collecting samples"
+            desc="Collecting samples",
         )
 
         # Create a queue and add all positions to it
@@ -735,8 +855,16 @@ class WorldSampler:
         try:
             # Create and start worker processes
             for i in range(self.num_workers):
-                process = Process(target=self._collect_samples_worker, args=(self.get_worker_directory(
-                    root_directory, directory, i), dimension, world_name, sample_positions_queue, sampled_positions_queue))
+                process = Process(
+                    target=self._collect_samples_worker,
+                    args=(
+                        self.get_worker_directory(root_directory, directory, i),
+                        dimension,
+                        world_name,
+                        sample_positions_queue,
+                        sampled_positions_queue,
+                    ),
+                )
                 process.start()
                 processes.append(process)
 
@@ -767,8 +895,9 @@ class WorldSampler:
                     self.sample_world(directory, root)
                     # Prevent further traversal into subdirectories of a world
                     dirs[:] = []
-            schematic_count = sum(len(files) for _, _,
-                                  files in os.walk(self.schematic_directory))
+            schematic_count = sum(
+                len(files) for _, _, files in os.walk(self.schematic_directory)
+            )
             print(f"Total schematics: {schematic_count}")
             print("Done sampling directory")
         except KeyboardInterrupt:
@@ -778,16 +907,18 @@ class WorldSampler:
         """Samples a world"""
         print(f"Sampling {directory}")
         self.load_interested_blocks(directory)
-        for dimension in ['minecraft:overworld', 'minecraft:the_nether', 'minecraft:the_end']:
+        for dimension in [
+            "minecraft:overworld",
+            "minecraft:the_nether",
+            "minecraft:the_end",
+        ]:
             print(f"Sampling dimension: {dimension}")
-            relevent_chunks = self._mark_chunks(
-                root_directory, directory, dimension)
-            self._visualize_marked_chunks(
-                directory, dimension, relevent_chunks)
+            relevent_chunks = self._mark_chunks(root_directory, directory, dimension)
+            self._visualize_marked_chunks(directory, dimension, relevent_chunks)
             sample_positions = self._identify_samples(
-                root_directory, directory, dimension)
-            self._visualize_sample_positions(
-                directory, dimension, sample_positions)
+                root_directory, directory, dimension
+            )
+            self._visualize_sample_positions(directory, dimension, sample_positions)
             self._collect_samples(root_directory, directory, dimension)
         if self.clear_worker_directories:
             self._clear_worker_directories(root_directory, directory)
@@ -809,16 +940,24 @@ class WorldSampler:
     def clear_world(self, directory: str) -> None:
         """Clears all progress and samples from a world"""
         print(f"Clearing {directory}")
-        for dimension in ['minecraft:overworld', 'minecraft:the_nether', 'minecraft:the_end']:
-            dimension = dimension.replace(':', '_')
+        for dimension in [
+            "minecraft:overworld",
+            "minecraft:the_nether",
+            "minecraft:the_end",
+        ]:
+            dimension = dimension.replace(":", "_")
             chunk_progress_path = os.path.join(
-                directory, f'{dimension}_chunk_progress.json')
+                directory, f"{dimension}_chunk_progress.json"
+            )
             sample_progress_path = os.path.join(
-                directory, f'{dimension}_sample_progress.json')
+                directory, f"{dimension}_sample_progress.json"
+            )
             if os.path.exists(chunk_progress_path):
                 os.remove(chunk_progress_path)
             if os.path.exists(sample_progress_path):
                 os.remove(sample_progress_path)
-        shutil.rmtree(os.path.join(self.schematic_directory,
-                                   os.path.basename(directory)), ignore_errors=True)
+        shutil.rmtree(
+            os.path.join(self.schematic_directory, os.path.basename(directory)),
+            ignore_errors=True,
+        )
         print(f"Done clearing {directory}")

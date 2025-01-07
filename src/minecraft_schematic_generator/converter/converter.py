@@ -29,13 +29,14 @@ class SchematicArrayConverter:
         # Swap the dimensions of the array
         return np.swapaxes(converted_block_data, 0, 1)
 
-    def array_to_schematic(self, array: np.ndarray, schematic: Optional[Schematic] = None):
+    def array_to_schematic(
+        self, array: np.ndarray, schematic: Optional[Schematic] = None
+    ):
         """
         Convert an array to a schematic.
         """
         if schematic is None:
-            schematic = Schematic(
-                array.shape[2], array.shape[1], array.shape[0])
+            schematic = Schematic(array.shape[2], array.shape[1], array.shape[0])
 
         # Loop through all blocks in the schematic
         for x, y, z in schematic.iter_block_positions():
@@ -43,7 +44,7 @@ class SchematicArrayConverter:
             try:
                 block = self.block_token_mapper.token_to_block(token)
             except KeyError:
-                block = Block('minecraft:air')
+                block = Block("minecraft:air")
             schematic.set_block(x, y, z, block)
 
         return schematic

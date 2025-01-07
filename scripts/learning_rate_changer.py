@@ -1,5 +1,6 @@
-import torch
 import json
+
+import torch
 
 
 class CustomEncoder(json.JSONEncoder):
@@ -9,18 +10,18 @@ class CustomEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-checkpoint_path = 'lightning_logs/center_data/version_12/checkpoints/last.ckpt'
-checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+checkpoint_path = "lightning_logs/center_data/version_12/checkpoints/last.ckpt"
+checkpoint = torch.load(checkpoint_path, map_location=torch.device("cpu"))
 
 print(checkpoint.keys())
 
-print(json.dumps(checkpoint['callbacks'], indent=4, cls=CustomEncoder))
-print(json.dumps(checkpoint['lr_schedulers'], indent=4, cls=CustomEncoder))
+print(json.dumps(checkpoint["callbacks"], indent=4, cls=CustomEncoder))
+print(json.dumps(checkpoint["lr_schedulers"], indent=4, cls=CustomEncoder))
 
-checkpoint['lr_schedulers'][0]['base_lrs'][0] = 5e-6
-checkpoint['lr_schedulers'][0]['_last_lr'][0] = 5e-6
+checkpoint["lr_schedulers"][0]["base_lrs"][0] = 5e-6
+checkpoint["lr_schedulers"][0]["_last_lr"][0] = 5e-6
 
-print(json.dumps(checkpoint['lr_schedulers'], indent=4, cls=CustomEncoder))
+print(json.dumps(checkpoint["lr_schedulers"], indent=4, cls=CustomEncoder))
 
 # checkpoint['callbacks']["EarlyStopping{'monitor': 'val_loss', 'mode': 'min'}"]['best_score'] = torch.tensor(
 #     1.0)
@@ -33,4 +34,5 @@ print(json.dumps(checkpoint['lr_schedulers'], indent=4, cls=CustomEncoder))
 # print(json.dumps(checkpoint['callbacks'], indent=4, cls=CustomEncoder))
 # print(json.dumps(checkpoint['lr_schedulers'], indent=4, cls=CustomEncoder))
 
+torch.save(checkpoint, checkpoint_path)
 torch.save(checkpoint, checkpoint_path)

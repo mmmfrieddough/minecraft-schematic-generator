@@ -1,26 +1,31 @@
 import torch
-from lightning.pytorch import Trainer, seed_everything
-from lightning.pytorch.callbacks import (EarlyStopping, LearningRateMonitor,
-                                         ModelCheckpoint)
+from lightning import Trainer
+from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger, WandbLogger
 from lightning.pytorch.strategies import DDPStrategy
 
 import wandb
 from minecraft_schematic_generator.modules import (
-    LightningTransformerMinecraftStructureGenerator, MinecraftDataModule)
+    LightningTransformerMinecraftStructureGenerator,
+    MinecraftDataModule,
+)
 
 
 def main():
-    torch.set_float32_matmul_precision('medium')
+    torch.set_float32_matmul_precision("medium")
     # seed_everything(0, workers=True)
 
     experiment_name = "center_data"
     experiment_version = 13
     checkpoint_dir = "lightning_logs"
     tensorboard_logger = TensorBoardLogger(
-        checkpoint_dir, name=experiment_name, version=experiment_version)
+        checkpoint_dir, name=experiment_name, version=experiment_version
+    )
     wandb_logger = WandbLogger(
-        name=experiment_name, project='minecraft-structure-generator', version=str(experiment_version))
+        name=experiment_name,
+        project="minecraft-structure-generator",
+        version=str(experiment_version),
+    )
 
     lightning_model = LightningTransformerMinecraftStructureGenerator(
         num_classes=20000,
@@ -31,34 +36,24 @@ def main():
         num_layers=6,
         decoder_dropout=0.1,
         max_learning_rate=1e-6,
-        warmup_steps=100000
+        warmup_steps=100000,
     )
     # lightning_model = torch.compile(lightning_model)
 
-    hdf5_file = 'data/data_v2.h5'
+    hdf5_file = "data/data_v2.h5"
     batch_size = 20
     data_module = MinecraftDataModule(
         file_path=hdf5_file,
         batch_size=batch_size,
         # num_workers=4,
         combine_datasets=True,
-        separate_validation_datasets=['hermitcraft6']
+        separate_validation_datasets=["hermitcraft6"],
     )
     # wandb_logger.experiment.config['batch_size'] = batch_size
 
-    latest_checkpoint_callback = ModelCheckpoint(
-        save_last=True
-    )
+    latest_checkpoint_callback = ModelCheckpoint(save_last=True)
     best_model_checkpoint_callback = ModelCheckpoint(
-        save_top_k=3,
-        monitor='val_loss',
-        mode='min'
-    )
-    early_stop_callback = EarlyStopping(
-        monitor='val_loss',
-        patience=200,
-        mode='min',
-        verbose=True
+        save_top_k=3, monitor="val_loss", mode="min"
     )
     lr_monitor_callback = LearningRateMonitor()
 
@@ -80,14 +75,14 @@ def main():
             latest_checkpoint_callback,
             best_model_checkpoint_callback,
             # early_stop_callback,
-            lr_monitor_callback
-        ]
+            lr_monitor_callback,
+        ],
     )
 
-    trainer.fit(lightning_model, datamodule=data_module, ckpt_path='last')
+    trainer.fit(lightning_model, datamodule=data_module, ckpt_path="last")
 
     wandb.finish()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
