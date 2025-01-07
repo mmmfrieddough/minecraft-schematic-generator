@@ -59,6 +59,16 @@ Finally, the system processes all identified positions and saves each sample as 
 
 Ready-to-use executables are available in the releases section, providing an easy way to run the model server.
 
+## Installation
+
+Before installing the project dependencies, ensure you have the correct version of PyTorch installed for your system. Visit the [PyTorch installation page](https://pytorch.org/get-started/locally/) to select the appropriate version based on your operating system, package manager, and CUDA version.
+
+Once PyTorch is installed, you can install the remaining dependencies with:
+
+```bash
+pip install -e .[dev,test,docs]
+```
+
 ### Available Scripts
 
 - `train.py` - Main training utility

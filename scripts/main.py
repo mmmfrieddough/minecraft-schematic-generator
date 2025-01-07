@@ -1,19 +1,20 @@
-from pathlib import Path
 import traceback
-from typing import List, Tuple
+from pathlib import Path
+from typing import List
 
 import torch
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from schempy.components import BlockPalette
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 
 from minecraft_schematic_generator.converter import BlockTokenMapper
-from minecraft_schematic_generator.converter.converter import SchematicArrayConverter
+from minecraft_schematic_generator.converter.converter import \
+    SchematicArrayConverter
 from minecraft_schematic_generator.data_preparer import clean_block_properties
-from minecraft_schematic_generator.modules import LightningTransformerMinecraftStructureGenerator
+from minecraft_schematic_generator.modules import \
+    LightningTransformerMinecraftStructureGenerator
 
 
 class Request(BaseModel):
@@ -38,7 +39,8 @@ block_token_mapper = BlockTokenMapper()
 
 model_version = 12
 output_dir = 'schematic_viewer/public/schematics/'
-checkpoint_path = f'lightning_logs/center_data/version_{model_version}/checkpoints/last.ckpt'
+checkpoint_path = f'lightning_logs/center_data/version_{
+    model_version}/checkpoints/last.ckpt'
 model = LightningTransformerMinecraftStructureGenerator.load_from_checkpoint(
     checkpoint_path)
 model.eval()

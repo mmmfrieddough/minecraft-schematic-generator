@@ -8,17 +8,21 @@ version = "0.1.0"
 description = "ML model for generating Minecraft schematics"
 requires-python = ">=3.8"
 dependencies = [
-    "torch",
-    "pytorch-lightning",
-    "numpy",
-    "pandas"
+    "lightning",
+    "schempy",
+    "h5py",
+    "tqdm",
+    "amulet-core",
+    "matplotlib"
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
-    "black",
-    "isort"
+    "pydantic",
+    "fastapi",
+    "uvicorn",
+    "wandb",
+    "ipykernel"
 ]
 
 [tool.hatch.build.targets.wheel]
