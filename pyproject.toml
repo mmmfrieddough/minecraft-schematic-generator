@@ -23,7 +23,8 @@ dev = [
     "uvicorn",
     "wandb",
     "ipykernel",
-    "tensorboard"
+    "tensorboard",
+    "ruff"
 ]
 
 [tool.hatch.build.targets.wheel]

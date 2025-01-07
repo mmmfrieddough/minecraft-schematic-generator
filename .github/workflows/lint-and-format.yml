@@ -1,0 +1,24 @@
+name: Lint and Format Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run Ruff Lint Check
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: check # Fails if there are linting issues
+
+      - name: Run Ruff Format Check
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: format --check # Fails if code is not formatted correctly
