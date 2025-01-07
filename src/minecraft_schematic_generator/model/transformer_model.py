@@ -1,6 +1,33 @@
 import numpy as np
 import torch
+from huggingface_hub import ModelCard, PyTorchModelHubMixin
 from torch import nn
+
+MODEL_CARD_TEMPLATE = """
+---
+language: en
+tags:
+- minecraft
+- structure-generation
+- pytorch
+license: mit
+repository: https://github.com/mmmfrieddough/minecraft-schematic-generator
+---
+
+# Minecraft Structure Generator
+
+This model generates Minecraft structures using a decoder-only transformer architecture.
+
+## Model Details
+
+- Architecture: Decoder-only Transformer
+- Vocabulary Size: {{ num_classes }} block types
+- Sequence Length: {{ max_sequence_length }}
+- Embedding Dimension: {{ embedding.embedding_dim }}
+- Attention Heads: {{ attention_heads }}
+- Transformer Layers: {{ transformer_layers }}
+- Parameters: {{ parameters }}
+"""
 
 
 class PositionalEncoding(nn.Module):
@@ -57,7 +84,7 @@ class PositionalEncoding(nn.Module):
         return x
 
 
-class TransformerMinecraftStructureGenerator(nn.Module):
+class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
     def __init__(
         self,
         num_classes,
@@ -118,3 +145,15 @@ class TransformerMinecraftStructureGenerator(nn.Module):
         output = output.transpose(1, 2)
 
         return output
+
+    def generate_model_card(self):
+        return ModelCard.from_template(
+            card_data=self._hub_mixin_info.model_card_data,
+            template_str=MODEL_CARD_TEMPLATE,
+            num_classes=self.num_classes,
+            max_sequence_length=self.max_sequence_length,
+            embedding=self.embedding.embedding_dim,
+            attention_heads=self.decoder.layers[0].self_attn.num_heads,
+            transformer_layers=len(self.decoder.layers),
+            parameters=f"{sum(p.numel() for p in self.parameters()):,}",
+        )

@@ -13,7 +13,9 @@ dependencies = [
     "h5py",
     "tqdm",
     "amulet-core",
-    "matplotlib"
+    "matplotlib",
+    "huggingface-hub",
+    "safetensors"
 ]
 
 [project.optional-dependencies]
