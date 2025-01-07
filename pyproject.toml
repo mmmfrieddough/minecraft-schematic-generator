@@ -22,7 +22,8 @@ dev = [
     "fastapi",
     "uvicorn",
     "wandb",
-    "ipykernel"
+    "ipykernel",
+    "tensorboard"
 ]
 
 [tool.hatch.build.targets.wheel]
