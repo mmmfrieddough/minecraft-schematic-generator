@@ -72,7 +72,6 @@ pip install -e .[dev,test,docs]
 ### Available Scripts
 
 - `train.py` - Main training utility
-- `main.py` - Model serving API
 - `sample.py` - World sampling utility
 - `prepare_data.py` - Dataset compilation
 - `inference.ipynb` - Interactive model testing

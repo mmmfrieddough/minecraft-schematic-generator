@@ -4,5 +4,3 @@ from .transformer_lightning_module import (
 )
 
 __all__ = ["MinecraftDataModule", "LightningTransformerMinecraftStructureGenerator"]
-
-__all__ = ["MinecraftDataModule", "LightningTransformerMinecraftStructureGenerator"]
