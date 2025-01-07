@@ -1,32 +1,37 @@
-import time
+from pathlib import Path
 import traceback
 from typing import List, Tuple
 
-import amulet.api.block
-import PyMCTranslate
-import schempy
 import torch
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from schempy.components import BlockPalette
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from converter import BlockTokenMapper
+from converter.converter import SchematicArrayConverter
 from data_preparer import clean_block_properties
 from modules import LightningTransformerMinecraftStructureGenerator
-from schempy.components import BlockPalette
 
 
 class Request(BaseModel):
     platform: str
     version_number: int
     temperature: float
+    start_radius: int
+    max_iterations: int
+    max_blocks: int
+    air_probability_iteration_scaling: float
     structure: List[List[List[str]]]
 
 
 class Block(BaseModel):
-    value: str
-    position: Tuple[int, int, int]
+    block_state: str
+    z: int
+    y: int
+    x: int
 
 
 block_token_mapper = BlockTokenMapper()
@@ -39,6 +44,15 @@ model = LightningTransformerMinecraftStructureGenerator.load_from_checkpoint(
 model.eval()
 
 app = FastAPI()
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    print(f"Validation error details: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()}
+    )
 
 
 @app.post("/complete-structure/")
@@ -58,8 +72,7 @@ async def complete_structure(input: Request):
 
             if token not in test:
                 test.append(token)
-                # print('-------------------')
-                # print(str(block), token)
+                print(f"Token: {token}, Block: {block_str}")
 
             return token
 
@@ -70,22 +83,26 @@ async def complete_structure(input: Request):
         # Convert the input data to a torch tensor
         input_tensor = torch.tensor(input_structure_ids)
 
+        # Save as a schematic for debugging
+        # try:
+        #     schematic_array_converter = SchematicArrayConverter()
+        #     schematic = schematic_array_converter.array_to_schematic(
+        #         input_tensor)
+        #     schematic.name = 'Test'
+        #     schematic.save_to_file(Path('debug.schem'), 2)
+        # except Exception as e:
+        #     print(f"Failed to save schematic: {e}")
+
         # Mask out the air blocks
         input_tensor[input_tensor == 1] = 0
 
-        test = []
-
         # Generate the structure
         def generate():
-            for block, z, y, x in model.fill_structure(input_tensor, input.temperature):
+            for block, z, y, x in model.fill_structure(input_tensor, input.temperature, input.start_radius, input.max_iterations, input.max_blocks, input.air_probability_iteration_scaling):
                 # Convert the token back to a block
                 block = block_token_mapper.token_to_block(block)
 
-                response = Block(value=str(block), position=(z, y, x))
-                if id not in test:
-                    test.append(id)
-                    # print('-------------------')
-                    # print(test0, test1, test2, test3, test4)
+                response = Block(block_state=str(block), z=z, y=y, x=x)
 
                 yield response.model_dump_json() + "\n"
 

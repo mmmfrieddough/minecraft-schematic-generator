@@ -16,10 +16,10 @@ from modules import (GenerateSchematicCallback,
 
 def main():
     torch.set_float32_matmul_precision('medium')
-    # seed_everything(28, workers=True)a
+    # seed_everything(0, workers=True)
 
     experiment_name = "center_data"
-    experiment_version = 12
+    experiment_version = 13
     checkpoint_dir = "lightning_logs"
     tensorboard_logger = TensorBoardLogger(
         checkpoint_dir, name=experiment_name, version=experiment_version)
@@ -34,8 +34,8 @@ def main():
         num_heads=6,
         num_layers=6,
         decoder_dropout=0.1,
-        max_learning_rate=5e-6,
-        warmup_steps=60000
+        max_learning_rate=1e-6,
+        warmup_steps=100000
     )
     # lightning_model = torch.compile(lightning_model)
 

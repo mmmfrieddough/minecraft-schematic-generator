@@ -38,7 +38,8 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
 
         # Create a mask for elements that are zero and adjacent to a value > 1
         masked_structures = masked_structures.unsqueeze(1)
-        mask = self.generate_neighbor_mask(masked_structures)
+        mask = self.generate_neighbor_mask(
+            masked_structures) & (masked_structures == 0)
         mask = mask.squeeze(1)
 
         # Flatten the structures and mask
@@ -64,7 +65,6 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         return predicted_structures, loss, acc
 
     def training_step(self, batch, batch_idx):
-        full_structures, masked_structures = batch
         _, loss, acc = self._forward_and_loss(batch)
         self.log('train_loss', loss)
         self.log('train_accuracy', acc)
@@ -95,7 +95,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         self.validation_step_outputs.clear()
 
     def generate_neighbor_mask(self, tensor):
-        """Generates a mask indicating if an element is 0 and has a neighbor > 1."""
+        """Generates a mask indicating if an element has a neighbor > 1."""
         kernel = torch.ones((1, 1, 3, 3, 3), dtype=tensor.dtype,
                             device=tensor.device)
         kernel[0, 0, 1, 1, 1] = 0  # Ignore the central element
@@ -107,13 +107,10 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         neighbors_greater_than_1 = F.conv3d(
             greater_than_1.float(), kernel.float(), padding=1) >= 1
 
-        # Create a mask for elements that are 0
-        is_zero = tensor == 0
+        # Return the mask
+        return neighbors_greater_than_1
 
-        # Combine both conditions
-        return neighbors_greater_than_1 & is_zero
-
-    def fill_structure(self, structure, temperature=1.0):
+    def fill_structure(self, structure, temperature, start_radius, max_iterations, max_blocks, air_probability_iteration_scaling):
         self.eval()
         structure = structure.to(self.device)
 
@@ -123,12 +120,26 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
 
         flattened_structure = structure.view(1, -1)
 
+        # Initialize mask of valid next elements
+        filled_positions = torch.zeros_like(structure, dtype=torch.bool)
+        filled_positions[0, 0, 5-start_radius:5+start_radius+1, 5 -
+                         start_radius:5+start_radius+1, 5-start_radius:5+start_radius+1] = 1
+
         with torch.no_grad():
-            for i in range(100):  # Safety limit
+            filled_blocks = 0
+
+            for i in range(max_iterations):
+                print(f"Iteration {i+1}/{max_iterations}")
+
                 # Generate mask of valid next elements
-                mask = self.generate_neighbor_mask(structure)
+                mask_structure = structure * filled_positions
+                mask = self.generate_neighbor_mask(
+                    mask_structure) & (structure == 0)
+
+                # Exit if no more elements to update
                 if not mask.any():
-                    break  # Exit if no more elements to update
+                    print("No more elements to update")
+                    break
 
                 # Get positions that need filling
                 valid_positions = mask.squeeze().nonzero()
@@ -153,23 +164,31 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
                     logits_for_position = logits[0, :, flat_idx]
 
                     # Probability of air (token 1) goes up each iteration
-                    # logits_for_position[1] += i
+                    logits_for_position[1] += i * \
+                        air_probability_iteration_scaling
 
                     # Apply temperature and sample
                     probabilities = F.softmax(
                         logits_for_position / temperature, dim=-1)
                     predicted_token = torch.multinomial(
                         probabilities, num_samples=1).item()
+                    selected_probability = probabilities[predicted_token].item(
+                    )
+                    air_probability = probabilities[1].item()
+                    print(
+                        f"Selected token {predicted_token} with probability {selected_probability*100:.1f}%, air probability {air_probability*100:.1f}%")
 
-                    yield predicted_token, z, y, x
+                    if predicted_token != 1:
+                        yield predicted_token, z, y, x
+                        filled_positions[0, 0, z, y, x] = 1
+                        filled_blocks += 1
+                        print(f"Filled {filled_blocks}/{max_blocks} blocks")
+                    if filled_blocks >= max_blocks:
+                        break
                     structure[0, 0, z, y, x] = predicted_token
 
-            # Find any remaining elements with value 0 and yield them as value 1
-            remaining_zeros = (structure == 0).nonzero(as_tuple=False)
-            for idx in remaining_zeros:
-                z, y, x = idx[2], idx[3], idx[4]
-                yield 1, z, y, x
-                structure[0, 0, z, y, x] = 1
+                if filled_blocks >= max_blocks:
+                    break
 
         self.train()
 
