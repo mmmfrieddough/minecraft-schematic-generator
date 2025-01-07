@@ -1,7 +1,0 @@
-nbtlib
-numpy
-openai
-SchemPy
-tensorboard
-torch
-tqdm
