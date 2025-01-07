@@ -24,7 +24,8 @@ dev = [
     "wandb",
     "ipykernel",
     "tensorboard",
-    "ruff"
+    "ruff",
+    "pre-commit"
 ]
 
 [tool.hatch.build.targets.wheel]
