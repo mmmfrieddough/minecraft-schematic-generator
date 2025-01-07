@@ -1,4 +1,4 @@
-from data_sampler import WorldSampler
+from minecraft_schematic_generator.data_sampler import WorldSampler
 
 
 def main():

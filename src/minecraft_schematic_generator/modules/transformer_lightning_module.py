@@ -5,7 +5,7 @@ from lightning.pytorch.utilities.grads import grad_norm
 from torch import optim
 from torchmetrics.functional import accuracy
 
-from model import TransformerMinecraftStructureGenerator
+from minecraft_schematic_generator.model import TransformerMinecraftStructureGenerator
 
 
 class LightningTransformerMinecraftStructureGenerator(L.LightningModule):

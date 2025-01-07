@@ -10,10 +10,10 @@ from schempy.components import BlockPalette
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from converter import BlockTokenMapper
-from converter.converter import SchematicArrayConverter
-from data_preparer import clean_block_properties
-from modules import LightningTransformerMinecraftStructureGenerator
+from minecraft_schematic_generator.converter import BlockTokenMapper
+from minecraft_schematic_generator.converter.converter import SchematicArrayConverter
+from minecraft_schematic_generator.data_preparer import clean_block_properties
+from minecraft_schematic_generator.modules import LightningTransformerMinecraftStructureGenerator
 
 
 class Request(BaseModel):

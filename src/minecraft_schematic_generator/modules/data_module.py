@@ -5,7 +5,7 @@ from lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader
 from tqdm import tqdm
 
-from model import MinecraftDataset
+from minecraft_schematic_generator.model import MinecraftDataset
 
 
 class MinecraftDataModule(LightningDataModule):

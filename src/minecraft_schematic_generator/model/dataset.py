@@ -7,7 +7,7 @@ from torch.nn.functional import conv3d
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from converter import BlockTokenMapper
+from minecraft_schematic_generator.converter import BlockTokenMapper
 
 
 class MinecraftDataset(Dataset):

@@ -6,7 +6,7 @@ import h5py
 from schempy import Schematic, Block
 from tqdm import tqdm
 
-from converter import SchematicArrayConverter
+from minecraft_schematic_generator.converter import SchematicArrayConverter
 
 converter = SchematicArrayConverter()
 

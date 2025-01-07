@@ -1,15 +1,17 @@
+from importlib import resources
 import json
-
 from schempy import Block
 
 
 class BlockTokenMapper:
     def __init__(self):
-        self.mapping_path = 'block_state_mapping.json'
+        # Get the data directory path
+        data_path = resources.files('minecraft_schematic_generator.converter')
+        self.mapping_path = data_path.joinpath('block_state_mapping.json')
 
         # Load mappings or initialize if not present
         try:
-            with open(self.mapping_path, 'r') as f:
+            with self.mapping_path.open('r') as f:
                 self.block_id_to_token_map = json.load(f)
             # Generate the reverse mapping once at load time
             self.token_to_block_id_map = {
@@ -39,7 +41,7 @@ class BlockTokenMapper:
 
     def save_mapping(self) -> None:
         # Save the forward mapping to a file
-        with open(self.mapping_path, 'w') as f:
+        with self.mapping_path.open('w') as f:
             json.dump(self.block_id_to_token_map, f)
 
     def token_to_block(self, token: int) -> Block:

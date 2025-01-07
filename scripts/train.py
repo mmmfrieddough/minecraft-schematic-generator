@@ -1,5 +1,3 @@
-import os
-
 import torch
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import (EarlyStopping, LearningRateMonitor,
@@ -8,10 +6,8 @@ from lightning.pytorch.loggers import TensorBoardLogger, WandbLogger
 from lightning.pytorch.strategies import DDPStrategy
 
 import wandb
-from common.file_paths import BASE_DIR
-from modules import (GenerateSchematicCallback,
-                     LightningTransformerMinecraftStructureGenerator,
-                     MinecraftDataModule)
+from minecraft_schematic_generator.modules import (
+    LightningTransformerMinecraftStructureGenerator, MinecraftDataModule)
 
 
 def main():
@@ -39,7 +35,7 @@ def main():
     )
     # lightning_model = torch.compile(lightning_model)
 
-    hdf5_file = os.path.join(BASE_DIR, 'data_v2.h5')
+    hdf5_file = 'data/data_v2.h5'
     batch_size = 20
     data_module = MinecraftDataModule(
         file_path=hdf5_file,
@@ -64,17 +60,6 @@ def main():
         mode='min',
         verbose=True
     )
-    generate_schematic_callback = GenerateSchematicCallback(
-        full_path='schematic_viewer/public/schematics/full/',
-        masked_path='schematic_viewer/public/schematics/masked/',
-        filled_path='schematic_viewer/public/schematics/filled/',
-        data_module=data_module,
-        generate_train=False,
-        generate_val=True,
-        generate_all_datasets=False,
-        generate_every_n_epochs=1,
-        temperature=0.7
-    )
     lr_monitor_callback = LearningRateMonitor()
 
     ddp = DDPStrategy(process_group_backend="gloo")
@@ -95,7 +80,6 @@ def main():
             latest_checkpoint_callback,
             best_model_checkpoint_callback,
             # early_stop_callback,
-            # generate_schematic_callback,
             lr_monitor_callback
         ]
     )

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "minecraft_schematic_generator"
+version = "0.1.0"
+description = "ML model for generating Minecraft schematics"
+requires-python = ">=3.8"
+dependencies = [
+    "torch",
+    "pytorch-lightning",
+    "numpy",
+    "pandas"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "isort"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/minecraft_schematic_generator"]

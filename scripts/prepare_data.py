@@ -1,4 +1,4 @@
-from data_preparer import load_schematics
+from minecraft_schematic_generator.data_preparer import load_schematics
 
 schematics_dir = 'data/schematics/'
 hdf5_path = 'data/data_v2.h5'
