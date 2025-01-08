@@ -20,10 +20,10 @@ jobs:
         include:
           - os: windows-latest
             output_name: minecraft-structure-server.exe
-            torch_index: cu121
+            torch_index: cu124
           - os: ubuntu-latest
             output_name: minecraft-structure-server-linux
-            torch_index: cu121
+            torch_index: cu124
           - os: macos-latest
             output_name: minecraft-structure-server-mac
             torch_index: cpu
@@ -36,7 +36,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "3.12"
 
       - name: Install PyTorch with CUDA
         if: matrix.os != 'macos-latest'
