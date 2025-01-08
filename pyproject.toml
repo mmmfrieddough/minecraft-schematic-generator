@@ -15,13 +15,16 @@ dependencies = [
     "amulet-core",
     "matplotlib",
     "huggingface-hub",
-    "safetensors"
+    "safetensors",
+    "fastapi",
+    "pydantic"
 ]
 
 [project.optional-dependencies]
+server = [
+    "uvicorn"
+]
 dev = [
-    "pydantic",
-    "fastapi",
     "uvicorn",
     "wandb",
     "ipykernel",

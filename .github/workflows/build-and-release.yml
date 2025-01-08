@@ -1,0 +1,92 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Version number for this release"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  discussions: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        include:
+          - os: windows-latest
+            output_name: minecraft-structure-server.exe
+            torch_index: cu121
+          - os: ubuntu-latest
+            output_name: minecraft-structure-server-linux
+            torch_index: cu121
+          - os: macos-latest
+            output_name: minecraft-structure-server-mac
+            torch_index: cpu
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install PyTorch with CUDA
+        if: matrix.os != 'macos-latest'
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/${{ matrix.torch_index }}
+
+      - name: Install PyTorch CPU (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch
+
+      - name: Install PyInstaller and minimal dependencies
+        run: |
+          # Install only server dependencies
+          pip install -e .[server]
+          pip install pyinstaller
+
+      - name: Build binary
+        run: |
+          pyinstaller --onefile \
+            --name ${{ matrix.output_name }} \
+            --copy-metadata safetensors \
+            --collect-data minecraft_schematic_generator \
+            app/main.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.output_name }}
+          path: dist/${{ matrix.output_name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ inputs.release_version }}
+          name: Release v${{ inputs.release_version }}
+          draft: false
+          prerelease: false
+          files: |
+            minecraft-structure-server.exe
+            minecraft-structure-server-linux
+            minecraft-structure-server-mac
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

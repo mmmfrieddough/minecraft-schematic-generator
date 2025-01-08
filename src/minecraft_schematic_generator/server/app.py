@@ -1,4 +1,5 @@
 import contextlib
+import logging
 import traceback
 
 from fastapi import FastAPI, HTTPException
@@ -9,12 +10,16 @@ from .model_loader import ModelLoader
 from .models import Block, StructureRequest
 from .services import StructureGenerator
 
+logger = logging.getLogger(__name__)
+
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    logger.info("Loading model...")
     model_loader = ModelLoader()
     app.state.model = model_loader.load_model(app.state.mode, app.state.checkpoint_path)
+    logger.info("Model loaded successfully")
     yield
 
 
@@ -23,13 +28,14 @@ app = FastAPI(lifespan=lifespan)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc: RequestValidationError):
-    print(f"Validation error details: {exc.errors()}")
+    logger.error(f"Validation error: {exc.errors()}")
     return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 
 @app.post("/complete-structure/")
 async def complete_structure(input: StructureRequest):
     try:
+        logger.info("Starting structure generation")
         generator = StructureGenerator(app.state.model)
         input_tensor = generator.prepare_input_tensor(input.structure)
 
@@ -49,5 +55,5 @@ async def complete_structure(input: StructureRequest):
 
     except Exception as e:
         traceback_str = traceback.format_exc()
-        print(traceback_str)
+        logger.error(f"Error during structure generation: {str(e)}\n{traceback_str}")
         raise HTTPException(status_code=500, detail=str(e))
