@@ -41,7 +41,7 @@ jobs:
                   token='${{ secrets.HF_TOKEN }}'
               )
           except Exception as e:
-              if 'already exists' not in str(e).lower():
+              if 'exists already' not in str(e).lower():
                   raise
           "
 
