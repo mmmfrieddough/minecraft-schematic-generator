@@ -93,8 +93,7 @@ jobs:
 
       - name: Build binary
         run: |
-          pyinstaller --onefile \
-            --name ${{ matrix.output_name }} --copy-metadata safetensors --collect-data minecraft_schematic_generator app/main.py
+          pyinstaller --onefile --name ${{ matrix.output_name }} --copy-metadata safetensors --collect-data minecraft_schematic_generator app/main.py
 
       - name: Upload to Hugging Face
         if: matrix.cuda
