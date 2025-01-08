@@ -13,40 +13,7 @@ permissions:
   discussions: write
 
 jobs:
-  create-hf-tag:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.12"
-
-      - name: Install huggingface-hub
-        run: |
-          python -m pip install --upgrade pip
-          pip install huggingface-hub
-
-      - name: Create Hugging Face Tag
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          python -c "
-          from huggingface_hub import HfApi
-          api = HfApi()
-
-          try:
-              api.create_tag(
-                  repo_id='mmmfrieddough/minecraft-structure-generator',
-                  tag=f'v${{ inputs.release_version }}',
-                  token='${{ secrets.HF_TOKEN }}'
-              )
-          except Exception as e:
-              if 'exists already' not in str(e).lower():
-                  raise
-          "
-
   build:
-    needs: create-hf-tag
     strategy:
       matrix:
         include:
@@ -119,6 +86,35 @@ jobs:
         with:
           name: ${{ matrix.output_name }}
           path: dist/${{ matrix.output_name }}
+
+  create-release-tag:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install huggingface-hub
+        run: |
+          python -m pip install --upgrade pip
+          pip install huggingface-hub
+
+      - name: Create HF Tag
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python -c "
+          from huggingface_hub import HfApi
+          api = HfApi()
+
+          api.create_tag(
+              repo_id='mmmfrieddough/minecraft-structure-generator',
+              tag=f'v${{ inputs.release_version }}',
+              token='${{ secrets.HF_TOKEN }}'
+          )
+          "
 
   release:
     needs: build
