@@ -100,6 +100,16 @@ jobs:
         with:
           path: dist
 
+      - name: Install 7-Zip
+        run: sudo apt-get install p7zip-full
+
+      - name: Compress binaries
+        run: |
+          cd dist
+          7z a minecraft-schematic-generator.exe.7z minecraft-schematic-generator.exe/minecraft-schematic-generator.exe
+          7z a minecraft-schematic-generator-linux.7z minecraft-schematic-generator-linux/minecraft-schematic-generator-linux
+          7z a minecraft-schematic-generator-mac.7z minecraft-schematic-generator-mac/minecraft-schematic-generator-mac
+
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
@@ -109,8 +119,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            dist/minecraft-schematic-generator.exe/minecraft-schematic-generator.exe
-            dist/minecraft-schematic-generator-linux/minecraft-schematic-generator-linux
-            dist/minecraft-schematic-generator-mac/minecraft-schematic-generator-mac
+            dist/*.7z
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
