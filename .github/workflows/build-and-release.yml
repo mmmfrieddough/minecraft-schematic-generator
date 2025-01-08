@@ -58,10 +58,10 @@ jobs:
 
       - name: Build binary
         run: |
-          pyinstaller --onefile \
-            --name ${{ matrix.output_name }} \
-            --copy-metadata safetensors \
-            --collect-data minecraft_schematic_generator \
+          pyinstaller -F `
+            --name "${{ matrix.output_name }}" `
+            --copy-metadata safetensors `
+            --collect-data minecraft_schematic_generator `
             app/main.py
 
       - name: Upload artifact
