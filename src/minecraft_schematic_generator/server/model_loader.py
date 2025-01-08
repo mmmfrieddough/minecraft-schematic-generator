@@ -29,8 +29,12 @@ class ModelLoader:
             )
 
         elif mode == "production":
-            # First load the base model from HF
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            if torch.cuda.is_available():
+                device = torch.device("cuda")
+            elif torch.backends.mps.is_available():
+                device = torch.device("mps")
+            else:
+                device = torch.device("cpu")
 
             logger.info(f"Loading model from Hugging Face: {MODEL_ID}")
             base_model = TransformerMinecraftStructureGenerator.from_pretrained(
