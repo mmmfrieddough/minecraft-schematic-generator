@@ -18,19 +18,19 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: minecraft-schematic-generator.exe
-          path: dist/minecraft-schematic-generator.exe
+          path: dist
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: minecraft-schematic-generator-linux
-          path: dist/minecraft-schematic-generator-linux
+          path: dist
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: minecraft-schematic-generator-mac
-          path: dist/minecraft-schematic-generator-mac
+          path: dist
 
   download:
     needs: upload

@@ -71,6 +71,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v3
+        with:
+          path: dist
 
       - name: Create Release
         id: create_release
@@ -81,8 +83,8 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            minecraft-schematic-generator.exe
-            minecraft-schematic-generator-linux
-            minecraft-schematic-generator-mac
+            dist/minecraft-schematic-generator.exe/minecraft-schematic-generator.exe
+            dist/minecraft-schematic-generator-linux/minecraft-schematic-generator-linux
+            dist/minecraft-schematic-generator-mac/minecraft-schematic-generator-mac
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
