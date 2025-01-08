@@ -140,7 +140,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ inputs.release_version }}
-          name: Release v${{ inputs.release_version }}
+          name: v${{ inputs.release_version }}
           body: |
             ## Download Options
 
