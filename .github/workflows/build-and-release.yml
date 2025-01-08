@@ -19,13 +19,13 @@ jobs:
         os: [windows-latest, ubuntu-latest, macos-latest]
         include:
           - os: windows-latest
-            output_name: minecraft-structure-server.exe
+            output_name: minecraft-schematic-generator.exe
             torch_index: cu124
           - os: ubuntu-latest
-            output_name: minecraft-structure-server-linux
+            output_name: minecraft-schematic-generator-linux
             torch_index: cu124
           - os: macos-latest
-            output_name: minecraft-structure-server-mac
+            output_name: minecraft-schematic-generator-mac
             torch_index: cpu
 
     runs-on: ${{ matrix.os }}
@@ -85,8 +85,8 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            minecraft-structure-server.exe
-            minecraft-structure-server-linux
-            minecraft-structure-server-mac
+            minecraft-schematic-generator.exe
+            minecraft-schematic-generator-linux
+            minecraft-schematic-generator-mac
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
