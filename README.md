@@ -1,6 +1,6 @@
 # Minecraft Structure Generator
 
-[![Build and Release](https://github.com/mmmfrieddough/minecraft-structure-generator/actions/workflows/build-and-release.yml/badge.svg)](https://github.com/mmmfrieddough/minecraft-structure-generator/actions/workflows/build-and-release.yml)
+[![Build and Release](https://github.com/mmmfrieddough/minecraft-schematic-generator/actions/workflows/build-and-release.yml/badge.svg)](https://github.com/mmmfrieddough/minecraft-schematic-generator/actions/workflows/build-and-release.yml)
 [![Model](https://img.shields.io/badge/🤗_Model-Hugging_Face-yellow)](https://huggingface.co/mmmfrieddough/minecraft-structure-generator)
 
 An ML-powered structure generator for Minecraft that uses a transformer architecture to complete partially built structures. This model serves as the backbone for [Craftpilot](https://github.com/mmmfrieddough/craftpilot), enabling intelligent structure completion in-game.
