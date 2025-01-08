@@ -85,7 +85,7 @@ pip install -e .[dev,test,docs]
 
 ## Resources
 
-- [Model on Huggingface](link_to_model)
+- [Model on Huggingface](https://huggingface.co/mmmfrieddough/minecraft-structure-generator)
 - [Craftpilot Mod](https://github.com/mmmfrieddough/craftpilot)
 
 ## Contributing
