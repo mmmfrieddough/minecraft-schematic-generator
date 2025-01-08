@@ -56,9 +56,35 @@ jobs:
           pip install -e .[server]
           pip install pyinstaller
 
+      - name: Install UPX (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get install upx
+
+      - name: Install UPX (macOS)
+        if: matrix.os == 'macos-latest'
+        run: brew install upx
+
+      - name: Install UPX (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          $url = "https://github.com/upx/upx/releases/download/v4.2.1/upx-4.2.1-win64.zip"
+          Invoke-WebRequest -Uri $url -OutFile upx.zip
+          Expand-Archive upx.zip -DestinationPath upx
+          echo "$pwd\upx\upx-4.2.1-win64" | Out-File -FilePath $env:GITHUB_PATH -Append
+
       - name: Build binary
         run: |
-          pyinstaller --onefile --name ${{ matrix.output_name }} --copy-metadata safetensors --collect-data minecraft_schematic_generator app/main.py
+          pyinstaller --onefile \
+            --name ${{ matrix.output_name }} \
+            --upx-dir="${{ matrix.os == 'windows-latest' && 'upx\upx-4.2.1-win64' || '/usr/bin' }}" \
+            --strip \
+            --noupx-exclude \
+            --exclude-module PIL \
+            --exclude-module numpy \
+            --exclude-module pandas \
+            --copy-metadata safetensors \
+            --collect-data minecraft_schematic_generator \
+            app/main.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
