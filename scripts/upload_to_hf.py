@@ -7,4 +7,4 @@ if __name__ == "__main__":
     checkpoint = LightningTransformerMinecraftStructureGenerator.load_from_checkpoint(
         checkpoint_path
     )
-    checkpoint.model.push_to_hub("mmmfrieddough/minecraft-structure-generator")
+    checkpoint.model.push_to_hub("mmmfrieddough/minecraft-schematic-generator")

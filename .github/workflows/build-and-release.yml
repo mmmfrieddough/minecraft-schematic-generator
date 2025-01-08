@@ -70,7 +70,7 @@ jobs:
           api.upload_file(
               path_or_fileobj='dist/${{ matrix.output_name }}',
               path_in_repo=f'binaries/${{ matrix.output_name }}',
-              repo_id='mmmfrieddough/minecraft-structure-generator',
+              repo_id='mmmfrieddough/minecraft-schematic-generator',
               token='${{ secrets.HF_TOKEN }}'
           )
           "
@@ -105,7 +105,7 @@ jobs:
           api = HfApi()
 
           api.create_tag(
-              repo_id='mmmfrieddough/minecraft-structure-generator',
+              repo_id='mmmfrieddough/minecraft-schematic-generator',
               tag='${{ github.ref_name }}',
               token='${{ secrets.HF_TOKEN }}'
           )
@@ -130,8 +130,8 @@ jobs:
 
             ### CUDA Version (Recommended)
             For optimal performance on Windows and Linux, download the CUDA-enabled version (hosted on Hugging Face due to file size limits):
-            - [Windows CUDA](https://huggingface.co/mmmfrieddough/minecraft-structure-generator/resolve/${{ github.ref_name }}/binaries/minecraft-schematic-generator.exe)
-            - [Linux CUDA](https://huggingface.co/mmmfrieddough/minecraft-structure-generator/resolve/${{ github.ref_name }}/binaries/minecraft-schematic-generator-linux)
+            - [Windows CUDA](https://huggingface.co/mmmfrieddough/minecraft-schematic-generator/resolve/${{ github.ref_name }}/binaries/minecraft-schematic-generator.exe)
+            - [Linux CUDA](https://huggingface.co/mmmfrieddough/minecraft-schematic-generator/resolve/${{ github.ref_name }}/binaries/minecraft-schematic-generator-linux)
 
             **Note:** CUDA version requires an NVIDIA GPU but provides significantly faster inference.
 

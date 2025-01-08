@@ -7,7 +7,7 @@ from minecraft_schematic_generator.modules import (
     LightningTransformerMinecraftStructureGenerator,
 )
 
-MODEL_ID = "mmmfrieddough/minecraft-structure-generator"
+MODEL_ID = "mmmfrieddough/minecraft-schematic-generator"
 
 logger = logging.getLogger(__name__)
 
