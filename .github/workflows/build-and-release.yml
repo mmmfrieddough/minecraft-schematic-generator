@@ -74,17 +74,7 @@ jobs:
 
       - name: Build binary
         run: |
-          pyinstaller --onefile \
-            --name ${{ matrix.output_name }} \
-            --upx-dir="${{ matrix.os == 'windows-latest' && 'upx\upx-4.2.1-win64' || '/usr/bin' }}" \
-            --strip \
-            --noupx-exclude \
-            --exclude-module PIL \
-            --exclude-module numpy \
-            --exclude-module pandas \
-            --copy-metadata safetensors \
-            --collect-data minecraft_schematic_generator \
-            app/main.py
+          pyinstaller --onefile --name ${{ matrix.output_name }} --upx-dir="${{ matrix.os == 'windows-latest' && 'upx\upx-4.2.1-win64' || '/usr/bin' }}" --strip --exclude-module PIL --exclude-module numpy --exclude-module pandas --copy-metadata safetensors --collect-data minecraft_schematic_generator app/main.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
