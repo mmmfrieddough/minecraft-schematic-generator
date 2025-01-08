@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_version:
-        description: "Version number for this release"
+        description: "Version number for this release (e.g., 1.0.0)"
         required: true
         type: string
 
@@ -13,20 +13,53 @@ permissions:
   discussions: write
 
 jobs:
+  create-hf-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Hugging Face Tag
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python -c "
+          from huggingface_hub import HfApi
+          api = HfApi()
+
+          try:
+              api.create_tag(
+                  repo_id='mmmfrieddough/minecraft-structure-generator',
+                  tag=f'v${{ inputs.release_version }}',
+                  token='${{ secrets.HF_TOKEN }}'
+              )
+          except Exception as e:
+              if 'already exists' not in str(e).lower():
+                  raise
+          "
+
   build:
+    needs: create-hf-tag
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
         include:
           - os: windows-latest
             output_name: minecraft-schematic-generator.exe
-            torch_index: cu124
+            torch_index: cpu
+            cuda: false
           - os: ubuntu-latest
             output_name: minecraft-schematic-generator-linux
-            torch_index: cu124
+            torch_index: cpu
+            cuda: false
           - os: macos-latest
             output_name: minecraft-schematic-generator-mac
             torch_index: cpu
+            cuda: false
+          - os: windows-latest
+            output_name: minecraft-schematic-generator.exe
+            torch_index: cu124
+            cuda: true
+          - os: ubuntu-latest
+            output_name: minecraft-schematic-generator-linux
+            torch_index: cu124
+            cuda: true
 
     runs-on: ${{ matrix.os }}
 
@@ -38,45 +71,48 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install PyTorch with CUDA
-        if: matrix.os != 'macos-latest'
+      - name: Install PyTorch
         run: |
           python -m pip install --upgrade pip
           pip install torch --index-url https://download.pytorch.org/whl/${{ matrix.torch_index }}
 
-      - name: Install PyTorch CPU (macOS)
-        if: matrix.os == 'macos-latest'
+      - name: Install PyInstaller and dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install torch
-
-      - name: Install PyInstaller and minimal dependencies
-        run: |
-          # Install only server dependencies
           pip install -e .[server]
-          pip install pyinstaller
-
-      - name: Install UPX (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get install upx
-
-      - name: Install UPX (macOS)
-        if: matrix.os == 'macos-latest'
-        run: brew install upx
-
-      - name: Install UPX (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          $url = "https://github.com/upx/upx/releases/download/v4.2.1/upx-4.2.1-win64.zip"
-          Invoke-WebRequest -Uri $url -OutFile upx.zip
-          Expand-Archive upx.zip -DestinationPath upx
-          echo "$pwd\upx\upx-4.2.1-win64" | Out-File -FilePath $env:GITHUB_PATH -Append
+          pip install pyinstaller ${{ matrix.cuda && 'huggingface_hub' || '' }}
 
       - name: Build binary
         run: |
-          pyinstaller --onefile --name ${{ matrix.output_name }} --upx-dir="${{ matrix.os == 'windows-latest' && 'upx\upx-4.2.1-win64' || '/usr/bin' }}" --strip --exclude-module PIL --exclude-module numpy --exclude-module pandas --copy-metadata safetensors --collect-data minecraft_schematic_generator app/main.py
+          pyinstaller --onefile \
+            --name ${{ matrix.output_name }} --copy-metadata safetensors --collect-data minecraft_schematic_generator app/main.py
+
+      - name: Upload to Hugging Face
+        if: matrix.cuda
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python -c "
+          from huggingface_hub import HfApi
+          api = HfApi()
+
+          # Create a tag for this version
+          api.create_tag(
+              repo_id='mmmfrieddough/minecraft-structure-generator',
+              tag=f'v${{ inputs.release_version }}',
+              token='${{ secrets.HF_TOKEN }}'
+          )
+
+          # Upload to versioned path
+          api.upload_file(
+              path_or_fileobj='dist/${{ matrix.output_name }}',
+              path_in_repo=f'binaries/${{ matrix.output_name }}',
+              repo_id='mmmfrieddough/minecraft-structure-generator',
+              token='${{ secrets.HF_TOKEN }}'
+          )
+          "
 
       - name: Upload artifact
+        if: ${{ !matrix.cuda }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.output_name }}
@@ -90,25 +126,44 @@ jobs:
         with:
           path: dist
 
-      - name: Install 7-Zip
-        run: sudo apt-get install p7zip-full
-
-      - name: Compress binaries
-        run: |
-          cd dist
-          7z a minecraft-schematic-generator.exe.7z minecraft-schematic-generator.exe/minecraft-schematic-generator.exe
-          7z a minecraft-schematic-generator-linux.7z minecraft-schematic-generator-linux/minecraft-schematic-generator-linux
-          7z a minecraft-schematic-generator-mac.7z minecraft-schematic-generator-mac/minecraft-schematic-generator-mac
-
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ inputs.release_version }}
           name: Release v${{ inputs.release_version }}
+          body: |
+            ## Download Options
+
+            ### CUDA Version (Recommended)
+            For optimal performance on Windows and Linux, download the CUDA-enabled version (hosted on Hugging Face due to file size limits):
+            - [Windows CUDA](https://huggingface.co/mmmfrieddough/minecraft-structure-generator/resolve/v${{ inputs.release_version }}/binaries/minecraft-schematic-generator.exe)
+            - [Linux CUDA](https://huggingface.co/mmmfrieddough/minecraft-structure-generator/resolve/v${{ inputs.release_version }}/binaries/minecraft-schematic-generator-linux)
+
+            **Note:** CUDA version requires an NVIDIA GPU but provides significantly faster inference.
+
+            ### CPU Version
+            For macOS systems (best performance on Apple Silicon):
+            - [macOS](dist/minecraft-schematic-generator-mac/minecraft-schematic-generator-mac)
+
+            CPU versions for Windows/Linux are available but not recommended due to extremely slow inference times:
+            - [Windows CPU](dist/minecraft-schematic-generator.exe/minecraft-schematic-generator.exe)
+            - [Linux CPU](dist/minecraft-schematic-generator-linux/minecraft-schematic-generator-linux)
+
+            ## System Requirements
+            - Windows/Linux: NVIDIA GPU strongly recommended
+            - macOS: Apple Silicon recommended for best performance
+
+            ## Server Configuration
+            The server can be started with:
+            ```bash
+            ./minecraft-schematic-generator [options]
+            ```
+
+            By default, it will run on http://localhost:8000
           draft: false
           prerelease: false
           files: |
-            dist/*.7z
+            dist/minecraft-schematic-generator*/minecraft-schematic-generator*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
