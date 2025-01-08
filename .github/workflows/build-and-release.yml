@@ -1,12 +1,8 @@
 name: Build and Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      release_version:
-        description: "Version number for this release (e.g., 1.0.0)"
-        required: true
-        type: string
+  release:
+    types: [created]
 
 permissions:
   contents: write
@@ -71,7 +67,6 @@ jobs:
           from huggingface_hub import HfApi
           api = HfApi()
 
-          # Upload to versioned path
           api.upload_file(
               path_or_fileobj='dist/${{ matrix.output_name }}',
               path_in_repo=f'binaries/${{ matrix.output_name }}',
@@ -111,7 +106,7 @@ jobs:
 
           api.create_tag(
               repo_id='mmmfrieddough/minecraft-structure-generator',
-              tag=f'v${{ inputs.release_version }}',
+              tag='${{ github.ref_name }}',
               token='${{ secrets.HF_TOKEN }}'
           )
           "
@@ -128,15 +123,15 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ inputs.release_version }}
-          name: v${{ inputs.release_version }}
+          tag_name: v${{ github.ref_name }}
+          name: v${{ github.ref_name }}
           body: |
             ## Download Options
 
             ### CUDA Version (Recommended)
             For optimal performance on Windows and Linux, download the CUDA-enabled version (hosted on Hugging Face due to file size limits):
-            - [Windows CUDA](https://huggingface.co/mmmfrieddough/minecraft-structure-generator/resolve/v${{ inputs.release_version }}/binaries/minecraft-schematic-generator.exe)
-            - [Linux CUDA](https://huggingface.co/mmmfrieddough/minecraft-structure-generator/resolve/v${{ inputs.release_version }}/binaries/minecraft-schematic-generator-linux)
+            - [Windows CUDA](https://huggingface.co/mmmfrieddough/minecraft-structure-generator/resolve/${{ github.ref_name }}/binaries/minecraft-schematic-generator.exe)
+            - [Linux CUDA](https://huggingface.co/mmmfrieddough/minecraft-structure-generator/resolve/${{ github.ref_name }}/binaries/minecraft-schematic-generator-linux)
 
             **Note:** CUDA version requires an NVIDIA GPU but provides significantly faster inference.
 
