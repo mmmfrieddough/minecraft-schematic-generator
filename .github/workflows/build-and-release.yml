@@ -104,13 +104,6 @@ jobs:
           from huggingface_hub import HfApi
           api = HfApi()
 
-          # Create a tag for this version
-          api.create_tag(
-              repo_id='mmmfrieddough/minecraft-structure-generator',
-              tag=f'v${{ inputs.release_version }}',
-              token='${{ secrets.HF_TOKEN }}'
-          )
-
           # Upload to versioned path
           api.upload_file(
               path_or_fileobj='dist/${{ matrix.output_name }}',
