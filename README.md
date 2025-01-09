@@ -3,7 +3,7 @@
 [![Build and Release](https://github.com/mmmfrieddough/minecraft-schematic-generator/actions/workflows/build-and-release.yml/badge.svg)](https://github.com/mmmfrieddough/minecraft-schematic-generator/actions/workflows/build-and-release.yml)
 [![Lint and Format](https://github.com/mmmfrieddough/minecraft-schematic-generator/actions/workflows/lint-and-format.yml/badge.svg)](https://github.com/mmmfrieddough/minecraft-schematic-generator/actions/workflows/lint-and-format.yml)
 [![Model](https://img.shields.io/badge/🤗_Model-Hugging_Face-yellow)](https://huggingface.co/mmmfrieddough/minecraft-schematic-generator)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/github/license/mmmfrieddough/minecraft-schematic-generator)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
