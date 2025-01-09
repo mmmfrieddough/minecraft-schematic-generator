@@ -2,7 +2,7 @@ import contextlib
 import logging
 import traceback
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -33,13 +33,13 @@ async def validation_exception_handler(request, exc: RequestValidationError):
 
 
 @app.post("/complete-structure/")
-async def complete_structure(input: StructureRequest):
+async def complete_structure(input: StructureRequest, request: Request):
     try:
         logger.info("Starting structure generation")
         generator = StructureGenerator(app.state.model)
         input_tensor = generator.prepare_input_tensor(input.structure)
 
-        def generate():
+        async def generate():
             for block_data in generator.generate_structure(
                 input_tensor,
                 input.temperature,
@@ -50,6 +50,11 @@ async def complete_structure(input: StructureRequest):
             ):
                 response = Block(**block_data)
                 yield response.model_dump_json() + "\n"
+
+                # Check for client disconnection after each block
+                if await request.is_disconnected():
+                    logger.info("Client disconnected, stopping generation")
+                    break
 
         return StreamingResponse(generate(), media_type="application/x-ndjson")
 
