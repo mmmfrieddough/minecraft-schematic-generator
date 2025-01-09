@@ -203,11 +203,12 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
                         f"Selected token {predicted_token} with probability {selected_probability*100:.1f}%, air probability {air_probability*100:.1f}%"
                     )
 
+                    yield predicted_token, z, y, x
+
                     if predicted_token != 1:
-                        yield predicted_token, z, y, x
                         filled_positions[0, 0, z, y, x] = 1
                         filled_blocks += 1
-                        print(f"Filled {filled_blocks}/{max_blocks} blocks")
+                        print(f"Filled {filled_blocks}/{max_blocks} solid blocks")
                     if filled_blocks >= max_blocks:
                         break
                     structure[0, 0, z, y, x] = predicted_token
