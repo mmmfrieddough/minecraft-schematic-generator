@@ -125,6 +125,80 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         # Return the mask
         return neighbors_greater_than_1
 
+    def _get_valid_positions(self, structure, filled_positions):
+        """Get ordered list of valid positions to fill, from center outward."""
+        # Generate mask of valid next elements
+        mask_structure = structure * filled_positions
+        mask = self.generate_neighbor_mask(mask_structure) & (structure == 0)
+
+        if not mask.any():
+            return None
+
+        # Get positions that need filling
+        valid_positions = mask.squeeze().nonzero()
+
+        # Calculate distances from center
+        center = torch.tensor([5.0, 5.0, 5.0], device=valid_positions.device)
+        distances = torch.norm(valid_positions.float() - center, dim=1)
+
+        # Return positions ordered by distance from center
+        return valid_positions[torch.argsort(distances)]
+
+    def _predict_single_position(
+        self,
+        flattened_structure,
+        pos,
+        temperature,
+        iteration=0,
+        air_probability_scaling=0,
+    ):
+        """Make a prediction for a single position in the structure."""
+        z, y, x = pos
+        flat_idx = z * 11 * 11 + y * 11 + x
+
+        # Get logits for the position
+        logits = self(flattened_structure)
+        logits_for_position = logits[0, :, flat_idx]
+
+        # Apply air probability scaling
+        logits_for_position[1] += iteration * air_probability_scaling
+
+        # Sample from the distribution
+        probabilities = F.softmax(logits_for_position / temperature, dim=-1)
+        predicted_token = torch.multinomial(probabilities, num_samples=1).item()
+
+        return (
+            predicted_token,
+            probabilities[predicted_token].item(),
+            probabilities[1].item(),
+        )
+
+    def one_shot_inference(self, structure, temperature=1.0):
+        """Return a new structure with predictions for masked positions."""
+        with torch.no_grad():
+            # Store original device and dimensionality
+            original_device = structure.device
+            was_3d = structure.dim() == 3
+
+            # Move to model's device and ensure we have the right shape
+            structure = structure.to(self.device)
+            if was_3d:
+                structure = structure.unsqueeze(0).unsqueeze(0)
+
+            flattened = structure.view(1, -1)
+            logits = self(flattened)
+            probabilities = F.softmax(logits / temperature, dim=1)
+            predictions = torch.argmax(probabilities, dim=1).view_as(structure)
+
+            result = structure.clone()
+            result[structure == 0] = predictions[structure == 0]
+
+            # Restore original shape if needed
+            if was_3d:
+                result = result.squeeze(0).squeeze(0)
+
+            return result.to(original_device)
+
     def fill_structure(
         self,
         structure,
@@ -134,7 +208,6 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         max_blocks,
         air_probability_iteration_scaling,
     ):
-        self.eval()
         structure = structure.to(self.device)
 
         # Ensure tensor has batch and channel dimensions
@@ -156,49 +229,27 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         with torch.no_grad():
             filled_blocks = 0
 
-            for i in range(max_iterations):
-                print(f"Iteration {i+1}/{max_iterations}")
+            for iteration in range(max_iterations):
+                print(f"Iteration {iteration+1}/{max_iterations}")
 
-                # Generate mask of valid next elements
-                mask_structure = structure * filled_positions
-                mask = self.generate_neighbor_mask(mask_structure) & (structure == 0)
-
-                # Exit if no more elements to update
-                if not mask.any():
+                valid_positions = self._get_valid_positions(structure, filled_positions)
+                if valid_positions is None:
                     print("No more elements to update")
                     break
 
-                # Get positions that need filling
-                valid_positions = mask.squeeze().nonzero()
-
-                # Calculate center coordinates (assuming 11x11x11 structure)
-                center = torch.tensor([5.0, 5.0, 5.0], device=valid_positions.device)
-
-                # Calculate distances from center for each position
-                distances = torch.norm(valid_positions.float() - center, dim=1)
-
-                # Sort positions by distance from center
-                ordered_positions = valid_positions[torch.argsort(distances)]
-
                 # Process each position in center-out order
-                for pos in ordered_positions:
+                for pos in valid_positions:
+                    predicted_token, selected_probability, air_probability = (
+                        self._predict_single_position(
+                            flattened_structure,
+                            pos,
+                            temperature,
+                            iteration,
+                            air_probability_iteration_scaling,
+                        )
+                    )
+
                     z, y, x = pos
-
-                    # Perform forward pass for current state
-                    logits = self(flattened_structure)
-                    flat_idx = z * 11 * 11 + y * 11 + x
-                    logits_for_position = logits[0, :, flat_idx]
-
-                    # Probability of air (token 1) goes up each iteration
-                    logits_for_position[1] += i * air_probability_iteration_scaling
-
-                    # Apply temperature and sample
-                    probabilities = F.softmax(logits_for_position / temperature, dim=-1)
-                    predicted_token = torch.multinomial(
-                        probabilities, num_samples=1
-                    ).item()
-                    selected_probability = probabilities[predicted_token].item()
-                    air_probability = probabilities[1].item()
                     print(
                         f"Selected token {predicted_token} with probability {selected_probability*100:.1f}%, air probability {air_probability*100:.1f}%"
                     )
@@ -215,8 +266,6 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
 
                 if filled_blocks >= max_blocks:
                     break
-
-        self.train()
 
     def complete_structure(self, masked_structure, temperature=1.0):
         for predicted_token, z, y, x in self.fill_structure(
