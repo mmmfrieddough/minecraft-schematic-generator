@@ -1,10 +1,12 @@
 from abc import abstractmethod
+from typing import Set, Tuple
 
 import numpy as np
 import torch
 from schempy import Schematic
 
-from ..converter import SchematicArrayConverter
+from minecraft_schematic_generator.converter import SchematicArrayConverter
+
 from .base_benchmark import BaseBenchmark
 
 
@@ -64,12 +66,19 @@ class StructureBenchmark(BaseBenchmark):
         )
         return accuracy
 
-    def run_single_test(self, model, seed: int) -> float:
-        """Template method for running a structure test"""
+    def get_model_inputs(
+        self, seed: int
+    ) -> Tuple[torch.Tensor, Tuple[np.ndarray, Set[Tuple[int, int, int]]]]:
+        """
+        Prepare structure inputs for model inference.
+        Returns:
+            model_input: Tensor of partial structure
+            comparison_data: Tuple of (complete_structure, removed_positions)
+        """
         # Create schematics
         complete_schematic, partial_schematic = self.create_schematics()
 
-        # Build the complete structure
+        # Build the structure
         removed_positions = self.build_structure(
             complete_schematic, partial_schematic, seed
         )
@@ -84,26 +93,31 @@ class StructureBenchmark(BaseBenchmark):
 
         # Convert to model input
         partial_structure = self.convert_to_model_input(partial_schematic)
-
-        # Run model
-        generated_structure = model.one_shot_inference(partial_structure, 0.7)
-
-        # Convert complete schematic for comparison
         complete_structure = self.schematic_array_converter.schematic_to_array(
             complete_schematic
         )
 
+        return partial_structure, (complete_structure, removed_positions)
+
+    def compare_model_output(
+        self,
+        model_output: torch.Tensor,
+        comparison_data: Tuple[np.ndarray, Set[Tuple[int, int, int]]],
+        seed: int,
+    ) -> float:
+        """Compare generated structure with original"""
+        complete_structure, removed_positions = comparison_data
+
         # Save generated result
         generated_schematic = self.schematic_array_converter.array_to_schematic(
-            generated_structure
+            model_output
         )
         self.save_debug_schematic(
             generated_schematic, f"{self.name}/generated_{seed}.schem"
         )
 
-        # Compare and return accuracy
         return self.compare_structures(
-            complete_structure, generated_structure, removed_positions
+            complete_structure, model_output, removed_positions
         )
 
     @abstractmethod

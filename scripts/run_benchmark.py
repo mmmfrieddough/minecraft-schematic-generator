@@ -16,5 +16,7 @@ model = LightningTransformerMinecraftStructureGenerator.load_from_checkpoint(
 model.eval()
 
 # Run all benchmarks
-results = run_benchmark(model, num_runs=1, save_debug_schematics=True, base_seed=0)
+results = run_benchmark(
+    model, num_runs=10, save_debug_schematics=False, base_seed=0, batch_size=50
+)
 print(results)

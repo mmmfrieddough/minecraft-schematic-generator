@@ -5,7 +5,7 @@ from typing import Dict, List
 import numpy as np
 from tqdm import tqdm
 
-from .base_benchmark import BaseBenchmark, BenchmarkResult
+from .benchmarks.base_benchmark import BaseBenchmark, BenchmarkResult
 
 
 @dataclass
@@ -15,20 +15,16 @@ class CategoryResult:
 
     @property
     def average(self) -> float:
-        all_scores = [
-            score for result in self.benchmark_results for score in result.scores
-        ]
-        return np.mean(all_scores)
+        scores = [result.average for result in self.benchmark_results]
+        return np.mean(scores)
 
     @property
     def std_dev(self) -> float:
-        all_scores = [
-            score for result in self.benchmark_results for score in result.scores
-        ]
-        return np.std(all_scores)
+        scores = [result.average for result in self.benchmark_results]
+        return np.std(scores)
 
     def __str__(self) -> str:
-        result = f"\n{self.name} Category: {self.average:.2%} (±{self.std_dev:.2%})\n"
+        result = f"\n{self.name}: {self.average:.2%} (±{self.std_dev:.2%})\n"
         for benchmark_result in self.benchmark_results:
             result += f"  {benchmark_result}\n"
         return result
@@ -40,13 +36,8 @@ class BenchmarkSuite:
 
     @property
     def average(self) -> float:
-        all_scores = [
-            score
-            for category in self.category_results
-            for result in category.benchmark_results
-            for score in result.scores
-        ]
-        return np.mean(all_scores)
+        scores = [result.average for result in self.category_results]
+        return np.mean(scores)
 
     def __str__(self) -> str:
         result = f"\nOverall Average: {self.average:.2%}\n"
@@ -56,10 +47,9 @@ class BenchmarkSuite:
 
 
 class BenchmarkCategory(Enum):
-    STRUCTURES = "Structures"
-    CONNECTIONS = "Connections"
-    PATTERNS = "Patterns"
-    REDSTONE = "Redstone"
+    STRUCTURES = "structures"
+    PATTERNS = "patterns"
+    REDSTONE = "redstone"
 
 
 class BenchmarkRegistry:
@@ -72,30 +62,44 @@ class BenchmarkRegistry:
         self.benchmarks[category].append(benchmark)
 
     def run_category(
-        self, category: BenchmarkCategory, model, num_runs=1, base_seed=0
+        self,
+        category: BenchmarkCategory,
+        model,
+        num_runs,
+        base_seed,
+        batch_size,
+        show_progress,
     ) -> CategoryResult:
         results = []
         with tqdm(
             total=len(self.benchmarks[category]),
             desc=f"Category: {category.value}",
             leave=False,
+            disable=not show_progress,
         ) as pbar:
             for benchmark in self.benchmarks[category]:
-                results.append(benchmark.run(model, num_runs, base_seed))
+                results.append(
+                    benchmark.run(model, num_runs, base_seed, batch_size, show_progress)
+                )
                 pbar.update(1)
         return CategoryResult(category.value, results)
 
-    def run_all(self, model, num_runs=1, base_seed=0) -> BenchmarkSuite:
+    def run_all(
+        self, model, num_runs, base_seed, batch_size, show_progress
+    ) -> BenchmarkSuite:
         category_results = []
         with tqdm(
             total=len(BenchmarkCategory),
-            desc="Overall Progress",
+            desc="Benchmark Progress",
             position=0,
-            leave=True,
+            leave=False,
+            disable=not show_progress,
         ) as pbar:
             for category in BenchmarkCategory:
                 category_results.append(
-                    self.run_category(category, model, num_runs, base_seed)
+                    self.run_category(
+                        category, model, num_runs, base_seed, batch_size, show_progress
+                    )
                 )
                 pbar.update(1)
 

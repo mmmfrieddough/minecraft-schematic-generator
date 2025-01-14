@@ -185,17 +185,25 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
             if was_3d:
                 structure = structure.unsqueeze(0).unsqueeze(0)
 
-            flattened = structure.view(1, -1)
+            # Flatten the spatial dimensions (depth, height, width) into one dimension
+            batch_size, channels, depth, height, width = structure.size()
+            flattened = structure.view(batch_size, channels, depth * height * width)
+            flattened = flattened.squeeze(1)  # Remove channel dimension
+
             logits = self(flattened)
             probabilities = F.softmax(logits / temperature, dim=1)
-            predictions = torch.argmax(probabilities, dim=1).view_as(structure)
+            predictions = torch.argmax(probabilities, dim=1).view(
+                batch_size, depth, height, width
+            )  # Changed to remove channel dim
 
-            result = structure.clone()
-            result[structure == 0] = predictions[structure == 0]
+            result = structure.squeeze(
+                1
+            ).clone()  # Remove channel dimension from structure
+            result[result == 0] = predictions[result == 0]
 
             # Restore original shape if needed
             if was_3d:
-                result = result.squeeze(0).squeeze(0)
+                result = result.squeeze(0)
 
             return result.to(original_device)
 
