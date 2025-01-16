@@ -21,7 +21,6 @@ class PatternBenchmark(StructureBenchmark):
         "stone_bricks",
         "mossy_stone_bricks",
         "cracked_stone_bricks",
-        "deepslate",
         "cobbled_deepslate",
         "polished_deepslate",
         "deepslate_bricks",

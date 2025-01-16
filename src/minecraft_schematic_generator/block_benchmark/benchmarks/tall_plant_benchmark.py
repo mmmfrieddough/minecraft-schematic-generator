@@ -42,7 +42,7 @@ class TallPlantBenchmark(StructureBenchmark):
             self.SCHEMATIC_MIDDLE,
             self.SCHEMATIC_MIDDLE,
             self.SCHEMATIC_MIDDLE,
-            Block("minecraft:grass_block"),
+            Block("minecraft:grass_block[snowy=false]"),
         )
         plant_state = random.choice(plant_states)
         complete_schematic.set_block(
@@ -111,13 +111,17 @@ class TallPlantBenchmark(StructureBenchmark):
                 and random.random() > 0.5
             ):
                 # Place in complete schematic
-                complete_schematic.set_block(x, y, z, Block("minecraft:grass_block"))
+                complete_schematic.set_block(
+                    x, y, z, Block("minecraft:grass_block[snowy=false]")
+                )
                 plant_state = random.choice(plant_states)
                 complete_schematic.set_block(x, y + 1, z, Block(plant_state["lower"]))
                 complete_schematic.set_block(x, y + 2, z, Block(plant_state["upper"]))
 
                 # Copy to partial schematic
-                partial_schematic.set_block(x, y, z, Block("minecraft:grass_block"))
+                partial_schematic.set_block(
+                    x, y, z, Block("minecraft:grass_block[snowy=false]")
+                )
                 partial_schematic.set_block(x, y + 1, z, Block(plant_state["lower"]))
                 partial_schematic.set_block(x, y + 2, z, Block(plant_state["upper"]))
 
