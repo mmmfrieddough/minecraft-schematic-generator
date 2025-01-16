@@ -1,4 +1,6 @@
+import multiprocessing
 import os
+from multiprocessing import Pool
 from pathlib import Path
 from typing import Dict, Set, Tuple
 
@@ -66,7 +68,7 @@ def get_schematic_data(sample_name: str, schematic_path: str) -> None:
     clean_schematic(schematic)
 
     # Convert the schematic to an array
-    schematic_data = converter.schematic_to_array(schematic)
+    schematic_data = converter.schematic_to_array(schematic, update_mapping=True)
 
     return schematic_data
 
@@ -113,19 +115,37 @@ def split_data(
     return splits
 
 
+def process_schematic_file(args):
+    """Helper function to process individual schematic files"""
+    file, dataset_path, sample_name = args
+    schematic_path = os.path.join(dataset_path, file)
+    try:
+        structure = get_schematic_data(sample_name, schematic_path)
+        return sample_name, structure
+    except Exception as e:
+        print(f"Failed to process schematic: {file}")
+        print(e)
+        return None
+
+
 def load_schematics(
     schematics_dir: str,
     hdf5_path: str,
     split_ratios: Tuple[float, float, float],
     dataset_names: list[str] = None,
     validation_only_datasets: list[str] = [],
+    num_workers: int = None,
 ) -> None:
-    with h5py.File(hdf5_path, "w") as hdf5_file:
-        print(f"Loading schematics from {schematics_dir} into {hdf5_path}")
+    if num_workers is None:
+        num_workers = max(1, multiprocessing.cpu_count() - 1)
 
-        total_files = sum([len(files) for _, _, files in os.walk(schematics_dir)])
-        pbar_overral = tqdm(total=total_files, desc="Processing schematic files")
+    print(f"Loading schematics from {schematics_dir} into {hdf5_path}")
 
+    total_files = sum([len(files) for _, _, files in os.walk(schematics_dir)])
+    pbar_overral = tqdm(total=total_files, desc="Processing schematic files")
+
+    # Create process pool outside the loop
+    with Pool(num_workers) as pool:
         for root, dirs, files in os.walk(schematics_dir):
             for dataset in dirs:
                 if dataset_names and dataset not in dataset_names:
@@ -152,28 +172,34 @@ def load_schematics(
                     splits = split_data(dataset_path, split_ratios)
 
                 for set_type, files in splits.items():
-                    set_group = hdf5_file.require_group(set_type).require_group(dataset)
+                    # Prepare arguments for parallel processing
+                    process_args = [
+                        (file, dataset_path, os.path.splitext(file)[0])
+                        for file in files
+                    ]
 
-                    names = []
-                    structures = []
-
-                    pbar_set = tqdm(
-                        files, desc=f"Processing {dataset} {set_type}", leave=False
+                    # Process files in parallel
+                    results = list(
+                        tqdm(
+                            pool.imap(process_schematic_file, process_args),
+                            total=len(process_args),
+                            desc=f"Processing {dataset} {set_type}",
+                            leave=False,
+                        )
                     )
-                    for file in pbar_set:
-                        sample_name = os.path.splitext(file)[0]
-                        schematic_path = os.path.join(dataset_path, file)
-                        try:
-                            structure = get_schematic_data(sample_name, schematic_path)
-                            names.append(sample_name)
-                            structures.append(structure)
-                        except Exception as e:
-                            print(f"Failed to process schematic: {file}")
-                            print(e)
-                            continue
 
-                    set_group.create_dataset("names", data=names)
-                    set_group.create_dataset("structures", data=structures)
+                    # Filter out None results and separate names and structures
+                    valid_results = [r for r in results if r is not None]
+                    names, structures = (
+                        zip(*valid_results) if valid_results else ([], [])
+                    )
+
+                    with h5py.File(hdf5_path, "a") as hdf5_file:
+                        set_group = hdf5_file.require_group(set_type).require_group(
+                            dataset
+                        )
+                        set_group.create_dataset("names", data=names)
+                        set_group.create_dataset("structures", data=structures)
 
                     pbar_overral.update(len(files))
 
