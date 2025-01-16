@@ -18,13 +18,8 @@ class CategoryResult:
         scores = [result.average for result in self.benchmark_results]
         return np.mean(scores)
 
-    @property
-    def std_dev(self) -> float:
-        scores = [result.average for result in self.benchmark_results]
-        return np.std(scores)
-
     def __str__(self) -> str:
-        result = f"\n{self.name}: {self.average:.2%} (±{self.std_dev:.2%})\n"
+        result = f"\n{self.name}: {self.average:.2%}\n"
         for benchmark_result in self.benchmark_results:
             result += f"  {benchmark_result}\n"
         return result

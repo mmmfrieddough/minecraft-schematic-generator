@@ -163,6 +163,8 @@ class DoorBenchmark(StructureBenchmark):
 
         # Remove one half of each door
         for door_parts in door_groups.values():
+            if random.random() > 0.75:
+                continue
             door_parts.sort(key=lambda p: p[0][1])
             pos_to_remove, _ = random.choice(door_parts)
             partial_schematic.set_block(

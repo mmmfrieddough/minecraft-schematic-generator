@@ -173,8 +173,14 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
             probabilities[1].item(),
         )
 
-    def one_shot_inference(self, structure, temperature=1.0):
-        """Return a new structure with predictions for masked positions."""
+    def one_shot_inference(self, structure, temperature=1.0, use_greedy=False):
+        """Return a new structure with predictions for masked positions.
+
+        Args:
+            structure: Input structure tensor
+            temperature: Temperature for softmax sampling (ignored if use_greedy=True)
+            use_greedy: If True, always select most likely token without sampling
+        """
         with torch.no_grad():
             # Store original device and dimensionality
             original_device = structure.device
@@ -191,10 +197,18 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
             flattened = flattened.squeeze(1)  # Remove channel dimension
 
             logits = self(flattened)
-            probabilities = F.softmax(logits / temperature, dim=1)
-            predictions = torch.argmax(probabilities, dim=1).view(
-                batch_size, depth, height, width
-            )  # Changed to remove channel dim
+
+            if use_greedy:
+                predictions = torch.argmax(logits, dim=1)
+            else:
+                # Reshape logits to [batch_size * sequence_length, num_classes]
+                reshaped_logits = logits.permute(0, 2, 1).reshape(-1, logits.size(1))
+                probabilities = F.softmax(reshaped_logits / temperature, dim=1)
+                predictions = torch.multinomial(probabilities, num_samples=1).view(
+                    batch_size, -1
+                )
+
+            predictions = predictions.view(batch_size, depth, height, width)
 
             result = structure.squeeze(
                 1

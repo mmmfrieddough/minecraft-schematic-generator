@@ -5,7 +5,7 @@ from minecraft_schematic_generator.server import app
 if __name__ == "__main__":
     app.state.mode = "local"
     app.state.checkpoint_path = (
-        "lightning_logs/center_data/version_13/checkpoints/last.ckpt"
+        "lightning_logs/mini_model/version_8/checkpoints/last.ckpt"
     )
 
     print("Starting server")

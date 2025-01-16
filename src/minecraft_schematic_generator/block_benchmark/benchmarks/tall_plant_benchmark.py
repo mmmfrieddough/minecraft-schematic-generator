@@ -145,6 +145,8 @@ class TallPlantBenchmark(StructureBenchmark):
 
         # Remove one half of each plant
         for plant_parts in plant_groups.values():
+            if random.random() > 0.75:
+                continue
             plant_parts.sort(key=lambda p: p[0][1])
             pos_to_remove, _ = random.choice(plant_parts)
             partial_schematic.set_block(

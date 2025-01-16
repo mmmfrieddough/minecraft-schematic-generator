@@ -179,35 +179,13 @@ class PatternBenchmark(StructureBenchmark):
 
         # Get valid removable positions (those with adjacent blocks)
         removed_positions = set()
-        removable_positions = []
-
-        for pos in placed_positions:
-            # Check all 6 adjacent positions
-            adjacent_positions = [
-                (pos[0] + 1, pos[1], pos[2]),
-                (pos[0] - 1, pos[1], pos[2]),
-                (pos[0], pos[1] + 1, pos[2]),
-                (pos[0], pos[1] - 1, pos[2]),
-                (pos[0], pos[1], pos[2] + 1),
-                (pos[0], pos[1], pos[2] - 1),
-            ]
-
-            # Count how many adjacent positions have blocks
-            adjacent_blocks = sum(
-                1 for adj_pos in adjacent_positions if adj_pos in placed_positions
-            )
-
-            # Only add to removable if it would leave at least one adjacent block
-            if (
-                adjacent_blocks > 1
-            ):  # Need more than 1 so removing this block leaves at least 1
-                removable_positions.append(pos)
 
         # Randomly remove blocks from valid positions
-        random.shuffle(removable_positions)
+        placed_positions_list = list(placed_positions)
+        random.shuffle(placed_positions_list)
         target_removals = int(len(placed_positions) * self.removal_chance)
 
-        for pos in removable_positions:
+        for pos in placed_positions_list:
             if len(removed_positions) >= target_removals:
                 break
 

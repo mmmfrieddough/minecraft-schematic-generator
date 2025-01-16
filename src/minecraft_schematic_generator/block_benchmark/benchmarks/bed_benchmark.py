@@ -190,6 +190,8 @@ class BedBenchmark(StructureBenchmark):
 
         # Remove one half of each bed
         for foot_pos, head_pos in bed_groups.values():
+            if random.random() > 0.75:
+                continue
             pos_to_remove = random.choice([foot_pos, head_pos])
             partial_schematic.set_block(
                 pos_to_remove[0],

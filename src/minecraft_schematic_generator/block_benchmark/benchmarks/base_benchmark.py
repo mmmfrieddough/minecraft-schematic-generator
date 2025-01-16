@@ -99,7 +99,7 @@ class BaseBenchmark(ABC):
             # Run model on batch
             model_input_batch = torch.stack(batch_inputs)
             model_input_batch = model_input_batch.unsqueeze(1)
-            model_outputs = model.one_shot_inference(model_input_batch, 0.7)
+            model_outputs = model.one_shot_inference(model_input_batch, 0.7, True)
 
             # Compare batch results
             for j, output in enumerate(model_outputs):

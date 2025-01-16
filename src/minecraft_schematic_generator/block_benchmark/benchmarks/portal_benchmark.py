@@ -2,7 +2,7 @@ import random
 from itertools import product
 from typing import Dict, Set, Tuple
 
-from schempy import Block
+from schempy import Block, Schematic
 
 from .structure_benchmark import StructureBenchmark
 
@@ -185,39 +185,82 @@ class PortalBenchmark(StructureBenchmark):
             attempts -= 1
 
         # Remove random blocks and return removed positions
-        removed_positions = self.remove_portal_blocks(partial_schematic)
+        removed_positions = self.remove_portal_blocks(
+            partial_schematic, complete_schematic
+        )
         return removed_positions
 
-    def remove_portal_blocks(self, partial_schematic):
+    def has_adjacent_solid_block(
+        self, schematic: Schematic, x: int, y: int, z: int
+    ) -> bool:
+        """Check if position has at least one adjacent solid block in partial schematic"""
+        adjacents = [
+            (x + 1, y, z),
+            (x - 1, y, z),
+            (x, y + 1, z),
+            (x, y - 1, z),
+            (x, y, z + 1),
+            (x, y, z - 1),
+        ]
+
+        for ax, ay, az in adjacents:
+            # Check if coordinates are within schematic bounds
+            if (
+                0 <= ax < self.SCHEMATIC_SIZE
+                and 0 <= ay < self.SCHEMATIC_SIZE
+                and 0 <= az < self.SCHEMATIC_SIZE
+            ):
+                block = schematic.get_block(ax, ay, az)
+                if block and "minecraft:air" not in str(block):
+                    return True
+        return False
+
+    def remove_portal_blocks(self, partial_schematic, complete_schematic):
         removed_positions = set()
+        blocks_to_remove = []  # Track all blocks we want to remove
 
         # For each portal structure
         for base_pos, portal_blocks in self.portal_groups.items():
+            if random.random() > 0.75:
+                continue
+
             frame_blocks = self.portal_frames[base_pos]
 
-            # Remove some portal blocks (ensuring at least one remains)
+            # Select portal blocks to remove (ensuring at least one remains)
             portal_blocks_list = list(portal_blocks)
             num_portal_blocks_to_remove = random.randint(1, len(portal_blocks) - 1)
-            blocks_to_remove = random.sample(
+            portal_blocks_to_remove = random.sample(
                 portal_blocks_list, num_portal_blocks_to_remove
             )
 
-            # Remove some frame blocks
+            # Select frame blocks to remove
             frame_blocks_list = list(frame_blocks)
             num_frame_blocks_to_remove = random.randint(0, len(frame_blocks) // 2)
             frame_blocks_to_remove = random.sample(
                 frame_blocks_list, num_frame_blocks_to_remove
             )
+
+            blocks_to_remove.extend(portal_blocks_to_remove)
             blocks_to_remove.extend(frame_blocks_to_remove)
 
-            # Remove the selected blocks but only track non-corner blocks
-            for pos in blocks_to_remove:
+        # Remove all selected blocks first
+        for pos in blocks_to_remove:
+            if not self.is_corner_block(pos, base_pos):
                 partial_schematic.set_block(*pos, Block("minecraft:air"))
-                # Only add to removed_positions if it's not a corner block
-                if not self.is_corner_block(pos, base_pos):
-                    removed_positions.add(pos)
+                removed_positions.add(pos)
 
-        return removed_positions
+        # Check all removed positions and restore any that don't have adjacent solid blocks
+        restored_positions = set()
+        for pos in removed_positions:
+            if not self.has_adjacent_solid_block(partial_schematic, *pos):
+                x, y, z = pos
+                # Get the original block type based on whether it was a portal or frame block
+                block = complete_schematic.get_block(x, y, z)
+                partial_schematic.set_block(x, y, z, block)
+                restored_positions.add(pos)
+
+        # Return only the positions that remained removed
+        return removed_positions - restored_positions
 
     def is_corner_block(
         self, pos: Tuple[int, int, int], base_pos: Tuple[int, int, int]
