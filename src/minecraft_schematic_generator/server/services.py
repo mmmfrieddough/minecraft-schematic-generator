@@ -13,7 +13,13 @@ class StructureGenerator:
     def convert_block_to_token(self, block_str: str) -> int:
         block = BlockPalette._parse_block_str(block_str)
         clean_block_properties(block)
-        return self.block_token_mapper.block_to_token(block)
+        try:
+            return self.block_token_mapper.block_to_token(block)
+        except KeyError("Block not found in mapping"):
+            print(
+                f"WARN: Block {block_str} not found in mapping. Returning unused token."
+            )
+            return self.block_token_mapper.find_next_available_token()
 
     def prepare_input_tensor(self, structure):
         input_structure_ids = [

@@ -5,10 +5,17 @@ from schempy import Block
 
 
 class BlockTokenMapper:
+    def find_next_available_token(self) -> int:
+        while self.next_available_token in self.token_to_block_id_map:
+            self.next_available_token += 1
+        return self.next_available_token
+
     def __init__(self):
         # Get the data directory path
         data_path = resources.files("minecraft_schematic_generator.converter")
         self.mapping_path = data_path.joinpath("block_state_mapping.json")
+
+        self.next_available_token = 1
 
         # Load mappings or initialize if not present
         try:
@@ -18,12 +25,10 @@ class BlockTokenMapper:
             self.token_to_block_id_map = {
                 v: k for k, v in self.block_id_to_token_map.items()
             }
-            self.next_available_token = max(self.token_to_block_id_map.keys()) + 1
         except FileNotFoundError:
             self.block_id_to_token_map = {}
             self.token_to_block_id_map = {}
-            self.next_available_token = 1
-            self.block_to_token(Block("minecraft:air"))
+            self.block_to_token(Block("minecraft:air"), update_mapping=True)
 
     def id_to_block(self, id: str) -> Block:
         # Convert the properties to a dict
@@ -53,21 +58,22 @@ class BlockTokenMapper:
         block_id = self.id_to_block(id)
         return block_id
 
-    def block_str_to_token(self, block_str: str) -> int:
+    def block_str_to_token(self, block_str: str, update_mapping: bool = False) -> int:
         # If the block ID has not been tokenized, assign a new token
         if block_str not in self.block_id_to_token_map:
-            self.block_id_to_token_map[block_str] = self.next_available_token
-            # Update the reverse mapping as well
-            self.token_to_block_id_map[self.next_available_token] = block_str
-            self.next_available_token += 1
+            if not update_mapping:
+                raise KeyError(f"Block {block_str} not found in mapping")
+
+            token = self.find_next_available_token()
+            self.block_id_to_token_map[block_str] = token
+            self.token_to_block_id_map[token] = block_str
             self.save_mapping()
 
         # Return the token
         return self.block_id_to_token_map[block_str]
 
-    def block_to_token(self, block: Block) -> int:
+    def block_to_token(self, block: Block, update_mapping: bool = False) -> int:
         # Encode the block ID
         block_str = str(block)
 
-        return self.block_str_to_token(block_str)
-        return self.block_str_to_token(block_str)
+        return self.block_str_to_token(block_str, update_mapping)
