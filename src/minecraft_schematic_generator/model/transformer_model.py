@@ -100,24 +100,30 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         self.max_sequence_length = max_sequence_length
 
         self.embedding = nn.Embedding(num_classes, model_dim)
+
         self.positional_encoding = PositionalEncoding(model_dim, max_sequence_length)
         self.embedding_dropout = nn.Dropout(embedding_dropout)
         decoder_layer = nn.TransformerDecoderLayer(
             model_dim, num_heads, dropout=decoder_dropout
         )
         self.decoder = nn.TransformerDecoder(decoder_layer, num_layers)
+
         self.output_layer = nn.Linear(model_dim, num_classes)
+        self.output_layer.weight = self.embedding.weight  # Share weights
 
         self._init_weights()
 
     def _init_weights(self):
         nn.init.xavier_uniform_(self.embedding.weight)
+
         for layer in self.decoder.layers:
             nn.init.xavier_uniform_(layer.self_attn.in_proj_weight)
             nn.init.xavier_uniform_(layer.self_attn.out_proj.weight)
             nn.init.xavier_uniform_(layer.linear1.weight)
             nn.init.xavier_uniform_(layer.linear2.weight)
-        nn.init.xavier_uniform_(self.output_layer.weight)
+
+        if self.output_layer.bias is not None:
+            nn.init.zeros_(self.output_layer.bias)
 
     def forward(self, structure_flat: torch.Tensor) -> torch.Tensor:
         # Embed the sequence
