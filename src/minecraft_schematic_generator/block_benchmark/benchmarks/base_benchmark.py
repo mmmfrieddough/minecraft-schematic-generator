@@ -69,43 +69,57 @@ class BaseBenchmark(ABC):
         self, model, num_runs, base_seed, batch_size, show_progress
     ) -> BenchmarkResult:
         """Run multiple tests with batched model inference"""
-        # Gather all inputs
-        all_inputs = []
-        all_comparison_data = []
+        # Store original training mode
+        was_training = model.training
 
-        for seed in tqdm(
-            range(base_seed, base_seed + num_runs),
-            desc=f"{self.name} - Preparing",
-            leave=False,
-            disable=not show_progress,
-        ):
-            model_input, comparison_data = self.get_model_inputs(seed)
-            all_inputs.append(model_input)
-            all_comparison_data.append(comparison_data)
+        # Set model to evaluation mode
+        model.eval()
 
-        # Process in batches
-        scores = []
-        num_batches = (num_runs + batch_size - 1) // batch_size  # Ceiling division
-        for i in tqdm(
-            range(0, num_runs, batch_size),
-            desc=f"{self.name} - Processing",
-            total=num_batches,
-            leave=False,
-            disable=not show_progress,
-        ):
-            batch_inputs = all_inputs[i : i + batch_size]
-            batch_comparison = all_comparison_data[i : i + batch_size]
+        try:
+            # Gather all inputs
+            all_inputs = []
+            all_comparison_data = []
 
-            # Run model on batch
-            model_input_batch = torch.stack(batch_inputs)
-            model_input_batch = model_input_batch.unsqueeze(1)
-            model_outputs = model.one_shot_inference(model_input_batch, 0.7, True)
+            for seed in tqdm(
+                range(base_seed, base_seed + num_runs),
+                desc=f"{self.name} - Preparing",
+                leave=False,
+                disable=not show_progress,
+            ):
+                model_input, comparison_data = self.get_model_inputs(seed)
+                all_inputs.append(model_input)
+                all_comparison_data.append(comparison_data)
 
-            # Compare batch results
-            for j, output in enumerate(model_outputs):
-                score = self.compare_model_output(
-                    output, batch_comparison[j], base_seed + i + j
-                )
-                scores.append(score)
+            # Process in batches
+            scores = []
+            num_batches = (num_runs + batch_size - 1) // batch_size  # Ceiling division
+            with torch.no_grad():
+                for i in tqdm(
+                    range(0, num_runs, batch_size),
+                    desc=f"{self.name} - Processing",
+                    total=num_batches,
+                    leave=False,
+                    disable=not show_progress,
+                ):
+                    batch_inputs = all_inputs[i : i + batch_size]
+                    batch_comparison = all_comparison_data[i : i + batch_size]
 
-        return BenchmarkResult(self.name, scores)
+                    # Run model on batch
+                    model_input_batch = torch.stack(batch_inputs)
+                    model_input_batch = model_input_batch.unsqueeze(1)
+                    model_outputs = model.one_shot_inference(
+                        model_input_batch, 0.7, True
+                    )
+
+                    # Compare batch results
+                    for j, output in enumerate(model_outputs):
+                        score = self.compare_model_output(
+                            output, batch_comparison[j], base_seed + i + j
+                        )
+                        scores.append(score)
+
+            return BenchmarkResult(self.name, scores)
+        finally:
+            # Restore original training mode
+            if was_training:
+                model.train()
