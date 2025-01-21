@@ -1,6 +1,7 @@
 from typing import List
 
 import h5py
+import torch
 from lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader
 from tqdm import tqdm
@@ -75,6 +76,8 @@ class MinecraftDataModule(LightningDataModule):
             drop_last=True,
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
+            pin_memory=True,
+            prefetch_factor=2 if self.num_workers > 0 else None,
         )
 
     def val_dataloader(self):
@@ -98,10 +101,16 @@ class MinecraftDataModule(LightningDataModule):
 
             # Create a DataLoader for the combined datasets
             if combined_val_datasets:
+                combined_dataset = ConcatDataset(combined_val_datasets)
+
+                # Shuffle the combined dataset once
+                indices = torch.randperm(len(combined_dataset))
+                combined_dataset = torch.utils.data.Subset(combined_dataset, indices)
+
                 combined_val_loader = DataLoader(
-                    ConcatDataset(combined_val_datasets),
+                    combined_dataset,
                     batch_size=self.batch_size,
-                    shuffle=True,
+                    shuffle=False,
                     drop_last=False,
                     num_workers=self.num_workers,
                     persistent_workers=self.persistent_workers,
@@ -116,7 +125,7 @@ class MinecraftDataModule(LightningDataModule):
                 dataloader = DataLoader(
                     separate_val_datasets[i],
                     batch_size=self.batch_size,
-                    shuffle=True,
+                    shuffle=False,
                     drop_last=False,
                     num_workers=self.num_workers,
                     persistent_workers=self.persistent_workers,
@@ -128,7 +137,7 @@ class MinecraftDataModule(LightningDataModule):
                 DataLoader(
                     dataset,
                     batch_size=self.batch_size,
-                    shuffle=True,
+                    shuffle=False,
                     drop_last=False,
                     num_workers=self.num_workers,
                     persistent_workers=self.persistent_workers,
@@ -147,7 +156,7 @@ class MinecraftDataModule(LightningDataModule):
             test_loader = DataLoader(
                 test_datasets,
                 batch_size=self.batch_size,
-                shuffle=True,
+                shuffle=False,
                 drop_last=False,
                 num_workers=self.num_workers,
                 persistent_workers=self.persistent_workers,
@@ -158,7 +167,7 @@ class MinecraftDataModule(LightningDataModule):
                 DataLoader(
                     dataset,
                     batch_size=self.batch_size,
-                    shuffle=True,
+                    shuffle=False,
                     drop_last=False,
                     num_workers=self.num_workers,
                     persistent_workers=self.persistent_workers,
