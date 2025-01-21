@@ -381,7 +381,7 @@ class WorldSampler:
         all_chunks_queue = Queue()
         if self.chunks_limit:
             remaining_chunk_coords = set(
-                random.sample(remaining_chunk_coords, self.chunks_limit)
+                random.sample(list(remaining_chunk_coords), self.chunks_limit)
             )
         for chunk_coords in remaining_chunk_coords:
             all_chunks_queue.put(chunk_coords)
@@ -671,7 +671,7 @@ class WorldSampler:
         relevant_chunks_queue = Queue()
         if self.samples_limit:
             remaining_relevant_chunks = set(
-                random.sample(remaining_relevant_chunks, self.samples_limit)
+                random.sample(list(remaining_relevant_chunks), self.samples_limit)
             )
         for chunk_coords in remaining_relevant_chunks:
             relevant_chunks_queue.put(chunk_coords)
