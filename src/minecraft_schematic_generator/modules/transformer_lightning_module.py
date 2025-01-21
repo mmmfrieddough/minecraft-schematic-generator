@@ -75,9 +75,8 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
 
         return predicted_structures, loss, perplexity
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch, _):
         with record_function("training_step_total"):
-            # Profile the data preprocessing
             with record_function("data_setup"):
                 full_structures, masked_structures = batch
                 masked_structures = masked_structures.unsqueeze(1)
@@ -86,21 +85,17 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
                 )
                 mask = mask.squeeze(1)
 
-            # Profile the forward pass and loss calculation
             with record_function("forward_and_loss"):
-                with torch.autocast(device_type="cuda"):
-                    _, loss, perplexity = self._forward_and_loss(batch)
+                _, loss, perplexity = self._forward_and_loss(batch)
 
-            # Profile the logging
             with record_function("logging"):
                 self.log("train_loss", loss)
                 self.log("train_perplexity", perplexity)
 
         return loss
 
-    def validation_step(self, batch, batch_idx, dataloader_idx=0):
-        with torch.autocast(device_type="cuda"):
-            predictions, loss, perplexity = self._forward_and_loss(batch)
+    def validation_step(self, batch, _, dataloader_idx=0):
+        predictions, loss, perplexity = self._forward_and_loss(batch)
         data_module = self.trainer.datamodule
         dataset_name = data_module.get_val_dataset_name(dataloader_idx)
         self.log(

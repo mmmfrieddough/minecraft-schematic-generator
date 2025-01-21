@@ -9,6 +9,7 @@ from minecraft_schematic_generator.modules import (
     BlockBenchmarkCallback,
     LightningTransformerMinecraftStructureGenerator,
     MinecraftDataModule,
+    SaveOnInterruptCallback,
 )
 
 
@@ -50,6 +51,9 @@ def main():
     best_model_checkpoint_callback = ModelCheckpoint(
         save_top_k=2, monitor="val_loss", mode="min"
     )
+    save_on_interrupt_callback = SaveOnInterruptCallback(
+        checkpoint_callback=latest_checkpoint_callback
+    )
     lr_monitor_callback = LearningRateMonitor()
     block_benchmark_callback = BlockBenchmarkCallback(num_runs=200)
 
@@ -62,9 +66,11 @@ def main():
         val_check_interval=0.1,
         limit_val_batches=0.2,
         accumulate_grad_batches=4,
+        precision="bf16-mixed",
         callbacks=[
             latest_checkpoint_callback,
             best_model_checkpoint_callback,
+            save_on_interrupt_callback,
             lr_monitor_callback,
             block_benchmark_callback,
         ],

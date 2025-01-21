@@ -3,10 +3,10 @@ from typing import List
 import h5py
 import torch
 from lightning import LightningDataModule
-from torch.utils.data import ConcatDataset, DataLoader
+from torch.utils.data import ConcatDataset
 from tqdm import tqdm
 
-from minecraft_schematic_generator.model import MinecraftDataset
+from minecraft_schematic_generator.model import MinecraftDataset, ResumableDataLoader
 
 
 class MinecraftDataModule(LightningDataModule):
@@ -29,6 +29,21 @@ class MinecraftDataModule(LightningDataModule):
         self.combine_datasets = combine_datasets
         self.separate_validation_datasets = separate_validation_datasets
         self.val_dataset_names = {}
+        self._rng_state = None
+
+    def state_dict(self) -> dict:
+        """Save datamodule state."""
+        return {
+            "rng_state": torch.get_rng_state(),
+            "val_dataset_names": self.val_dataset_names,
+        }
+
+    def load_state_dict(self, state_dict: dict) -> None:
+        """Load datamodule state."""
+        self._rng_state = state_dict.get("rng_state")
+        self.val_dataset_names = state_dict.get("val_dataset_names", {})
+        if self._rng_state is not None:
+            torch.set_rng_state(self._rng_state)
 
     def get_val_dataset_name(self, dataloader_idx: int):
         return self.val_dataset_names[dataloader_idx]
@@ -69,7 +84,11 @@ class MinecraftDataModule(LightningDataModule):
     def train_dataloader(self):
         train_datasets = ConcatDataset([dataset for _, dataset in self.train_datasets])
         assert len(train_datasets) > 0, "Training DataLoader is empty."
-        return DataLoader(
+
+        if self._rng_state is not None:
+            torch.set_rng_state(self._rng_state)
+
+        return ResumableDataLoader(
             train_datasets,
             batch_size=self.batch_size,
             shuffle=True,
@@ -107,7 +126,7 @@ class MinecraftDataModule(LightningDataModule):
                 indices = torch.randperm(len(combined_dataset))
                 combined_dataset = torch.utils.data.Subset(combined_dataset, indices)
 
-                combined_val_loader = DataLoader(
+                combined_val_loader = ResumableDataLoader(
                     combined_dataset,
                     batch_size=self.batch_size,
                     shuffle=False,
@@ -122,7 +141,7 @@ class MinecraftDataModule(LightningDataModule):
 
             # Add separate DataLoaders for datasets not to be combined
             for i in range(len(separate_val_datasets)):
-                dataloader = DataLoader(
+                dataloader = ResumableDataLoader(
                     separate_val_datasets[i],
                     batch_size=self.batch_size,
                     shuffle=False,
@@ -134,7 +153,7 @@ class MinecraftDataModule(LightningDataModule):
                 self.val_dataset_names[i + 1] = separate_val_dataset_names[i]
         else:
             val_loaders = [
-                DataLoader(
+                ResumableDataLoader(
                     dataset,
                     batch_size=self.batch_size,
                     shuffle=False,
@@ -153,7 +172,7 @@ class MinecraftDataModule(LightningDataModule):
             test_datasets = ConcatDataset(
                 [dataset for _, dataset in self.test_datasets]
             )
-            test_loader = DataLoader(
+            test_loader = ResumableDataLoader(
                 test_datasets,
                 batch_size=self.batch_size,
                 shuffle=False,
@@ -164,7 +183,7 @@ class MinecraftDataModule(LightningDataModule):
             test_loaders = [test_loader]
         else:
             test_loaders = [
-                DataLoader(
+                ResumableDataLoader(
                     dataset,
                     batch_size=self.batch_size,
                     shuffle=False,
