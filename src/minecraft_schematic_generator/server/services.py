@@ -11,11 +11,11 @@ class StructureGenerator:
         self.block_token_mapper = BlockTokenMapper()
 
     def convert_block_to_token(self, block_str: str) -> int:
-        block = BlockPalette._parse_block_str(block_str)
+        block = BlockPalette._parse_block_str(block_str.lower())
         clean_block_properties(block)
         try:
             return self.block_token_mapper.block_to_token(block)
-        except KeyError("Block not found in mapping"):
+        except KeyError:
             print(
                 f"WARN: Block {block_str} not found in mapping. Returning unused token."
             )
