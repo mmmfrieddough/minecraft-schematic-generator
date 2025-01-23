@@ -14,11 +14,13 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         num_classes,
         max_sequence_length,
         embedding_dropout,
+        embedding_dim,
         model_dim,
         num_heads,
         num_layers,
         decoder_dropout,
         max_learning_rate,
+        warmup_proportion,
     ):
         super().__init__()
         self.model = TransformerMinecraftStructureGenerator(
@@ -29,9 +31,11 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
             num_heads=num_heads,
             num_layers=num_layers,
             decoder_dropout=decoder_dropout,
+            embedding_dim=embedding_dim,
         )
         self.num_classes = num_classes
         self.max_learning_rate = max_learning_rate
+        self.warmup_proportion = warmup_proportion
         self.validation_step_outputs = []
         self.save_hyperparameters()
 
@@ -328,6 +332,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
                 optimizer,
                 max_lr=self.max_learning_rate,
                 total_steps=self.trainer.estimated_stepping_batches,
+                pct_start=self.warmup_proportion,
             ),
             "interval": "step",
             "frequency": 1,
