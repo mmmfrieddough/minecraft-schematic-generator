@@ -34,11 +34,13 @@ class WorldSampler:
         sample_offset,
         sample_size,
         sample_interested_block_threshold,
+        sample_minimum_air_threshold,
         sample_progress_save_interval,
         sampling_purge_interval,
         clear_worker_directories=True,
-        chunks_limit=None,
-        samples_limit=None,
+        chunk_search_limit=None,
+        sample_search_limit=None,
+        sample_limit=None,
         num_workers=os.cpu_count(),
     ):
         self.schematic_directory = schematic_directory
@@ -48,12 +50,14 @@ class WorldSampler:
         self.sample_offset = sample_offset
         self.sample_size = sample_size
         self.sample_interested_block_threshold = sample_interested_block_threshold
+        self.sample_minimum_air_threshold = sample_minimum_air_threshold
         self.sample_progress_save_interval = sample_progress_save_interval
         self.sampling_purge_interval = sampling_purge_interval
         self.num_workers = num_workers
         self.clear_worker_directories = clear_worker_directories
-        self.chunks_limit = chunks_limit
-        self.samples_limit = samples_limit
+        self.chunk_search_limit = chunk_search_limit
+        self.sample_search_limit = sample_search_limit
+        self.sample_limit = sample_limit
 
     def load_interested_blocks(self, directory: str) -> None:
         """Loads the interested blocks from the file"""
@@ -379,9 +383,12 @@ class WorldSampler:
 
         # Create a queue and add all chunk coordinates to it
         all_chunks_queue = Queue()
-        if self.chunks_limit:
+        if (
+            self.chunk_search_limit
+            and len(remaining_chunk_coords) > self.chunk_search_limit
+        ):
             remaining_chunk_coords = set(
-                random.sample(list(remaining_chunk_coords), self.chunks_limit)
+                random.sample(list(remaining_chunk_coords), self.chunk_search_limit)
             )
         for chunk_coords in remaining_chunk_coords:
             all_chunks_queue.put(chunk_coords)
@@ -505,11 +512,12 @@ class WorldSampler:
                     chunk, translator, dimension
                 )
 
-        # Precompute interesting block positions
+        # Precompute interesting block and air block positions
         max_pos = 15 + self.sample_size
         y_size = max_height - min_height
         x_start, z_start = chunk_coords_to_block_coords(*chunk_coords)
-        block = np.zeros((max_pos, y_size, max_pos))
+        interested_block = np.zeros((max_pos, y_size, max_pos))
+        air_block = np.zeros((max_pos, y_size, max_pos))
         original_block = np.zeros((max_pos, y_size, max_pos))
         for j in range(y_size):
             for i in range(max_pos):
@@ -523,11 +531,16 @@ class WorldSampler:
                     block_value = blocks[x, y, z]
                     original_block[i, j, k] = block_value
                     chunk_interesting_indices = interested_indices[chunk_x][chunk_z]
-                    block[i, j, k] = (
+                    interested_block[i, j, k] = (
                         1 if block_value in chunk_interesting_indices else 0
                     )
+                    air_block[i, j, k] = 1 if block_value == 0 else 0
 
-        marked_count = np.cumsum(np.cumsum(np.cumsum(block, axis=0), axis=1), axis=2)
+        # Calculate cumulative sums for both interested blocks and air blocks
+        marked_count = np.cumsum(
+            np.cumsum(np.cumsum(interested_block, axis=0), axis=1), axis=2
+        )
+        air_count = np.cumsum(np.cumsum(np.cumsum(air_block, axis=0), axis=1), axis=2)
 
         # Iterate through grid of possible selection start positions
         x_offset, y_offset, z_offset = self._get_deterministic_random_offsets(
@@ -554,26 +567,43 @@ class WorldSampler:
                         continue
                     found_valid_position_y = True
 
+                    # Calculate total marked (interested) blocks
                     total_marked = marked_count[i + m - 1][j + m - 1][k + m - 1]
+                    # Calculate total air blocks
+                    total_air = air_count[i + m - 1][j + m - 1][k + m - 1]
 
+                    # Subtract previous slices for both counts
                     if i > 0:
                         total_marked -= marked_count[i - 1][j + m - 1][k + m - 1]
+                        total_air -= air_count[i - 1][j + m - 1][k + m - 1]
                     if j > 0:
                         total_marked -= marked_count[i + m - 1][j - 1][k + m - 1]
+                        total_air -= air_count[i + m - 1][j - 1][k + m - 1]
                     if k > 0:
                         total_marked -= marked_count[i + m - 1][j + m - 1][k - 1]
+                        total_air -= air_count[i + m - 1][j + m - 1][k - 1]
 
+                    # Add back double-subtracted regions
                     if i > 0 and j > 0:
                         total_marked += marked_count[i - 1][j - 1][k + m - 1]
+                        total_air += air_count[i - 1][j - 1][k + m - 1]
                     if i > 0 and k > 0:
                         total_marked += marked_count[i - 1][j + m - 1][k - 1]
+                        total_air += air_count[i - 1][j + m - 1][k - 1]
                     if j > 0 and k > 0:
                         total_marked += marked_count[i + m - 1][j - 1][k - 1]
+                        total_air += air_count[i + m - 1][j - 1][k - 1]
 
+                    # Subtract back triple-subtracted regions
                     if i > 0 and j > 0 and k > 0:
                         total_marked -= marked_count[i - 1][j - 1][k - 1]
+                        total_air -= air_count[i - 1][j - 1][k - 1]
 
-                    if total_marked > self.sample_interested_block_threshold:
+                    # Check both conditions
+                    if (
+                        total_marked > self.sample_interested_block_threshold
+                        and total_air > self.sample_minimum_air_threshold
+                    ):
                         x = x_start + i
                         y = j + min_height
                         z = z_start + k
@@ -669,9 +699,12 @@ class WorldSampler:
 
         # Create a queue and add all chunk coordinates to it
         relevant_chunks_queue = Queue()
-        if self.samples_limit:
+        if (
+            self.sample_search_limit
+            and len(remaining_relevant_chunks) > self.sample_search_limit
+        ):
             remaining_relevant_chunks = set(
-                random.sample(list(remaining_relevant_chunks), self.samples_limit)
+                random.sample(list(remaining_relevant_chunks), self.sample_search_limit)
             )
         for chunk_coords in remaining_relevant_chunks:
             relevant_chunks_queue.put(chunk_coords)
@@ -818,11 +851,15 @@ class WorldSampler:
 
         # Filter out positions that already have a schematic
         world_name = os.path.relpath(directory, root_directory)
-        sample_positions = [
-            p
-            for p in all_sample_positions
-            if not os.path.exists(self._get_schematic_path(world_name, dimension, p))
-        ]
+        sample_positions = set(
+            [
+                p
+                for p in all_sample_positions
+                if not os.path.exists(
+                    self._get_schematic_path(world_name, dimension, p)
+                )
+            ]
+        )
         if len(sample_positions) == 0:
             print(
                 f"All {len(all_sample_positions)} samples have already been collected"
@@ -843,6 +880,10 @@ class WorldSampler:
         )
 
         # Create a queue and add all positions to it
+        if self.sample_limit and len(sample_positions) > self.sample_limit:
+            sample_positions = set(
+                random.sample(list(sample_positions), self.sample_limit)
+            )
         sample_positions_queue = Queue()
         for position in sample_positions:
             sample_positions_queue.put(position)
