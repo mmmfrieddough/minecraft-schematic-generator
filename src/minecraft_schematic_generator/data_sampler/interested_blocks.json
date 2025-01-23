@@ -31,9 +31,11 @@
       "mangrove_planks",
       "cherry_planks",
       "bamboo_planks",
+      "pale_oak_planks",
       "mangrove_fence",
       "cherry_fence",
       "bamboo_fence",
+      "palen_oak_fence",
       "birch_fence_gate",
       "mangrove_fence_gate",
       "cherry_fence_gate",
@@ -103,7 +105,9 @@
       "chorus",
       "wart",
       "rod",
-      "magenta_stained_glass"
+      "magenta_stained_glass",
+      "hanging",
+      "resin"
     ],
     "nether": [
       "beacon",
@@ -388,14 +392,22 @@
       "jungle_planks",
       "acacia_planks",
       "dark_oak_planks",
+      "cherry_planks",
+      "pale_oak_planks",
       "birch_fence",
       "spruce_fence",
       "jungle_fence",
       "acacia_fence",
       "dark_oak_fence",
+      "cherry_fence",
+      "pale_oak_fence",
       "pressure_plate",
       "stripped",
-      "wood"
+      "wood",
+      "bamboo_mosaic",
+      "bamboo_block",
+      "hanging",
+      "resin"
     ],
     "nether": [
       "beacon",
@@ -453,7 +465,8 @@
       "fence",
       "wood",
       "pressure_plate",
-      "stairs"
+      "stairs",
+      "bamboo"
     ],
     "end": [
       "beacon",
@@ -510,7 +523,8 @@
       "pressure_plate",
       "stairs",
       "slab",
-      "magma"
+      "magma",
+      "bamboo"
     ]
   }
 }
