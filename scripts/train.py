@@ -1,5 +1,6 @@
 import torch
 from lightning import Trainer
+from lightning.pytorch import seed_everything
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger, WandbLogger
 from lightning.pytorch.strategies import DDPStrategy
@@ -14,10 +15,12 @@ from minecraft_schematic_generator.modules import (
 
 
 def main():
+    seed_everything(0)
+
     torch.set_float32_matmul_precision("medium")
 
     experiment_name = "mini_model"
-    experiment_version = 20
+    experiment_version = "higher_max_lr"
     checkpoint_dir = "lightning_logs"
     tensorboard_logger = TensorBoardLogger(
         checkpoint_dir, name=experiment_name, version=experiment_version
@@ -29,20 +32,22 @@ def main():
     )
 
     lightning_model = LightningTransformerMinecraftStructureGenerator(
-        num_classes=20000,
+        num_classes=13050,
         max_sequence_length=1331,
         embedding_dropout=0.1,
+        embedding_dim=128,
         model_dim=192,
         num_heads=2,
         num_layers=2,
         decoder_dropout=0.1,
-        max_learning_rate=1e-4,
+        max_learning_rate=3e-4,
+        warmup_proportion=0.1,
     )
 
     data_module = MinecraftDataModule(
         file_path="data/data_v2.h5",
-        batch_size=50,
-        num_workers=2,
+        batch_size=70,
+        num_workers=4,
         combine_datasets=True,
         separate_validation_datasets=["holdout"],
     )
@@ -61,7 +66,7 @@ def main():
 
     trainer = Trainer(
         strategy=ddp,
-        max_epochs=1,
+        max_epochs=5,
         logger=[tensorboard_logger, wandb_logger],
         val_check_interval=0.1,
         limit_val_batches=0.2,

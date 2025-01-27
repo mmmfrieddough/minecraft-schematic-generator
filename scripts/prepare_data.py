@@ -1,7 +1,7 @@
 from minecraft_schematic_generator.data_preparer import load_schematics
 
-schematics_dir = "data/schematics"
-hdf5_path = "data/data_v3.h5"
+schematics_dir = "data/test_schematics"
+hdf5_path = "data/data_test_large.h5"
 
 
 def main():
@@ -9,7 +9,7 @@ def main():
         schematics_dir,
         hdf5_path,
         (0.8, 0.10, 0.10),
-        validation_only_datasets=["holdout"],
+        # validation_only_datasets=["holdout"],
         num_workers=30,
     )
 
