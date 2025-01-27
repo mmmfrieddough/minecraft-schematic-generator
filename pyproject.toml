@@ -22,10 +22,10 @@ dependencies = [
 
 [project.optional-dependencies]
 server = [
-    "uvicorn"
+    "hypercorn"
 ]
 dev = [
-    "uvicorn",
+    "hypercorn",
     "wandb",
     "ipykernel",
     "tensorboard",
