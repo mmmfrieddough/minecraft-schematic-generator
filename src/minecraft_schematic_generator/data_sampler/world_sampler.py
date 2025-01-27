@@ -59,6 +59,8 @@ class WorldSampler:
         self.sample_search_limit = sample_search_limit
         self.sample_limit = sample_limit
 
+        self.MC_VERSION = (1, 21, 4)
+
     def load_interested_blocks(self, directory: str) -> None:
         """Loads the interested blocks from the file"""
         # Check if a custom interested blocks file exists
@@ -226,7 +228,7 @@ class WorldSampler:
         try:
             # Load the world data from the directory
             world = amulet.load_level(directory)
-            translator = world.translation_manager.get_version("java", (1, 20, 4))
+            translator = world.translation_manager.get_version("java", self.MC_VERSION)
 
             while True:
                 chunk_coords = all_chunks_queue.get()
@@ -352,17 +354,19 @@ class WorldSampler:
     def _mark_chunks(self, root_directory: str, directory: str, dimension: str) -> set:
         """Looks through chunks in a world and marks them as relevant or not relevant"""
 
+        # Get all chunk coordinates
+        world = amulet.load_level(directory)
+        all_chunk_coords = world.all_chunk_coords(dimension)
+        world.close()
+
+        if len(all_chunk_coords) == 0:
+            print("No chunks found in the dimension")
+            return set()
+
         # Load progress
         visited_chunks, relevant_chunks = self._load_chunk_progress(
             directory, dimension
         )
-
-        # return relevant_chunks
-
-        # Get all chunk coordinates and convert to a list
-        world = amulet.load_level(directory)
-        all_chunk_coords = world.all_chunk_coords(dimension)
-        world.close()
 
         # Remove visited chunks from the list
         remaining_chunk_coords = all_chunk_coords - visited_chunks
@@ -484,7 +488,7 @@ class WorldSampler:
     def _identify_samples_in_chunk(
         self, world: World, dimension: str, translator, chunk_coords
     ) -> set:
-        """Collects samples from a chunk"""
+        """Identifies samples from a chunk"""
 
         sample_positions = set()
         min_height = world.bounds(dimension).min_y
@@ -637,7 +641,7 @@ class WorldSampler:
         try:
             # Load the world data from the directory
             world = amulet.load_level(directory)
-            translator = world.translation_manager.get_version("java", (1, 20, 4))
+            translator = world.translation_manager.get_version("java", self.MC_VERSION)
 
             while True:
                 chunk_coords = relevant_chunks_queue.get()
@@ -666,17 +670,14 @@ class WorldSampler:
             world.close()
 
     def _identify_samples(
-        self, root_directory: str, directory: str, dimension: str
+        self, root_directory: str, directory: str, dimension: str, relevant_chunks: set
     ) -> set:
         """Identifies samples from the marked chunks"""
 
         # Load progress
-        _, relevant_chunks = self._load_chunk_progress(directory, dimension)
         sampled_chunks, sample_positions = self._load_sample_progress(
             directory, dimension
         )
-
-        # return sample_positions
 
         # Get all relevant chunks that have not been sampled
         remaining_relevant_chunks = relevant_chunks - sampled_chunks
@@ -798,7 +799,10 @@ class WorldSampler:
             purge_counter = 0
             while True:
                 position = sample_positions_queue.get()
+
+                # Check if the worker should stop
                 if position is None:
+                    # Put None back into the queue for the next worker
                     sample_positions_queue.put(None)
                     break
 
@@ -818,7 +822,7 @@ class WorldSampler:
                     wrapper = SpongeSchemFormatWrapper(tmp_path)
                     wrapper.create_and_open(
                         "java",
-                        3578,
+                        self.MC_VERSION,
                         bounds=SelectionGroup(structure.bounds(dimension)),
                         overwrite=True,
                     )
@@ -842,12 +846,13 @@ class WorldSampler:
             world.close()
 
     def _collect_samples(
-        self, root_directory: str, directory: str, dimension: str
+        self,
+        root_directory: str,
+        directory: str,
+        dimension: str,
+        all_sample_positions: set,
     ) -> None:
         """Collects samples from the world at the identified positions"""
-
-        # Load progress
-        _, all_sample_positions = self._load_sample_progress(directory, dimension)
 
         # Filter out positions that already have a schematic
         world_name = os.path.relpath(directory, root_directory)
@@ -954,13 +959,21 @@ class WorldSampler:
             "minecraft:the_end",
         ]:
             print(f"Sampling dimension: {dimension}")
-            relevent_chunks = self._mark_chunks(root_directory, directory, dimension)
-            self._visualize_marked_chunks(directory, dimension, relevent_chunks)
+            relevant_chunks = self._mark_chunks(root_directory, directory, dimension)
+            if len(relevant_chunks) == 0:
+                print("No relevant chunks found")
+                continue
+            self._visualize_marked_chunks(directory, dimension, relevant_chunks)
             sample_positions = self._identify_samples(
-                root_directory, directory, dimension
+                root_directory, directory, dimension, relevant_chunks
             )
+            if len(sample_positions) == 0:
+                print("No sample positions found")
+                continue
             self._visualize_sample_positions(directory, dimension, sample_positions)
-            self._collect_samples(root_directory, directory, dimension)
+            self._collect_samples(
+                root_directory, directory, dimension, sample_positions
+            )
         if self.clear_worker_directories:
             self._clear_worker_directories(root_directory, directory)
         print(f"Done sampling {directory}")
