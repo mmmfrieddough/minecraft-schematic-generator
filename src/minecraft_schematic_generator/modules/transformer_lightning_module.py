@@ -190,11 +190,11 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
             probabilities = F.softmax(logits_for_position / temperature, dim=-1)
             predicted_token = torch.multinomial(probabilities, num_samples=1).item()
 
-            return (
-                predicted_token,
-                probabilities[predicted_token].item(),
-                probabilities[1].item(),
-            )
+            # print(
+            #     f"Selected token {predicted_token} with probability {probabilities[predicted_token].item()*100:.1f}%, air probability {probabilities[1].item()*100:.1f}%"
+            # )
+
+            return predicted_token
 
     def one_shot_inference(self, structure, temperature=1.0, use_greedy=False):
         """Return a new structure with predictions for masked positions.
@@ -275,36 +275,30 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
             filled_blocks = 0
 
             for iteration in range(max_iterations):
-                print(f"Iteration {iteration+1}/{max_iterations}")
+                # print(f"Iteration {iteration+1}/{max_iterations}")
 
                 valid_positions = self._get_valid_positions(structure, filled_positions)
                 if valid_positions is None:
-                    print("No more elements to update")
+                    # print("No more elements to update")
                     break
 
                 # Process each position in center-out order
                 for pos in valid_positions:
-                    predicted_token, selected_probability, air_probability = (
-                        self._predict_single_position(
-                            flattened_structure,
-                            pos,
-                            temperature,
-                            iteration,
-                            air_probability_iteration_scaling,
-                        )
+                    predicted_token = self._predict_single_position(
+                        flattened_structure,
+                        pos,
+                        temperature,
+                        iteration,
+                        air_probability_iteration_scaling,
                     )
 
                     z, y, x = pos
-                    print(
-                        f"Selected token {predicted_token} with probability {selected_probability*100:.1f}%, air probability {air_probability*100:.1f}%"
-                    )
-
                     yield predicted_token, z, y, x
 
                     if predicted_token != 1:
                         filled_positions[0, 0, z, y, x] = 1
                         filled_blocks += 1
-                        print(f"Filled {filled_blocks}/{max_blocks} solid blocks")
+                        # print(f"Filled {filled_blocks}/{max_blocks} solid blocks")
                     if filled_blocks >= max_blocks:
                         break
                     structure[0, 0, z, y, x] = predicted_token

@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     logger.info("Loading model...")
     model_loader = ModelLoader()
     app.state.model = model_loader.load_model(app.state.mode, app.state.checkpoint_path)
