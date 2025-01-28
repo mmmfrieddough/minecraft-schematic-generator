@@ -10,16 +10,16 @@ from minecraft_schematic_generator.model import TransformerMinecraftStructureGen
 class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
     def __init__(
         self,
-        num_classes,
-        max_sequence_length,
-        embedding_dropout,
-        embedding_dim,
-        model_dim,
-        num_heads,
-        num_layers,
-        decoder_dropout,
-        max_learning_rate,
-        warmup_proportion,
+        num_classes: int,
+        max_sequence_length: int,
+        embedding_dropout: float,
+        embedding_dim: int,
+        model_dim: int,
+        num_heads: int,
+        num_layers: int,
+        decoder_dropout: float,
+        max_learning_rate: float,
+        warmup_proportion: float,
     ):
         super().__init__()
         self.model = TransformerMinecraftStructureGenerator(
@@ -38,13 +38,15 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         self.validation_step_outputs = []
         self.save_hyperparameters()
 
-    def forward(self, structure):
+    def forward(self, structure: torch.Tensor) -> torch.Tensor:
         return self.model(structure)
 
-    def loss_function(self, predictions, targets):
+    def loss_function(
+        self, predictions: torch.Tensor, targets: torch.Tensor
+    ) -> torch.Tensor:
         return torch.nn.functional.cross_entropy(predictions, targets, ignore_index=0)
 
-    def _forward_and_loss(self, batch: torch.Tensor):
+    def _forward_and_loss(self, batch: torch.Tensor) -> torch.Tensor:
         with record_function("data_prep"):
             # Get the structures
             full_structures, masked_structures = batch
@@ -78,7 +80,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
 
         return predicted_structures, loss, perplexity
 
-    def training_step(self, batch, _):
+    def training_step(self, batch: torch.Tensor, _) -> torch.Tensor:
         with record_function("training_step_total"):
             with record_function("forward_and_loss"):
                 _, loss, perplexity = self._forward_and_loss(batch)
@@ -89,7 +91,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
 
         return loss
 
-    def validation_step(self, batch, _, dataloader_idx=0):
+    def validation_step(self, batch: torch.Tensor, _, dataloader_idx: int = 0) -> None:
         predictions, loss, perplexity = self._forward_and_loss(batch)
         data_module = self.trainer.datamodule
         dataset_name = data_module.get_val_dataset_name(dataloader_idx)
@@ -110,7 +112,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
             }
         )
 
-    def on_validation_epoch_end(self):
+    def on_validation_epoch_end(self) -> None:
         val_loss_total = torch.tensor(0.0, device=self.device)
         val_perplexity_total = torch.tensor(0.0, device=self.device)
         num_samples_total = 0
@@ -124,12 +126,12 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         self.log("val_perplexity", weighted_avg_perplexity, sync_dist=True)
         self.validation_step_outputs.clear()
 
-    def on_before_optimizer_step(self, optimizer):
+    def on_before_optimizer_step(self, _) -> None:
         if self.global_step % self.trainer.log_every_n_steps == 0:
             norms = grad_norm(self.model, norm_type=2)
             self.log_dict(norms)
 
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> dict:
         optimizer = optim.Adam(self.parameters(), lr=self.max_learning_rate)
 
         scheduler = {

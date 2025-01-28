@@ -33,14 +33,14 @@ This model generates Minecraft structures using a decoder-only transformer archi
 class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
     def __init__(
         self,
-        num_classes,
-        max_sequence_length,
-        embedding_dropout,
-        model_dim,
-        num_heads,
-        num_layers,
-        decoder_dropout,
-        embedding_dim=None,
+        num_classes: int,
+        max_sequence_length: int,
+        embedding_dropout: float,
+        model_dim: int,
+        num_heads: int,
+        num_layers: int,
+        decoder_dropout: float,
+        embedding_dim: int = None,
     ):
         super().__init__()
         self.num_classes = num_classes
@@ -139,7 +139,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
 
         return output
 
-    def generate_model_card(self):
+    def generate_model_card(self) -> ModelCard:
         return ModelCard.from_template(
             card_data=self._hub_mixin_info.model_card_data,
             template_str=MODEL_CARD_TEMPLATE,
@@ -151,7 +151,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
             parameters=f"{sum(p.numel() for p in self.parameters()):,}",
         )
 
-    def generate_neighbor_mask(self, tensor):
+    def generate_neighbor_mask(self, tensor: torch.Tensor) -> torch.Tensor:
         """Generates a mask indicating if an element has a neighbor > 1."""
         kernel = torch.ones((1, 1, 3, 3, 3), dtype=tensor.dtype, device=tensor.device)
         kernel[0, 0, 1, 1, 1] = 0  # Ignore the central element
@@ -167,7 +167,9 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         # Return the mask
         return neighbors_greater_than_1
 
-    def _get_valid_positions(self, structure, filled_positions):
+    def _get_valid_positions(
+        self, structure: torch.Tensor, filled_positions: torch.Tensor
+    ) -> torch.Tensor:
         """Get ordered list of valid positions to fill, from center outward."""
         # Generate mask of valid next elements
         mask_structure = structure * filled_positions
@@ -188,11 +190,11 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
 
     def _predict_single_position(
         self,
-        flattened_structure,
-        pos,
-        temperature,
-        iteration=0,
-        air_probability_scaling=0,
+        flattened_structure: torch.Tensor,
+        pos: torch.Tensor,
+        temperature: float,
+        iteration: int = 0,
+        air_probability_scaling: float = 0.0,
     ):
         """Make a prediction for a single position in the structure."""
         with torch.autocast(device_type="cuda"):
@@ -214,7 +216,12 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
 
             return predicted_token
 
-    def one_shot_inference(self, structure, temperature=1.0, use_greedy=False):
+    def one_shot_inference(
+        self,
+        structure: torch.Tensor,
+        temperature: float = 1.0,
+        use_greedy: bool = False,
+    ) -> torch.Tensor:
         """Return a new structure with predictions for masked positions.
 
         Args:
@@ -262,12 +269,12 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
 
     def fill_structure(
         self,
-        structure,
-        temperature,
-        start_radius,
-        max_iterations,
-        max_blocks,
-        air_probability_iteration_scaling,
+        structure: torch.Tensor,
+        temperature: float,
+        start_radius: int,
+        max_iterations: int,
+        max_blocks: int,
+        air_probability_iteration_scaling: float,
     ):
         # Ensure tensor has batch and channel dimensions
         if structure.dim() == 3:
@@ -320,7 +327,9 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
                 if filled_blocks >= max_blocks:
                     break
 
-    def complete_structure(self, masked_structure, temperature=1.0):
+    def complete_structure(
+        self, masked_structure: torch.Tensor, temperature: float = 1.0
+    ) -> torch.Tensor:
         for predicted_token, z, y, x in self.fill_structure(
             masked_structure, temperature
         ):
