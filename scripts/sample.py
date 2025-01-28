@@ -13,11 +13,13 @@ def main():
         sample_minimum_air_threshold=200,
         sample_progress_save_interval=1000,
         sampling_purge_interval=3,
-        num_workers=30,
+        num_mark_chunks_workers=22,
+        num_identify_samples_workers=14,
+        num_collect_samples_workers=20,
         clear_worker_directories=False,
-        chunk_search_limit=20000,
-        sample_search_limit=2000,
-        sample_limit=300,
+        # chunk_search_limit=50,
+        # sample_search_limit=30,
+        # sample_limit=300,
     )
     world_sampler.clear_directory("data/worlds/temp")
     world_sampler.sample_directory("data/worlds/temp")

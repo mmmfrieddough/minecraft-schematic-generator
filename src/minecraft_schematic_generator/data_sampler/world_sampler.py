@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import os
+import pickle
 import random
 import shutil
 import time
@@ -41,7 +42,9 @@ class WorldSampler:
         chunk_search_limit=None,
         sample_search_limit=None,
         sample_limit=None,
-        num_workers=os.cpu_count(),
+        num_mark_chunks_workers=1,
+        num_identify_samples_workers=1,
+        num_collect_samples_workers=1,
     ):
         self.schematic_directory = schematic_directory
         self.temp_directory = temp_directory
@@ -53,7 +56,9 @@ class WorldSampler:
         self.sample_minimum_air_threshold = sample_minimum_air_threshold
         self.sample_progress_save_interval = sample_progress_save_interval
         self.sampling_purge_interval = sampling_purge_interval
-        self.num_workers = num_workers
+        self.num_mark_chunks_workers = num_mark_chunks_workers
+        self.num_identify_samples_workers = num_identify_samples_workers
+        self.num_collect_samples_workers = num_collect_samples_workers
         self.clear_worker_directories = clear_worker_directories
         self.chunk_search_limit = chunk_search_limit
         self.sample_search_limit = sample_search_limit
@@ -98,11 +103,13 @@ class WorldSampler:
         worker_directory = os.path.join(copies_directory, worker_directory_name)
         return worker_directory
 
-    def setup_worker_directories(self, root_directory: str, src_directory: str) -> None:
+    def setup_worker_directories(
+        self, root_directory: str, src_directory: str, num_workers: int
+    ) -> None:
         """Sets up worker directories for a given source directory"""
 
         # Check if the worker directories have already been set up
-        for i in range(self.num_workers):
+        for i in range(num_workers):
             worker_directory = self.get_worker_directory(
                 root_directory, src_directory, i
             )
@@ -112,7 +119,7 @@ class WorldSampler:
             return
 
         # Create a copy of the source directory for each worker
-        pbar = tqdm(range(self.num_workers), desc="Setting up worker directories")
+        pbar = tqdm(range(num_workers), desc="Setting up worker directories")
         for i in pbar:
             worker_directory = self.get_worker_directory(
                 root_directory, src_directory, i
@@ -161,29 +168,28 @@ class WorldSampler:
     ) -> None:
         """Save the current chunk progress to a file"""
         dimension = dimension.replace(":", "_")
-        temp_file_path = os.path.join(
-            directory, f"{dimension}_chunk_progress_temp.json"
-        )
-        final_file_path = os.path.join(directory, f"{dimension}_chunk_progress.json")
-        with open(temp_file_path, "w") as file:
-            json.dump(
+        temp_file_path = os.path.join(directory, f"{dimension}_chunk_progress_temp.pkl")
+        final_file_path = os.path.join(directory, f"{dimension}_chunk_progress.pkl")
+        with open(temp_file_path, "wb") as file:
+            pickle.dump(
                 {
-                    "visited_chunks": list(visited_chunks),
-                    "relevant_chunks": list(relevant_chunks),
+                    "visited_chunks": visited_chunks,
+                    "relevant_chunks": relevant_chunks,
                 },
                 file,
+                protocol=pickle.HIGHEST_PROTOCOL,
             )
         os.replace(temp_file_path, final_file_path)
 
     def _load_chunk_progress(self, directory: str, dimension: str) -> tuple:
         """Load the current chunk progress from a file"""
         dimension = dimension.replace(":", "_")
-        path = os.path.join(directory, f"{dimension}_chunk_progress.json")
+        path = os.path.join(directory, f"{dimension}_chunk_progress.pkl")
         if os.path.exists(path):
-            with open(path, "r") as file:
-                data = json.load(file)
-            visited_chunks = set(tuple(c) for c in data["visited_chunks"])
-            relevant_chunks = set(tuple(c) for c in data["relevant_chunks"])
+            with open(path, "rb") as file:
+                data = pickle.load(file)
+            visited_chunks = data["visited_chunks"]
+            relevant_chunks = data["relevant_chunks"]
         else:
             visited_chunks = set()
             relevant_chunks = set()
@@ -195,28 +201,29 @@ class WorldSampler:
         """Save the current sample progress to a file"""
         dimension = dimension.replace(":", "_")
         temp_file_path = os.path.join(
-            directory, f"{dimension}_sample_progress_temp.json"
+            directory, f"{dimension}_sample_progress_temp.pkl"
         )
-        final_file_path = os.path.join(directory, f"{dimension}_sample_progress.json")
-        with open(temp_file_path, "w") as file:
-            json.dump(
+        final_file_path = os.path.join(directory, f"{dimension}_sample_progress.pkl")
+        with open(temp_file_path, "wb") as file:
+            pickle.dump(
                 {
-                    "sampled_chunks": list(sampled_chunks),
-                    "sample_positions": list(sample_positions),
+                    "sampled_chunks": sampled_chunks,
+                    "sample_positions": sample_positions,
                 },
                 file,
+                protocol=pickle.HIGHEST_PROTOCOL,
             )
         os.replace(temp_file_path, final_file_path)
 
     def _load_sample_progress(self, directory: str, dimension: str) -> tuple:
         """Load the current sample progress from a file"""
         dimension = dimension.replace(":", "_")
-        path = os.path.join(directory, f"{dimension}_sample_progress.json")
+        path = os.path.join(directory, f"{dimension}_sample_progress.pkl")
         if os.path.exists(path):
-            with open(path, "r") as file:
-                data = json.load(file)
-            sampled_chunks = set(tuple(c) for c in data["sampled_chunks"])
-            sample_positions = set(tuple(c) for c in data["sample_positions"])
+            with open(path, "rb") as file:
+                data = pickle.load(file)
+            sampled_chunks = data["sampled_chunks"]
+            sample_positions = data["sample_positions"]
         else:
             sampled_chunks = set()
             sample_positions = set()
@@ -381,15 +388,9 @@ class WorldSampler:
             return relevant_chunks
 
         # Set up worker directories
-        self.setup_worker_directories(root_directory, directory)
-
-        # Create a tqdm progress bar
-        pbar = tqdm(
-            total=len(all_chunk_coords),
-            initial=len(visited_chunks),
-            desc="Marking chunks",
+        self.setup_worker_directories(
+            root_directory, directory, self.num_mark_chunks_workers
         )
-        pbar.set_postfix({"relevant_chunks": len(relevant_chunks)})
 
         # Create a queue and add all chunk coordinates to it
         all_chunks_queue = Queue()
@@ -411,7 +412,10 @@ class WorldSampler:
         processes = []
         try:
             # Create and start worker processes
-            for i in range(self.num_workers):
+            for i in tqdm(
+                range(self.num_mark_chunks_workers),
+                desc="Starting worker processes for marking chunks",
+            ):
                 process = Process(
                     target=self._mark_chunks_worker,
                     args=(
@@ -424,6 +428,14 @@ class WorldSampler:
                 )
                 process.start()
                 processes.append(process)
+
+            # Create a tqdm progress bar
+            pbar = tqdm(
+                total=len(all_chunk_coords),
+                initial=len(visited_chunks),
+                desc="Marking chunks",
+            )
+            pbar.set_postfix({"relevant_chunks": len(relevant_chunks)})
 
             # Update the progress bar based on the visited chunks
             unsuccessful_chunks_count = 0
@@ -692,15 +704,9 @@ class WorldSampler:
             return sample_positions
 
         # Set up worker directories
-        self.setup_worker_directories(root_directory, directory)
-
-        # Create a tqdm progress bar
-        pbar = tqdm(
-            total=len(relevant_chunks),
-            initial=len(sampled_chunks),
-            desc="Identifying samples from chunks",
+        self.setup_worker_directories(
+            root_directory, directory, self.num_identify_samples_workers
         )
-        pbar.set_postfix({"sample_positions": len(sample_positions)})
 
         # Create a queue and add all chunk coordinates to it
         relevant_chunks_queue = Queue()
@@ -722,7 +728,10 @@ class WorldSampler:
         processes = []
         try:
             # Create and start worker processes
-            for i in range(self.num_workers):
+            for i in tqdm(
+                range(self.num_identify_samples_workers),
+                desc="Starting worker processes for identifying samples",
+            ):
                 process = Process(
                     target=self._identify_samples_worker,
                     args=(
@@ -735,6 +744,14 @@ class WorldSampler:
                 )
                 process.start()
                 processes.append(process)
+
+            # Create a tqdm progress bar
+            pbar = tqdm(
+                total=len(relevant_chunks),
+                initial=len(sampled_chunks),
+                desc="Identifying samples from chunks",
+            )
+            pbar.set_postfix({"sample_positions": len(sample_positions)})
 
             # Update the progress bar based on the progress queue
             unsuccessful_chunks_count = 0
@@ -879,13 +896,8 @@ class WorldSampler:
         os.makedirs(os.path.join(self.schematic_directory, world_name), exist_ok=True)
 
         # Set up worker directories
-        self.setup_worker_directories(root_directory, directory)
-
-        # Create a tqdm progress bar
-        pbar = tqdm(
-            total=len(all_sample_positions),
-            initial=(len(all_sample_positions) - len(sample_positions)),
-            desc="Collecting samples",
+        self.setup_worker_directories(
+            root_directory, directory, self.num_collect_samples_workers
         )
 
         # Create a queue and add all positions to it
@@ -904,7 +916,10 @@ class WorldSampler:
         processes = []
         try:
             # Create and start worker processes
-            for i in range(self.num_workers):
+            for i in tqdm(
+                range(self.num_collect_samples_workers),
+                desc="Starting worker processes for collecting samples",
+            ):
                 process = Process(
                     target=self._collect_samples_worker,
                     args=(
@@ -917,6 +932,13 @@ class WorldSampler:
                 )
                 process.start()
                 processes.append(process)
+
+            # Create a tqdm progress bar
+            pbar = tqdm(
+                total=len(all_sample_positions),
+                initial=(len(all_sample_positions) - len(sample_positions)),
+                desc="Collecting samples",
+            )
 
             # Update the progress bar based on the progress queue
             while any(p.is_alive() for p in processes):
@@ -942,6 +964,7 @@ class WorldSampler:
             print(f"Sampling directory: {directory}")
             for root, dirs, files in os.walk(directory):
                 if "level.dat" in files:
+                    print("--------------------")
                     self.sample_world(directory, root)
                     # Prevent further traversal into subdirectories of a world
                     dirs[:] = []
@@ -1005,10 +1028,10 @@ class WorldSampler:
         ]:
             dimension = dimension.replace(":", "_")
             chunk_progress_path = os.path.join(
-                directory, f"{dimension}_chunk_progress.json"
+                directory, f"{dimension}_chunk_progress.pkl"
             )
             sample_progress_path = os.path.join(
-                directory, f"{dimension}_sample_progress.json"
+                directory, f"{dimension}_sample_progress.pkl"
             )
             if os.path.exists(chunk_progress_path):
                 os.remove(chunk_progress_path)
