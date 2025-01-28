@@ -60,6 +60,7 @@ class WorldSampler:
         self.sample_limit = sample_limit
 
         self.MC_VERSION = (1, 21, 4)
+        self._block_cache = {}
 
     def load_interested_blocks(self, directory: str) -> None:
         """Loads the interested blocks from the file"""
@@ -133,15 +134,20 @@ class WorldSampler:
 
     def _check_block(self, block, target_blocks, translator):
         """Returns True if the block is one of the target blocks"""
+        cache_key = block.namespaced_name
+        if cache_key in self._block_cache:
+            return self._block_cache[cache_key]
+
         block, _, _ = translator.block.from_universal(block)
         if "universal" in block.namespaced_name:
             print(f"Conversion failed for {block.namespaced_name}")
-            return False
-        name = block.namespaced_name + "|"
-        for target_block in target_blocks:
-            if target_block in name:
-                return True
-        return False
+            result = False
+        else:
+            name = block.namespaced_name + "|"
+            result = any(target_block in name for target_block in target_blocks)
+
+        self._block_cache[cache_key] = result
+        return result
 
     def _chunk_contains_target_blocks(self, chunk, target_blocks, translator):
         """Returns True if the chunk contains any of the target blocks"""
@@ -489,70 +495,68 @@ class WorldSampler:
         self, world: World, dimension: str, translator, chunk_coords
     ) -> set:
         """Identifies samples from a chunk"""
-
         sample_positions = set()
         min_height = world.bounds(dimension).min_y
         max_height = world.bounds(dimension).max_y
-        world.get_block
 
         # Load all chunks that a selection starting in this chunk could possibly intersect
         num_chunks = self.sample_size // 16 + 2
-        chunk_blocks = [[None for _ in range(num_chunks)] for _ in range(num_chunks)]
-        interested_indices = [
-            [None for _ in range(num_chunks)] for _ in range(num_chunks)
-        ]
+        # Create single 3D arrays instead of nested lists - using more efficient dtype specification
+        chunk_blocks = np.zeros(
+            (num_chunks * 16, max_height - min_height, num_chunks * 16),
+            dtype=np.int32,
+            order="C",
+        )
+        interested_block = np.zeros_like(chunk_blocks, dtype=bool)
+        air_block = np.zeros_like(chunk_blocks, dtype=bool)
+
+        # Load chunks directly into the arrays
         for dx in range(num_chunks):
             for dz in range(num_chunks):
                 inner_chunk_coords = (chunk_coords[0] + dx, chunk_coords[1] + dz)
+                x_start, z_start = dx * 16, dz * 16
+                # Pre-calculate slice objects
+                x_slice = slice(x_start, x_start + 16)
+                z_slice = slice(z_start, z_start + 16)
+
                 if world.has_chunk(*inner_chunk_coords, dimension):
                     chunk = world.get_chunk(*inner_chunk_coords, dimension)
-                    world.purge()
-                else:
-                    chunk = Chunk(*inner_chunk_coords)
-                chunk_blocks[dx][dz] = np.asarray(
-                    chunk.blocks[:, min_height:max_height, :]
-                )
-                interested_indices[dx][dz] = self._get_interested_palette_indices(
-                    chunk, translator, dimension
-                )
-
-        # Precompute interesting block and air block positions
-        max_pos = 15 + self.sample_size
-        y_size = max_height - min_height
-        x_start, z_start = chunk_coords_to_block_coords(*chunk_coords)
-        interested_block = np.zeros((max_pos, y_size, max_pos))
-        air_block = np.zeros((max_pos, y_size, max_pos))
-        original_block = np.zeros((max_pos, y_size, max_pos))
-        for j in range(y_size):
-            for i in range(max_pos):
-                for k in range(max_pos):
-                    chunk_x = i // 16
-                    chunk_z = k // 16
-                    blocks = chunk_blocks[chunk_x][chunk_z]
-                    x = i % 16
-                    y = j
-                    z = k % 16
-                    block_value = blocks[x, y, z]
-                    original_block[i, j, k] = block_value
-                    chunk_interesting_indices = interested_indices[chunk_x][chunk_z]
-                    interested_block[i, j, k] = (
-                        1 if block_value in chunk_interesting_indices else 0
+                    blocks = np.asarray(chunk.blocks[:, min_height:max_height, :])
+                    interested_indices = self._get_interested_palette_indices(
+                        chunk, translator, dimension
                     )
-                    air_block[i, j, k] = 1 if block_value == 0 else 0
+                else:
+                    blocks = np.zeros((16, max_height - min_height, 16), dtype=np.int32)
+                    interested_indices = set()
 
-        # Calculate cumulative sums for both interested blocks and air blocks
+                # Use pre-calculated slices
+                chunk_blocks[x_slice, :, z_slice] = blocks
+
+                # Create masks for interested blocks and air blocks
+                if interested_indices:
+                    interested_block[x_slice, :, z_slice] = np.isin(
+                        blocks, list(interested_indices)
+                    )
+                air_block[x_slice, :, z_slice] = blocks == 0
+
+        world.purge()
+
+        # Calculate cumulative sums with optimal axis order for memory access
         marked_count = np.cumsum(
-            np.cumsum(np.cumsum(interested_block, axis=0), axis=1), axis=2
+            np.cumsum(np.cumsum(interested_block, axis=2), axis=1), axis=0
         )
-        air_count = np.cumsum(np.cumsum(np.cumsum(air_block, axis=0), axis=1), axis=2)
+        air_count = np.cumsum(np.cumsum(np.cumsum(air_block, axis=2), axis=1), axis=0)
 
         # Iterate through grid of possible selection start positions
         x_offset, y_offset, z_offset = self._get_deterministic_random_offsets(
             chunk_coords
         )
         m = self.sample_size
+        y_size = max_height - min_height
         y_limit = y_size - m
         middle_offset = m // 2
+        x_start, z_start = chunk_coords_to_block_coords(*chunk_coords)
+
         i = x_offset
         while i < 16:
             found_valid_position_x = False
@@ -562,7 +566,7 @@ class WorldSampler:
                 k = z_offset
                 while k < 16:
                     if (
-                        original_block[
+                        chunk_blocks[
                             i + middle_offset, j + middle_offset, k + middle_offset
                         ]
                         == 0
@@ -572,36 +576,36 @@ class WorldSampler:
                     found_valid_position_y = True
 
                     # Calculate total marked (interested) blocks
-                    total_marked = marked_count[i + m - 1][j + m - 1][k + m - 1]
+                    total_marked = marked_count[i + m - 1, j + m - 1, k + m - 1]
                     # Calculate total air blocks
-                    total_air = air_count[i + m - 1][j + m - 1][k + m - 1]
+                    total_air = air_count[i + m - 1, j + m - 1, k + m - 1]
 
                     # Subtract previous slices for both counts
                     if i > 0:
-                        total_marked -= marked_count[i - 1][j + m - 1][k + m - 1]
-                        total_air -= air_count[i - 1][j + m - 1][k + m - 1]
+                        total_marked -= marked_count[i - 1, j + m - 1, k + m - 1]
+                        total_air -= air_count[i - 1, j + m - 1, k + m - 1]
                     if j > 0:
-                        total_marked -= marked_count[i + m - 1][j - 1][k + m - 1]
-                        total_air -= air_count[i + m - 1][j - 1][k + m - 1]
+                        total_marked -= marked_count[i + m - 1, j - 1, k + m - 1]
+                        total_air -= air_count[i + m - 1, j - 1, k + m - 1]
                     if k > 0:
-                        total_marked -= marked_count[i + m - 1][j + m - 1][k - 1]
-                        total_air -= air_count[i + m - 1][j + m - 1][k - 1]
+                        total_marked -= marked_count[i + m - 1, j + m - 1, k - 1]
+                        total_air -= air_count[i + m - 1, j + m - 1, k - 1]
 
                     # Add back double-subtracted regions
                     if i > 0 and j > 0:
-                        total_marked += marked_count[i - 1][j - 1][k + m - 1]
-                        total_air += air_count[i - 1][j - 1][k + m - 1]
+                        total_marked += marked_count[i - 1, j - 1, k + m - 1]
+                        total_air += air_count[i - 1, j - 1, k + m - 1]
                     if i > 0 and k > 0:
-                        total_marked += marked_count[i - 1][j + m - 1][k - 1]
-                        total_air += air_count[i - 1][j + m - 1][k - 1]
+                        total_marked += marked_count[i - 1, j + m - 1, k - 1]
+                        total_air += air_count[i - 1, j + m - 1, k - 1]
                     if j > 0 and k > 0:
-                        total_marked += marked_count[i + m - 1][j - 1][k - 1]
-                        total_air += air_count[i + m - 1][j - 1][k - 1]
+                        total_marked += marked_count[i + m - 1, j - 1, k - 1]
+                        total_air += air_count[i + m - 1, j - 1, k - 1]
 
                     # Subtract back triple-subtracted regions
                     if i > 0 and j > 0 and k > 0:
-                        total_marked -= marked_count[i - 1][j - 1][k - 1]
-                        total_air -= air_count[i - 1][j - 1][k - 1]
+                        total_marked -= marked_count[i - 1, j - 1, k - 1]
+                        total_air -= air_count[i - 1, j - 1, k - 1]
 
                     # Check both conditions
                     if (
