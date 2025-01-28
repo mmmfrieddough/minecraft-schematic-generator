@@ -10,7 +10,7 @@ class SchematicArrayConverter:
     def __init__(self):
         self.block_token_mapper = BlockTokenMapper()
 
-    def schematic_to_array(self, schematic: Schematic):
+    def schematic_to_array(self, schematic: Schematic, update_mapping: bool = False):
         """
         Convert schematic to an array.
         """
@@ -21,7 +21,7 @@ class SchematicArrayConverter:
         # Go through each block in the palette
         for block, index in schematic.get_block_palette().items():
             # Map the block to a token
-            token = self.block_token_mapper.block_to_token(block)
+            token = self.block_token_mapper.block_to_token(block, update_mapping)
 
             # Replace positions in the array with the token
             converted_block_data[original_block_data == index] = token

@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from lightning.pytorch.utilities.grads import grad_norm
 from torch import optim
-from torchmetrics.functional import accuracy
+from torch.profiler import record_function
 
 from minecraft_schematic_generator.model import TransformerMinecraftStructureGenerator
 
@@ -14,12 +14,13 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         num_classes,
         max_sequence_length,
         embedding_dropout,
+        embedding_dim,
         model_dim,
         num_heads,
         num_layers,
         decoder_dropout,
         max_learning_rate,
-        warmup_steps,
+        warmup_proportion,
     ):
         super().__init__()
         self.model = TransformerMinecraftStructureGenerator(
@@ -30,10 +31,11 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
             num_heads=num_heads,
             num_layers=num_layers,
             decoder_dropout=decoder_dropout,
+            embedding_dim=embedding_dim,
         )
         self.num_classes = num_classes
         self.max_learning_rate = max_learning_rate
-        self.warmup_steps = warmup_steps
+        self.warmup_proportion = warmup_proportion
         self.validation_step_outputs = []
         self.save_hyperparameters()
 
@@ -44,69 +46,91 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         return torch.nn.functional.cross_entropy(predictions, targets, ignore_index=0)
 
     def _forward_and_loss(self, batch: torch.Tensor):
-        # Get the structures
-        full_structures, masked_structures = batch
+        with record_function("data_prep"):
+            # Get the structures
+            full_structures, masked_structures = batch
 
-        # Create a mask for elements that are zero and adjacent to a value > 1
-        masked_structures = masked_structures.unsqueeze(1)
-        mask = self.generate_neighbor_mask(masked_structures) & (masked_structures == 0)
-        mask = mask.squeeze(1)
+            # Create a mask for elements that are zero and adjacent to a value > 1
+            masked_structures = masked_structures.unsqueeze(1)
+            mask = self.generate_neighbor_mask(masked_structures) & (
+                masked_structures == 0
+            )
+            mask = mask.squeeze(1)
 
-        # Flatten the structures and mask
-        batch_size = full_structures.size(0)
-        full_structures = full_structures.view(batch_size, -1)
-        masked_structures = masked_structures.view(batch_size, -1)
-        mask = mask.view(batch_size, -1)
+            # Flatten the structures and mask
+            batch_size = full_structures.size(0)
+            full_structures = full_structures.view(batch_size, -1)
+            masked_structures = masked_structures.view(batch_size, -1)
+            mask = mask.view(batch_size, -1)
 
-        # Zero out the non-masked elements in full_structures
-        full_structures = full_structures * mask
+            # Zero out the non-masked elements in full_structures
+            full_structures = full_structures * mask
 
-        # Make the predictions
-        predicted_structures = self(masked_structures)
+        with record_function("model_forward"):
+            # Make the predictions
+            predicted_structures = self(masked_structures)
 
-        # Compute the loss
-        loss = self.loss_function(predicted_structures, full_structures)
+        with record_function("compute_loss"):
+            # Compute the loss
+            loss = self.loss_function(predicted_structures, full_structures)
 
-        # Compute the accuracy
-        predictions = torch.argmax(predicted_structures, dim=1)
-        acc = accuracy(
-            predictions,
-            full_structures,
-            num_classes=self.num_classes,
-            task="multiclass",
-            ignore_index=0,
-        )
+            # Compute perplexity
+            perplexity = torch.exp(loss)
 
-        return predicted_structures, loss, acc
+        return predicted_structures, loss, perplexity
 
-    def training_step(self, batch, batch_idx):
-        _, loss, acc = self._forward_and_loss(batch)
-        self.log("train_loss", loss)
-        self.log("train_accuracy", acc)
+    def training_step(self, batch, _):
+        with record_function("training_step_total"):
+            with record_function("data_setup"):
+                full_structures, masked_structures = batch
+                masked_structures = masked_structures.unsqueeze(1)
+                mask = self.generate_neighbor_mask(masked_structures) & (
+                    masked_structures == 0
+                )
+                mask = mask.squeeze(1)
+
+            with record_function("forward_and_loss"):
+                _, loss, perplexity = self._forward_and_loss(batch)
+
+            with record_function("logging"):
+                self.log("train_loss", loss)
+                self.log("train_perplexity", perplexity)
+
         return loss
 
-    def validation_step(self, batch, batch_idx, dataloader_idx=0):
-        predictions, loss, acc = self._forward_and_loss(batch)
+    def validation_step(self, batch, _, dataloader_idx=0):
+        predictions, loss, perplexity = self._forward_and_loss(batch)
         data_module = self.trainer.datamodule
         dataset_name = data_module.get_val_dataset_name(dataloader_idx)
-        self.log(f"val_loss/{dataset_name}", loss, add_dataloader_idx=False)
-        self.log(f"val_accuracy/{dataset_name}", acc, add_dataloader_idx=False)
+        self.log(
+            f"val_loss/{dataset_name}", loss, add_dataloader_idx=False, sync_dist=True
+        )
+        self.log(
+            f"val_perplexity/{dataset_name}",
+            perplexity,
+            add_dataloader_idx=False,
+            sync_dist=True,
+        )
         self.validation_step_outputs.append(
-            {"val_loss": loss, "val_accuracy": acc, "num_samples": predictions.size(0)}
+            {
+                "val_loss": loss,
+                "val_perplexity": perplexity,
+                "num_samples": predictions.size(0),
+            }
         )
 
     def on_validation_epoch_end(self):
         val_loss_total = torch.tensor(0.0, device=self.device)
-        val_accuarcy_total = torch.tensor(0.0, device=self.device)
+        val_perplexity_total = torch.tensor(0.0, device=self.device)
         num_samples_total = 0
         for output in self.validation_step_outputs:
             val_loss_total += output["val_loss"] * output["num_samples"]
-            val_accuarcy_total += output["val_accuracy"] * output["num_samples"]
+            val_perplexity_total += output["val_perplexity"] * output["num_samples"]
             num_samples_total += output["num_samples"]
         weighted_avg_loss = val_loss_total / num_samples_total
-        weighted_avg_accuracy = val_accuarcy_total / num_samples_total
-        self.log("val_loss", weighted_avg_loss)
-        self.log("val_accuracy", weighted_avg_accuracy)
+        weighted_avg_perplexity = val_perplexity_total / num_samples_total
+        self.log("val_loss", weighted_avg_loss, sync_dist=True)
+        self.log("val_perplexity", weighted_avg_perplexity, sync_dist=True)
         self.validation_step_outputs.clear()
 
     def generate_neighbor_mask(self, tensor):
@@ -125,6 +149,101 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         # Return the mask
         return neighbors_greater_than_1
 
+    def _get_valid_positions(self, structure, filled_positions):
+        """Get ordered list of valid positions to fill, from center outward."""
+        # Generate mask of valid next elements
+        mask_structure = structure * filled_positions
+        mask = self.generate_neighbor_mask(mask_structure) & (structure == 0)
+
+        if not mask.any():
+            return None
+
+        # Get positions that need filling
+        valid_positions = mask.squeeze().nonzero()
+
+        # Calculate distances from center
+        center = torch.tensor([5.0, 5.0, 5.0], device=valid_positions.device)
+        distances = torch.norm(valid_positions.float() - center, dim=1)
+
+        # Return positions ordered by distance from center
+        return valid_positions[torch.argsort(distances)]
+
+    def _predict_single_position(
+        self,
+        flattened_structure,
+        pos,
+        temperature,
+        iteration=0,
+        air_probability_scaling=0,
+    ):
+        """Make a prediction for a single position in the structure."""
+        with torch.autocast(device_type="cuda"):
+            z, y, x = pos
+            flat_idx = z * 11 * 11 + y * 11 + x
+            logits = self(flattened_structure)
+            logits_for_position = logits[0, :, flat_idx]
+
+            # Apply air probability scaling
+            logits_for_position[1] += iteration * air_probability_scaling
+
+            # Sample from the distribution
+            probabilities = F.softmax(logits_for_position / temperature, dim=-1)
+            predicted_token = torch.multinomial(probabilities, num_samples=1).item()
+
+            # print(
+            #     f"Selected token {predicted_token} with probability {probabilities[predicted_token].item()*100:.1f}%, air probability {probabilities[1].item()*100:.1f}%"
+            # )
+
+            return predicted_token
+
+    def one_shot_inference(self, structure, temperature=1.0, use_greedy=False):
+        """Return a new structure with predictions for masked positions.
+
+        Args:
+            structure: Input structure tensor
+            temperature: Temperature for softmax sampling (ignored if use_greedy=True)
+            use_greedy: If True, always select most likely token without sampling
+        """
+        with torch.no_grad(), torch.autocast(device_type="cuda"):
+            # Store original device and dimensionality
+            original_device = structure.device
+            was_3d = structure.dim() == 3
+
+            # Move to model's device and ensure we have the right shape
+            structure = structure.to(self.device)
+            if was_3d:
+                structure = structure.unsqueeze(0).unsqueeze(0)
+
+            # Flatten the spatial dimensions (depth, height, width) into one dimension
+            batch_size, channels, depth, height, width = structure.size()
+            flattened = structure.view(batch_size, channels, depth * height * width)
+            flattened = flattened.squeeze(1)  # Remove channel dimension
+
+            logits = self(flattened)
+
+            if use_greedy:
+                predictions = torch.argmax(logits, dim=1)
+            else:
+                # Reshape logits to [batch_size * sequence_length, num_classes]
+                reshaped_logits = logits.permute(0, 2, 1).reshape(-1, logits.size(1))
+                probabilities = F.softmax(reshaped_logits / temperature, dim=1)
+                predictions = torch.multinomial(probabilities, num_samples=1).view(
+                    batch_size, -1
+                )
+
+            predictions = predictions.view(batch_size, depth, height, width)
+
+            result = structure.squeeze(
+                1
+            ).clone()  # Remove channel dimension from structure
+            result[result == 0] = predictions[result == 0]
+
+            # Restore original shape if needed
+            if was_3d:
+                result = result.squeeze(0)
+
+            return result.to(original_device)
+
     def fill_structure(
         self,
         structure,
@@ -134,7 +253,6 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         max_blocks,
         air_probability_iteration_scaling,
     ):
-        self.eval()
         structure = structure.to(self.device)
 
         # Ensure tensor has batch and channel dimensions
@@ -156,67 +274,37 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         with torch.no_grad():
             filled_blocks = 0
 
-            for i in range(max_iterations):
-                print(f"Iteration {i+1}/{max_iterations}")
+            for iteration in range(max_iterations):
+                # print(f"Iteration {iteration+1}/{max_iterations}")
 
-                # Generate mask of valid next elements
-                mask_structure = structure * filled_positions
-                mask = self.generate_neighbor_mask(mask_structure) & (structure == 0)
-
-                # Exit if no more elements to update
-                if not mask.any():
-                    print("No more elements to update")
+                valid_positions = self._get_valid_positions(structure, filled_positions)
+                if valid_positions is None:
+                    # print("No more elements to update")
                     break
 
-                # Get positions that need filling
-                valid_positions = mask.squeeze().nonzero()
-
-                # Calculate center coordinates (assuming 11x11x11 structure)
-                center = torch.tensor([5.0, 5.0, 5.0], device=valid_positions.device)
-
-                # Calculate distances from center for each position
-                distances = torch.norm(valid_positions.float() - center, dim=1)
-
-                # Sort positions by distance from center
-                ordered_positions = valid_positions[torch.argsort(distances)]
-
                 # Process each position in center-out order
-                for pos in ordered_positions:
-                    z, y, x = pos
-
-                    # Perform forward pass for current state
-                    logits = self(flattened_structure)
-                    flat_idx = z * 11 * 11 + y * 11 + x
-                    logits_for_position = logits[0, :, flat_idx]
-
-                    # Probability of air (token 1) goes up each iteration
-                    logits_for_position[1] += i * air_probability_iteration_scaling
-
-                    # Apply temperature and sample
-                    probabilities = F.softmax(logits_for_position / temperature, dim=-1)
-                    predicted_token = torch.multinomial(
-                        probabilities, num_samples=1
-                    ).item()
-                    selected_probability = probabilities[predicted_token].item()
-                    air_probability = probabilities[1].item()
-                    print(
-                        f"Selected token {predicted_token} with probability {selected_probability*100:.1f}%, air probability {air_probability*100:.1f}%"
+                for pos in valid_positions:
+                    predicted_token = self._predict_single_position(
+                        flattened_structure,
+                        pos,
+                        temperature,
+                        iteration,
+                        air_probability_iteration_scaling,
                     )
 
+                    z, y, x = pos
                     yield predicted_token, z, y, x
 
                     if predicted_token != 1:
                         filled_positions[0, 0, z, y, x] = 1
                         filled_blocks += 1
-                        print(f"Filled {filled_blocks}/{max_blocks} solid blocks")
+                        # print(f"Filled {filled_blocks}/{max_blocks} solid blocks")
                     if filled_blocks >= max_blocks:
                         break
                     structure[0, 0, z, y, x] = predicted_token
 
                 if filled_blocks >= max_blocks:
                     break
-
-        self.train()
 
     def complete_structure(self, masked_structure, temperature=1.0):
         for predicted_token, z, y, x in self.fill_structure(
@@ -226,43 +314,22 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         return masked_structure
 
     def on_before_optimizer_step(self, optimizer):
-        norms = grad_norm(self.model, norm_type=2)
-        self.log_dict(norms)
+        if self.global_step % self.trainer.log_every_n_steps == 0:
+            norms = grad_norm(self.model, norm_type=2)
+            self.log_dict(norms)
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.max_learning_rate)
 
-        # Warmup scheduler
-        def lr_lambda(step):
-            return min((step + 1) / self.warmup_steps, 1.0)
-
-        warmup_scheduler = {
-            "scheduler": torch.optim.lr_scheduler.LambdaLR(
-                optimizer, lr_lambda=lr_lambda
+        scheduler = {
+            "scheduler": torch.optim.lr_scheduler.OneCycleLR(
+                optimizer,
+                max_lr=self.max_learning_rate,
+                total_steps=self.trainer.estimated_stepping_batches,
+                pct_start=self.warmup_proportion,
             ),
             "interval": "step",
             "frequency": 1,
         }
 
-        # Reduce on plateau scheduler
-        plateau_scheduler = {
-            "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer,
-                mode="min",
-                factor=0.5,
-                patience=10,
-                verbose=True,
-                threshold=1e-4,
-            ),
-            "monitor": "val_loss",
-            "interval": "step",
-            "frequency": max(
-                1,
-                int(
-                    self.trainer.val_check_interval
-                    * len(self.trainer.datamodule.train_dataloader())
-                ),
-            ),
-        }
-
-        return ([optimizer], [warmup_scheduler, plateau_scheduler])
+        return {"optimizer": optimizer, "lr_scheduler": scheduler}

@@ -1,11 +1,10 @@
 import random
 
 import h5py
-import numpy as np
 import torch
 from torch.nn.functional import conv3d
+from torch.profiler import record_function
 from torch.utils.data import Dataset
-from tqdm import tqdm
 
 from minecraft_schematic_generator.converter import BlockTokenMapper
 
@@ -25,7 +24,8 @@ class MinecraftDataset(Dataset):
             "minecraft:gravel",
             "minecraft:dripstone_block",
             "minecraft:moss_block",
-            "minecraft:deepslate[axis=y]" "minecraft:tuff",
+            "minecraft:deepslate[axis=y]",
+            "minecraft:tuff",
             "minecraft:snow_block",
             "minecraft:ice",
             "minecraft:packed_ice",
@@ -46,17 +46,14 @@ class MinecraftDataset(Dataset):
             [mapper.block_str_to_token(block) for block in natural_block_strings]
         )
 
+        self.file_path = file_path
+        self.split = split
+        self.generator = generator
+
+        # Get the dataset length
         with h5py.File(file_path, "r") as file:
             group = file[split][generator]
             self.length = len(group["names"])
-            self.structures = [
-                torch.from_numpy(structure.astype(np.int64)).long()
-                for structure in tqdm(
-                    group["structures"],
-                    desc=f"Loading {split} {generator} dataset",
-                    leave=False,
-                )
-            ]
 
     def _create_point_noise(
         tensor: torch.Tensor,
@@ -367,6 +364,16 @@ class MinecraftDataset(Dataset):
         return self.length
 
     def __getitem__(self, idx):
-        structure = self.structures[idx]
-        masked_structure = self._mask_structure(structure)
-        return structure, masked_structure
+        with record_function("getitem_total"):
+            with record_function("read_structure"):
+                # Load single structure from disk when needed
+                with h5py.File(self.file_path, "r") as file:
+                    # Read directly into a torch tensor with the correct dtype
+                    structure = torch.from_numpy(
+                        file[self.split][self.generator]["structures"][idx][()]
+                    ).long()
+
+            with record_function("mask_structure"):
+                masked_structure = self._mask_structure(structure)
+
+            return structure, masked_structure

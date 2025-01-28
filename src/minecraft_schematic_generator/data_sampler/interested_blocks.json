@@ -3,7 +3,20 @@
     "overworld": [
       "beacon",
       "scaffolding",
-      "concrete",
+      "light_gray_concrete",
+      ":gray_concrete",
+      "black_concrete",
+      "brown_concrete",
+      "orange_concrete",
+      "yellow_concrete",
+      "lime_concrete",
+      "green_concrete",
+      "cyan_concrete",
+      "light_blue_concrete",
+      "blue_concrete",
+      "purple_concrete",
+      "magenta_concrete",
+      "pink_concrete",
       "slime",
       ":iron_block",
       "honey",
@@ -13,27 +26,29 @@
       "soul_campfire",
       "shulker",
       "froglight",
-      "white_stained_glass|",
+      "white_stained_glass_pane",
       "orange_stained_glass|",
       "light_blue_stained_glass",
       "yellow_stained_glass|",
       "lime_stained_glass",
       "pink_stained_glass",
-      "gray_stained_glass",
-      "light_gray_stained_glass",
+      ":gray_stained_glass",
+      "light_gray_stained_glass_pane",
       "cyan_stained_glass",
       "purple_stained_glass",
       "blue_stained_glass",
       "brown_stained_glass|",
       "green_stained_glass",
       "red_stained_glass|",
-      "black_stained_glass",
+      "black_stained_glass_pane",
       "mangrove_planks",
       "cherry_planks",
       "bamboo_planks",
+      "pale_oak_planks",
       "mangrove_fence",
       "cherry_fence",
       "bamboo_fence",
+      "palen_oak_fence",
       "birch_fence_gate",
       "mangrove_fence_gate",
       "cherry_fence_gate",
@@ -45,9 +60,7 @@
       "birch_wood",
       "jungle_wood",
       "dark_oak_wood",
-      "mangrove_wood",
       "cherry_wood",
-      "hopper",
       "observer",
       "dropper",
       "light_weighted_pressure_plate",
@@ -75,11 +88,6 @@
       "purple_wool",
       ":anvil",
       "chipped",
-      "weathered",
-      "exposed",
-      "oxidized",
-      "waxed",
-      ":copper_block",
       "mangrove_slab",
       "cherry_slab",
       "bamboo_slab",
@@ -103,7 +111,10 @@
       "chorus",
       "wart",
       "rod",
-      "magenta_stained_glass"
+      "magenta_stained_glass",
+      "hanging_sign",
+      "resin",
+      "nether_portal"
     ],
     "nether": [
       "beacon",
@@ -194,7 +205,8 @@
       "moss",
       "wood",
       "prismarine",
-      "copper"
+      "copper",
+      "nether_portal"
     ],
     "end": [
       "beacon",
@@ -216,7 +228,7 @@
       "yellow_stained_glass",
       "lime_stained_glass",
       "pink_stained_glass",
-      "gray_stained_glass",
+      ":gray_stained_glass",
       "light_gray_stained_glass",
       "cyan_stained_glass",
       "purple_stained_glass",
@@ -316,7 +328,8 @@
       "prismarine",
       "copper",
       "nether",
-      "magma"
+      "magma",
+      "nether_portal"
     ]
   },
   "sample": {
@@ -388,14 +401,24 @@
       "jungle_planks",
       "acacia_planks",
       "dark_oak_planks",
+      "cherry_planks",
+      "pale_oak_planks",
+      "mangrove_planks",
       "birch_fence",
       "spruce_fence",
       "jungle_fence",
       "acacia_fence",
       "dark_oak_fence",
+      "cherry_fence",
+      "pale_oak_fence",
       "pressure_plate",
       "stripped",
-      "wood"
+      "wood",
+      "bamboo_mosaic",
+      "bamboo_block",
+      "hanging",
+      "resin",
+      "nether_portal"
     ],
     "nether": [
       "beacon",
@@ -453,7 +476,9 @@
       "fence",
       "wood",
       "pressure_plate",
-      "stairs"
+      "stairs",
+      "bamboo",
+      "nether_portal"
     ],
     "end": [
       "beacon",
@@ -510,7 +535,9 @@
       "pressure_plate",
       "stairs",
       "slab",
-      "magma"
+      "magma",
+      "bamboo",
+      "nether_portal"
     ]
   }
 }

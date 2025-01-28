@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 from huggingface_hub import ModelCard, PyTorchModelHubMixin
 from torch import nn
@@ -30,60 +29,6 @@ This model generates Minecraft structures using a decoder-only transformer archi
 """
 
 
-class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, max_len):
-        super(PositionalEncoding, self).__init__()
-        self.d_model = d_model
-
-        # Calculate the dimensions of the cubic grid
-        cube_side = round(max_len ** (1 / 3))
-
-        # Ensure the sequence can form a perfect cube
-        assert cube_side**3 == max_len, "max_len must be a perfect cube"
-
-        # Create the positional embedding layer
-        self.positional_embedding = nn.Embedding(max_len, d_model)
-
-        # Initialize the positional embeddings with 3D spatial encoding
-        self.positional_embedding.weight.data.copy_(
-            self._3d_spatial_encoding(cube_side)
-        )
-
-        self.register_buffer("positions", torch.arange(max_len).expand((1, max_len)))
-
-    def _3d_spatial_encoding(self, cube_side):
-        # Generate a 3D grid
-        z_grid, y_grid, x_grid = torch.meshgrid(
-            torch.linspace(0, 1, cube_side),
-            torch.linspace(0, 1, cube_side),
-            torch.linspace(0, 1, cube_side),
-            indexing="ij",
-        )
-
-        # Flatten the grid
-        grid = torch.stack((z_grid, y_grid, x_grid), dim=-1).view(-1, 3)
-
-        # Encode each dimension into higher dimensions
-        div_term = torch.exp(
-            torch.arange(0, self.d_model // 3, 2)
-            * -(np.log(10000.0) / (self.d_model // 3))
-        )
-        pos_encoding = torch.zeros((grid.shape[0], self.d_model))
-        for i in range(3):  # For each of the z, y, x dimensions
-            pos_encoding[:, i::6] = torch.sin(
-                grid[:, i : i + 1] * div_term
-            )  # Sine for even indices
-            pos_encoding[:, (i + 1) :: 6] = torch.cos(
-                grid[:, i : i + 1] * div_term
-            )  # Cosine for odd indices
-
-        return pos_encoding
-
-    def forward(self, x):
-        x = x + self.positional_embedding(self.positions[:, : x.size(1)])
-        return x
-
-
 class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
     def __init__(
         self,
@@ -94,37 +39,80 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         num_heads,
         num_layers,
         decoder_dropout,
+        embedding_dim=None,
     ):
         super().__init__()
         self.num_classes = num_classes
         self.max_sequence_length = max_sequence_length
+        self.embedding_dim = embedding_dim or model_dim
+        self.model_dim = model_dim
 
-        self.embedding = nn.Embedding(num_classes, model_dim)
-        self.positional_encoding = PositionalEncoding(model_dim, max_sequence_length)
+        # Input
+        self.embedding = nn.Embedding(num_classes, self.embedding_dim)
+        if self.embedding_dim != model_dim:
+            self.embedding_projection = nn.Linear(self.embedding_dim, model_dim)
+        self.register_buffer("positions", torch.arange(max_sequence_length))
+        self.positional_embedding = nn.Embedding(max_sequence_length, model_dim)
         self.embedding_dropout = nn.Dropout(embedding_dropout)
+
+        # Transformer
         decoder_layer = nn.TransformerDecoderLayer(
             model_dim, num_heads, dropout=decoder_dropout
         )
         self.decoder = nn.TransformerDecoder(decoder_layer, num_layers)
-        self.output_layer = nn.Linear(model_dim, num_classes)
+
+        # Output
+        if self.embedding_dim != model_dim:
+            self.output_projection = nn.Linear(model_dim, self.embedding_dim)
+        self.output_layer = nn.Linear(self.embedding_dim, num_classes)
+        self.output_layer.weight = self.embedding.weight
 
         self._init_weights()
 
     def _init_weights(self):
         nn.init.xavier_uniform_(self.embedding.weight)
+
+        # Initialize positional embedding
+        nn.init.xavier_uniform_(self.positional_embedding.weight)
+
+        # Initialize projection layers if they exist
+        if self.embedding_dim != self.model_dim:
+            nn.init.xavier_uniform_(self.embedding_projection.weight)
+            nn.init.zeros_(self.embedding_projection.bias)
+            nn.init.xavier_uniform_(self.output_projection.weight)
+            nn.init.zeros_(self.output_projection.bias)
+
         for layer in self.decoder.layers:
             nn.init.xavier_uniform_(layer.self_attn.in_proj_weight)
             nn.init.xavier_uniform_(layer.self_attn.out_proj.weight)
             nn.init.xavier_uniform_(layer.linear1.weight)
             nn.init.xavier_uniform_(layer.linear2.weight)
-        nn.init.xavier_uniform_(self.output_layer.weight)
+            # Initialize biases
+            nn.init.zeros_(layer.self_attn.in_proj_bias)
+            nn.init.zeros_(layer.self_attn.out_proj.bias)
+            nn.init.zeros_(layer.linear1.bias)
+            nn.init.zeros_(layer.linear2.bias)
+            # Initialize layer norm parameters
+            nn.init.ones_(layer.norm1.weight)
+            nn.init.zeros_(layer.norm1.bias)
+            nn.init.ones_(layer.norm2.weight)
+            nn.init.zeros_(layer.norm2.bias)
+
+        if self.output_layer.bias is not None:
+            nn.init.zeros_(self.output_layer.bias)
 
     def forward(self, structure_flat: torch.Tensor) -> torch.Tensor:
         # Embed the sequence
         output_seq = self.embedding(structure_flat)
 
-        # Add positional encoding
-        output_seq = self.positional_encoding(output_seq)
+        # Project the embedding if necessary
+        if self.embedding_dim != self.model_dim:
+            output_seq = self.embedding_projection(output_seq)
+
+        # Use cached positions tensor, sliced to current sequence length
+        output_seq = output_seq + self.positional_embedding(
+            self.positions[: structure_flat.size(1)]
+        )
 
         # Add dropout
         output_seq = self.embedding_dropout(output_seq)
@@ -137,6 +125,10 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
 
         # Reshape back to the batch first format
         output = output.transpose(0, 1)
+
+        # Project back to embedding dimension if necessary
+        if self.embedding_dim != self.model_dim:
+            output = self.output_projection(output)
 
         # Run the output layer
         output = self.output_layer(output)

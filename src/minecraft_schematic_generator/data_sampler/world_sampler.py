@@ -34,11 +34,13 @@ class WorldSampler:
         sample_offset,
         sample_size,
         sample_interested_block_threshold,
+        sample_minimum_air_threshold,
         sample_progress_save_interval,
         sampling_purge_interval,
         clear_worker_directories=True,
-        chunks_limit=None,
-        samples_limit=None,
+        chunk_search_limit=None,
+        sample_search_limit=None,
+        sample_limit=None,
         num_workers=os.cpu_count(),
     ):
         self.schematic_directory = schematic_directory
@@ -48,12 +50,16 @@ class WorldSampler:
         self.sample_offset = sample_offset
         self.sample_size = sample_size
         self.sample_interested_block_threshold = sample_interested_block_threshold
+        self.sample_minimum_air_threshold = sample_minimum_air_threshold
         self.sample_progress_save_interval = sample_progress_save_interval
         self.sampling_purge_interval = sampling_purge_interval
         self.num_workers = num_workers
         self.clear_worker_directories = clear_worker_directories
-        self.chunks_limit = chunks_limit
-        self.samples_limit = samples_limit
+        self.chunk_search_limit = chunk_search_limit
+        self.sample_search_limit = sample_search_limit
+        self.sample_limit = sample_limit
+
+        self.MC_VERSION = (1, 21, 4)
 
     def load_interested_blocks(self, directory: str) -> None:
         """Loads the interested blocks from the file"""
@@ -222,7 +228,7 @@ class WorldSampler:
         try:
             # Load the world data from the directory
             world = amulet.load_level(directory)
-            translator = world.translation_manager.get_version("java", (1, 20, 4))
+            translator = world.translation_manager.get_version("java", self.MC_VERSION)
 
             while True:
                 chunk_coords = all_chunks_queue.get()
@@ -348,17 +354,19 @@ class WorldSampler:
     def _mark_chunks(self, root_directory: str, directory: str, dimension: str) -> set:
         """Looks through chunks in a world and marks them as relevant or not relevant"""
 
+        # Get all chunk coordinates
+        world = amulet.load_level(directory)
+        all_chunk_coords = world.all_chunk_coords(dimension)
+        world.close()
+
+        if len(all_chunk_coords) == 0:
+            print("No chunks found in the dimension")
+            return set()
+
         # Load progress
         visited_chunks, relevant_chunks = self._load_chunk_progress(
             directory, dimension
         )
-
-        # return relevant_chunks
-
-        # Get all chunk coordinates and convert to a list
-        world = amulet.load_level(directory)
-        all_chunk_coords = world.all_chunk_coords(dimension)
-        world.close()
 
         # Remove visited chunks from the list
         remaining_chunk_coords = all_chunk_coords - visited_chunks
@@ -379,9 +387,12 @@ class WorldSampler:
 
         # Create a queue and add all chunk coordinates to it
         all_chunks_queue = Queue()
-        if self.chunks_limit:
+        if (
+            self.chunk_search_limit
+            and len(remaining_chunk_coords) > self.chunk_search_limit
+        ):
             remaining_chunk_coords = set(
-                random.sample(remaining_chunk_coords, self.chunks_limit)
+                random.sample(list(remaining_chunk_coords), self.chunk_search_limit)
             )
         for chunk_coords in remaining_chunk_coords:
             all_chunks_queue.put(chunk_coords)
@@ -477,7 +488,7 @@ class WorldSampler:
     def _identify_samples_in_chunk(
         self, world: World, dimension: str, translator, chunk_coords
     ) -> set:
-        """Collects samples from a chunk"""
+        """Identifies samples from a chunk"""
 
         sample_positions = set()
         min_height = world.bounds(dimension).min_y
@@ -505,11 +516,12 @@ class WorldSampler:
                     chunk, translator, dimension
                 )
 
-        # Precompute interesting block positions
+        # Precompute interesting block and air block positions
         max_pos = 15 + self.sample_size
         y_size = max_height - min_height
         x_start, z_start = chunk_coords_to_block_coords(*chunk_coords)
-        block = np.zeros((max_pos, y_size, max_pos))
+        interested_block = np.zeros((max_pos, y_size, max_pos))
+        air_block = np.zeros((max_pos, y_size, max_pos))
         original_block = np.zeros((max_pos, y_size, max_pos))
         for j in range(y_size):
             for i in range(max_pos):
@@ -523,11 +535,16 @@ class WorldSampler:
                     block_value = blocks[x, y, z]
                     original_block[i, j, k] = block_value
                     chunk_interesting_indices = interested_indices[chunk_x][chunk_z]
-                    block[i, j, k] = (
+                    interested_block[i, j, k] = (
                         1 if block_value in chunk_interesting_indices else 0
                     )
+                    air_block[i, j, k] = 1 if block_value == 0 else 0
 
-        marked_count = np.cumsum(np.cumsum(np.cumsum(block, axis=0), axis=1), axis=2)
+        # Calculate cumulative sums for both interested blocks and air blocks
+        marked_count = np.cumsum(
+            np.cumsum(np.cumsum(interested_block, axis=0), axis=1), axis=2
+        )
+        air_count = np.cumsum(np.cumsum(np.cumsum(air_block, axis=0), axis=1), axis=2)
 
         # Iterate through grid of possible selection start positions
         x_offset, y_offset, z_offset = self._get_deterministic_random_offsets(
@@ -554,26 +571,43 @@ class WorldSampler:
                         continue
                     found_valid_position_y = True
 
+                    # Calculate total marked (interested) blocks
                     total_marked = marked_count[i + m - 1][j + m - 1][k + m - 1]
+                    # Calculate total air blocks
+                    total_air = air_count[i + m - 1][j + m - 1][k + m - 1]
 
+                    # Subtract previous slices for both counts
                     if i > 0:
                         total_marked -= marked_count[i - 1][j + m - 1][k + m - 1]
+                        total_air -= air_count[i - 1][j + m - 1][k + m - 1]
                     if j > 0:
                         total_marked -= marked_count[i + m - 1][j - 1][k + m - 1]
+                        total_air -= air_count[i + m - 1][j - 1][k + m - 1]
                     if k > 0:
                         total_marked -= marked_count[i + m - 1][j + m - 1][k - 1]
+                        total_air -= air_count[i + m - 1][j + m - 1][k - 1]
 
+                    # Add back double-subtracted regions
                     if i > 0 and j > 0:
                         total_marked += marked_count[i - 1][j - 1][k + m - 1]
+                        total_air += air_count[i - 1][j - 1][k + m - 1]
                     if i > 0 and k > 0:
                         total_marked += marked_count[i - 1][j + m - 1][k - 1]
+                        total_air += air_count[i - 1][j + m - 1][k - 1]
                     if j > 0 and k > 0:
                         total_marked += marked_count[i + m - 1][j - 1][k - 1]
+                        total_air += air_count[i + m - 1][j - 1][k - 1]
 
+                    # Subtract back triple-subtracted regions
                     if i > 0 and j > 0 and k > 0:
                         total_marked -= marked_count[i - 1][j - 1][k - 1]
+                        total_air -= air_count[i - 1][j - 1][k - 1]
 
-                    if total_marked > self.sample_interested_block_threshold:
+                    # Check both conditions
+                    if (
+                        total_marked > self.sample_interested_block_threshold
+                        and total_air > self.sample_minimum_air_threshold
+                    ):
                         x = x_start + i
                         y = j + min_height
                         z = z_start + k
@@ -607,7 +641,7 @@ class WorldSampler:
         try:
             # Load the world data from the directory
             world = amulet.load_level(directory)
-            translator = world.translation_manager.get_version("java", (1, 20, 4))
+            translator = world.translation_manager.get_version("java", self.MC_VERSION)
 
             while True:
                 chunk_coords = relevant_chunks_queue.get()
@@ -636,17 +670,14 @@ class WorldSampler:
             world.close()
 
     def _identify_samples(
-        self, root_directory: str, directory: str, dimension: str
+        self, root_directory: str, directory: str, dimension: str, relevant_chunks: set
     ) -> set:
         """Identifies samples from the marked chunks"""
 
         # Load progress
-        _, relevant_chunks = self._load_chunk_progress(directory, dimension)
         sampled_chunks, sample_positions = self._load_sample_progress(
             directory, dimension
         )
-
-        # return sample_positions
 
         # Get all relevant chunks that have not been sampled
         remaining_relevant_chunks = relevant_chunks - sampled_chunks
@@ -669,9 +700,12 @@ class WorldSampler:
 
         # Create a queue and add all chunk coordinates to it
         relevant_chunks_queue = Queue()
-        if self.samples_limit:
+        if (
+            self.sample_search_limit
+            and len(remaining_relevant_chunks) > self.sample_search_limit
+        ):
             remaining_relevant_chunks = set(
-                random.sample(remaining_relevant_chunks, self.samples_limit)
+                random.sample(list(remaining_relevant_chunks), self.sample_search_limit)
             )
         for chunk_coords in remaining_relevant_chunks:
             relevant_chunks_queue.put(chunk_coords)
@@ -765,7 +799,10 @@ class WorldSampler:
             purge_counter = 0
             while True:
                 position = sample_positions_queue.get()
+
+                # Check if the worker should stop
                 if position is None:
+                    # Put None back into the queue for the next worker
                     sample_positions_queue.put(None)
                     break
 
@@ -785,7 +822,7 @@ class WorldSampler:
                     wrapper = SpongeSchemFormatWrapper(tmp_path)
                     wrapper.create_and_open(
                         "java",
-                        3578,
+                        self.MC_VERSION,
                         bounds=SelectionGroup(structure.bounds(dimension)),
                         overwrite=True,
                     )
@@ -809,20 +846,25 @@ class WorldSampler:
             world.close()
 
     def _collect_samples(
-        self, root_directory: str, directory: str, dimension: str
+        self,
+        root_directory: str,
+        directory: str,
+        dimension: str,
+        all_sample_positions: set,
     ) -> None:
         """Collects samples from the world at the identified positions"""
 
-        # Load progress
-        _, all_sample_positions = self._load_sample_progress(directory, dimension)
-
         # Filter out positions that already have a schematic
         world_name = os.path.relpath(directory, root_directory)
-        sample_positions = [
-            p
-            for p in all_sample_positions
-            if not os.path.exists(self._get_schematic_path(world_name, dimension, p))
-        ]
+        sample_positions = set(
+            [
+                p
+                for p in all_sample_positions
+                if not os.path.exists(
+                    self._get_schematic_path(world_name, dimension, p)
+                )
+            ]
+        )
         if len(sample_positions) == 0:
             print(
                 f"All {len(all_sample_positions)} samples have already been collected"
@@ -843,6 +885,10 @@ class WorldSampler:
         )
 
         # Create a queue and add all positions to it
+        if self.sample_limit and len(sample_positions) > self.sample_limit:
+            sample_positions = set(
+                random.sample(list(sample_positions), self.sample_limit)
+            )
         sample_positions_queue = Queue()
         for position in sample_positions:
             sample_positions_queue.put(position)
@@ -913,13 +959,21 @@ class WorldSampler:
             "minecraft:the_end",
         ]:
             print(f"Sampling dimension: {dimension}")
-            relevent_chunks = self._mark_chunks(root_directory, directory, dimension)
-            self._visualize_marked_chunks(directory, dimension, relevent_chunks)
+            relevant_chunks = self._mark_chunks(root_directory, directory, dimension)
+            if len(relevant_chunks) == 0:
+                print("No relevant chunks found")
+                continue
+            self._visualize_marked_chunks(directory, dimension, relevant_chunks)
             sample_positions = self._identify_samples(
-                root_directory, directory, dimension
+                root_directory, directory, dimension, relevant_chunks
             )
+            if len(sample_positions) == 0:
+                print("No sample positions found")
+                continue
             self._visualize_sample_positions(directory, dimension, sample_positions)
-            self._collect_samples(root_directory, directory, dimension)
+            self._collect_samples(
+                root_directory, directory, dimension, sample_positions
+            )
         if self.clear_worker_directories:
             self._clear_worker_directories(root_directory, directory)
         print(f"Done sampling {directory}")
