@@ -11,7 +11,7 @@ class BlockBenchmarkCallback(Callback):
 
     def on_validation_epoch_end(self, trainer, pl_module):
         results = run_benchmark(
-            pl_module,
+            pl_module.model,
             num_runs=self.num_runs,
             save_debug_schematics=self.save_debug_schematics,
             base_seed=self.base_seed,

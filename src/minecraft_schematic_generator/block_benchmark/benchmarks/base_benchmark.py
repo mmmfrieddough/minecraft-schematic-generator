@@ -7,6 +7,8 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
+from minecraft_schematic_generator.model import TransformerMinecraftStructureGenerator
+
 
 @dataclass
 class BenchmarkResult:
@@ -66,7 +68,12 @@ class BaseBenchmark(ABC):
         raise NotImplementedError("Must be implemented by subclass")
 
     def run(
-        self, model, num_runs, base_seed, batch_size, show_progress
+        self,
+        model: TransformerMinecraftStructureGenerator,
+        num_runs,
+        base_seed,
+        batch_size,
+        show_progress,
     ) -> BenchmarkResult:
         """Run multiple tests with batched model inference"""
         # Store original training mode
@@ -107,6 +114,9 @@ class BaseBenchmark(ABC):
                     # Run model on batch
                     model_input_batch = torch.stack(batch_inputs)
                     model_input_batch = model_input_batch.unsqueeze(1)
+                    model_input_batch = model_input_batch.to(
+                        next(model.parameters()).device
+                    )
                     model_outputs = model.one_shot_inference(
                         model_input_batch, 0.7, True
                     )

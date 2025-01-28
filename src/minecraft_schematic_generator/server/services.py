@@ -3,10 +3,11 @@ from schempy.components import BlockPalette
 
 from minecraft_schematic_generator.converter import BlockTokenMapper
 from minecraft_schematic_generator.data_preparer import clean_block_properties
+from minecraft_schematic_generator.model import TransformerMinecraftStructureGenerator
 
 
 class StructureGenerator:
-    def __init__(self, model):
+    def __init__(self, model: TransformerMinecraftStructureGenerator):
         self.model = model
         self.block_token_mapper = BlockTokenMapper()
 
@@ -21,7 +22,7 @@ class StructureGenerator:
             )
             return self.block_token_mapper.find_next_available_token()
 
-    def prepare_input_tensor(self, structure):
+    def prepare_input_tensor(self, structure: list) -> torch.Tensor:
         input_structure_ids = [
             [[self.convert_block_to_token(block_str) for block_str in y] for y in z]
             for z in structure
@@ -32,13 +33,14 @@ class StructureGenerator:
 
     def generate_structure(
         self,
-        input_tensor,
-        temperature,
-        start_radius,
-        max_iterations,
-        max_blocks,
-        air_probability_iteration_scaling,
+        input_tensor: torch.Tensor,
+        temperature: float,
+        start_radius: int,
+        max_iterations: int,
+        max_blocks: int,
+        air_probability_iteration_scaling: float,
     ):
+        input_tensor = input_tensor.to(next(self.model.parameters()).device)
         for block, z, y, x in self.model.fill_structure(
             input_tensor,
             temperature,
