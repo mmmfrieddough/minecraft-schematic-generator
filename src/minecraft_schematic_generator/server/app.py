@@ -2,7 +2,7 @@ import contextlib
 import logging
 import traceback
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -37,15 +37,27 @@ app = SchematicGeneratorApp(lifespan=lifespan)
 
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request, exc: RequestValidationError):
-    logger.error(f"Validation error: {exc.errors()}")
-    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+async def validation_exception_handler(_: Request, exc: RequestValidationError):
+    logger.error("Validation error", extra={"errors": exc.errors()})
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": exc.errors(), "message": "Invalid request parameters"},
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(_: Request, exc: Exception):
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Internal server error", "message": str(exc)},
+    )
 
 
 @app.post("/complete-structure/")
 async def complete_structure(input: StructureRequest, request: Request):
+    logger.info("Received structure generation request")
     try:
-        logger.info("Starting structure generation")
         generator = StructureGenerator(app.state.model)
         input_tensor = generator.prepare_input_tensor(input.structure)
 

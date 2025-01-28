@@ -10,6 +10,12 @@ from minecraft_schematic_generator.modules import (
 logger = logging.getLogger(__name__)
 
 
+class ModelLoadError(Exception):
+    """Custom exception for model loading errors"""
+
+    pass
+
+
 class ModelLoader:
     def __init__(self):
         self.model: TransformerMinecraftStructureGenerator = None
@@ -36,38 +42,30 @@ class ModelLoader:
             device = torch.device(device_type)
         logger.info(f"Using device: {device}")
 
-        if checkpoint_path:
-            logger.info(f"Loading model from local checkpoint: {checkpoint_path}")
-            try:
+        try:
+            if checkpoint_path:
+                logger.info(f"Loading model from local checkpoint: {checkpoint_path}")
                 lightning_module = LightningTransformerMinecraftStructureGenerator.load_from_checkpoint(
                     checkpoint_path
                 )
                 self.model = lightning_module.model
-            except Exception as e:
-                logger.error(f"Unable to load model from checkpoint: {e}")
-                raise e
-        elif model_path:
-            try:
+            elif model_path:
                 logger.info(f"Loading model from local path: {model_path}")
                 self.model = TransformerMinecraftStructureGenerator.from_pretrained(
                     model_path
                 )
-            except Exception as e:
-                logger.error(f"Unable to load model from local path: {e}")
-                raise e
-        elif model_id:
-            try:
+            elif model_id:
                 logger.info(
                     f"Loading model from Hugging Face: {model_id}, revision: {model_revision}"
                 )
                 self.model = TransformerMinecraftStructureGenerator.from_pretrained(
                     model_id, revision=model_revision
                 )
-            except Exception as e:
-                logger.error(f"Unable to load model from Hugging Face: {e}")
-                raise e
-        else:
-            raise ValueError("No model specified")
+            else:
+                raise ModelLoadError("No model specified")
+        except Exception as e:
+            logger.error(f"Failed to load model: {str(e)}", exc_info=True)
+            raise ModelLoadError(f"Model loading failed: {str(e)}") from e
 
         self.model.to(device)
         self.model.eval()

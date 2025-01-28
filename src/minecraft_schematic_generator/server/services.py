@@ -43,14 +43,41 @@ class StructureGenerator:
         max_blocks: int,
         air_probability_iteration_scaling: float,
     ):
-        input_tensor = input_tensor.to(next(self.model.parameters()).device)
-        for block, z, y, x in self.model.fill_structure(
-            input_tensor,
-            temperature,
-            start_radius,
-            max_iterations,
-            max_blocks,
-            air_probability_iteration_scaling,
-        ):
-            block = self.block_token_mapper.token_to_block(block)
-            yield {"block_state": str(block), "z": z, "y": y, "x": x}
+        try:
+            input_tensor = input_tensor.to(next(self.model.parameters()).device)
+            self.logger.info(
+                "Starting structure generation",
+                extra={
+                    "tensor_shape": input_tensor.shape,
+                    "temperature": temperature,
+                    "start_radius": start_radius,
+                    "max_iterations": max_iterations,
+                    "max_blocks": max_blocks,
+                },
+            )
+
+            blocks_generated = 0
+            for block, z, y, x in self.model.fill_structure(
+                input_tensor,
+                temperature,
+                start_radius,
+                max_iterations,
+                max_blocks,
+                air_probability_iteration_scaling,
+            ):
+                blocks_generated += 1
+                block = self.block_token_mapper.token_to_block(block)
+                yield {"block_state": str(block), "z": z, "y": y, "x": x}
+
+            self.logger.info(
+                "Structure generation completed",
+                extra={"blocks_generated": blocks_generated},
+            )
+
+        except Exception:
+            self.logger.error(
+                "Error during structure generation",
+                exc_info=True,
+                extra={"tensor_shape": input_tensor.shape, "temperature": temperature},
+            )
+            raise
