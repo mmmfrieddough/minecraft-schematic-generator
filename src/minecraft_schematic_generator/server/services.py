@@ -1,3 +1,5 @@
+import logging
+
 import torch
 from schempy.components import BlockPalette
 
@@ -8,6 +10,7 @@ from minecraft_schematic_generator.model import TransformerMinecraftStructureGen
 
 class StructureGenerator:
     def __init__(self, model: TransformerMinecraftStructureGenerator):
+        self.logger = logging.getLogger(__name__)
         self.model = model
         self.block_token_mapper = BlockTokenMapper()
 
@@ -17,8 +20,8 @@ class StructureGenerator:
         try:
             return self.block_token_mapper.block_to_token(block)
         except KeyError:
-            print(
-                f"WARN: Block {block_str} not found in mapping. Returning unused token."
+            self.logger.warning(
+                f"Block {block_str} not found in mapping. Returning unused token."
             )
             return self.block_token_mapper.find_next_available_token()
 

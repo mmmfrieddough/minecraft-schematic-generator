@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from .config import AppState
 from .model_loader import ModelLoader
 from .models import Block, StructureRequest
 from .services import StructureGenerator
@@ -13,16 +14,26 @@ from .services import StructureGenerator
 logger = logging.getLogger(__name__)
 
 
+class SchematicGeneratorApp(FastAPI):
+    state: AppState
+
+
 @contextlib.asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: SchematicGeneratorApp):
     logger.info("Loading model...")
     model_loader = ModelLoader()
-    app.state.model = model_loader.load_model(app.state.mode, app.state.checkpoint_path)
+    app.state.model = model_loader.load_model(
+        app.state.checkpoint_path,
+        app.state.model_path,
+        app.state.model_id,
+        app.state.model_revision,
+        app.state.device,
+    )
     logger.info("Model loaded successfully")
     yield
 
 
-app = FastAPI(lifespan=lifespan)
+app = SchematicGeneratorApp(lifespan=lifespan)
 
 
 @app.exception_handler(RequestValidationError)
