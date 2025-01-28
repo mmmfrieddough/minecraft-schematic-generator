@@ -17,15 +17,17 @@ dependencies = [
     "huggingface-hub",
     "safetensors",
     "fastapi",
-    "pydantic"
+    "pydantic",
+    "aiohttp",
+    "semver"
 ]
 
 [project.optional-dependencies]
 server = [
-    "hypercorn"
+    "hypercorn",
+    "colorlog"
 ]
 dev = [
-    "hypercorn",
     "wandb",
     "ipykernel",
     "tensorboard",

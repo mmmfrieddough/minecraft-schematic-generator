@@ -2,9 +2,13 @@ import contextlib
 import logging
 import traceback
 
+import aiohttp
+import semver
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
+
+from minecraft_schematic_generator.version import GITHUB_REPO, __version__
 
 from .config import AppState
 from .model_loader import ModelLoader
@@ -18,8 +22,38 @@ class SchematicGeneratorApp(FastAPI):
     state: AppState
 
 
+async def check_latest_version(app: SchematicGeneratorApp):
+    """Check GitHub for the latest release version."""
+    try:
+        async with aiohttp.ClientSession() as session:
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    latest_version = data["tag_name"].lstrip("v")
+                    current_version = __version__
+
+                    if semver.compare(latest_version, current_version) > 0:
+                        logger.warning(
+                            f"A new version {latest_version} is available! "
+                            f"You are currently running version {current_version}. "
+                            f"Visit https://github.com/{GITHUB_REPO}/releases/latest to update."
+                        )
+                    else:
+                        logger.info(f"Running latest version {current_version}")
+                else:
+                    raise Exception(f"Coudn't fetch latest version: {response.status}")
+    except Exception as e:
+        logger.warning(f"Failed to check for updates: {str(e)}")
+
+
 @contextlib.asynccontextmanager
 async def lifespan(app: SchematicGeneratorApp):
+    logger.info(f"Starting Minecraft Schematic Generator v{__version__}")
+
+    # Check for updates
+    await check_latest_version(app)
+
     logger.info("Loading model...")
     model_loader = ModelLoader()
     app.state.model = model_loader.load_model(
