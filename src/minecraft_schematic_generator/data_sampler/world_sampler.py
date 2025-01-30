@@ -14,6 +14,7 @@ logging.getLogger("amulet").setLevel(logging.CRITICAL)
 logging.getLogger("PyMCTranslate").setLevel(logging.CRITICAL)
 
 import amulet  # noqa: E402
+import matplotlib  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from amulet.api.chunk import Chunk  # noqa: E402
@@ -170,16 +171,37 @@ class WorldSampler:
         dimension = dimension.replace(":", "_")
         temp_file_path = os.path.join(directory, f"{dimension}_chunk_progress_temp.pkl")
         final_file_path = os.path.join(directory, f"{dimension}_chunk_progress.pkl")
-        with open(temp_file_path, "wb") as file:
-            pickle.dump(
-                {
-                    "visited_chunks": visited_chunks,
-                    "relevant_chunks": relevant_chunks,
-                },
-                file,
-                protocol=pickle.HIGHEST_PROTOCOL,
-            )
-        os.replace(temp_file_path, final_file_path)
+
+        # Add retry logic with a small delay
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Make sure temp file is closed and deleted if it exists
+                if os.path.exists(temp_file_path):
+                    try:
+                        os.remove(temp_file_path)
+                    except FileNotFoundError:
+                        pass
+
+                # Write to temp file
+                with open(temp_file_path, "wb") as file:
+                    pickle.dump(
+                        {
+                            "visited_chunks": visited_chunks,
+                            "relevant_chunks": relevant_chunks,
+                        },
+                        file,
+                        protocol=pickle.HIGHEST_PROTOCOL,
+                    )
+
+                # Try to replace the file
+                os.replace(temp_file_path, final_file_path)
+                break
+            except PermissionError:
+                if attempt < max_retries - 1:
+                    time.sleep(0.5)  # Wait half a second before retrying
+                    continue
+                raise  # Re-raise the exception if all retries failed
 
     def _load_chunk_progress(self, directory: str, dimension: str) -> tuple:
         """Load the current chunk progress from a file"""
@@ -204,16 +226,37 @@ class WorldSampler:
             directory, f"{dimension}_sample_progress_temp.pkl"
         )
         final_file_path = os.path.join(directory, f"{dimension}_sample_progress.pkl")
-        with open(temp_file_path, "wb") as file:
-            pickle.dump(
-                {
-                    "sampled_chunks": sampled_chunks,
-                    "sample_positions": sample_positions,
-                },
-                file,
-                protocol=pickle.HIGHEST_PROTOCOL,
-            )
-        os.replace(temp_file_path, final_file_path)
+
+        # Add retry logic with a small delay
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Make sure temp file is closed and deleted if it exists
+                if os.path.exists(temp_file_path):
+                    try:
+                        os.remove(temp_file_path)
+                    except FileNotFoundError:
+                        pass
+
+                # Write to temp file
+                with open(temp_file_path, "wb") as file:
+                    pickle.dump(
+                        {
+                            "sampled_chunks": sampled_chunks,
+                            "sample_positions": sample_positions,
+                        },
+                        file,
+                        protocol=pickle.HIGHEST_PROTOCOL,
+                    )
+
+                # Try to replace the file
+                os.replace(temp_file_path, final_file_path)
+                break
+            except PermissionError:
+                if attempt < max_retries - 1:
+                    time.sleep(0.5)  # Wait half a second before retrying
+                    continue
+                raise  # Re-raise the exception if all retries failed
 
     def _load_sample_progress(self, directory: str, dimension: str) -> tuple:
         """Load the current sample progress from a file"""
@@ -286,6 +329,8 @@ class WorldSampler:
         title: str,
         colorbar: str = None,
     ) -> None:
+        matplotlib.use("Agg")
+
         # Set the background for dark mode
         plt.style.use("dark_background")
 
@@ -414,7 +459,8 @@ class WorldSampler:
             # Create and start worker processes
             for i in tqdm(
                 range(self.num_mark_chunks_workers),
-                desc="Starting worker processes for marking chunks",
+                desc="Starting worker processes",
+                leave=False,
             ):
                 process = Process(
                     target=self._mark_chunks_worker,
@@ -730,7 +776,8 @@ class WorldSampler:
             # Create and start worker processes
             for i in tqdm(
                 range(self.num_identify_samples_workers),
-                desc="Starting worker processes for identifying samples",
+                desc="Starting worker processes",
+                leave=False,
             ):
                 process = Process(
                     target=self._identify_samples_worker,
@@ -794,12 +841,18 @@ class WorldSampler:
 
         return sample_positions
 
+    def _get_schematic_hash(
+        self, world_name: str, dimension: str, position: tuple
+    ) -> str:
+        """Returns the hash of the schematic file for the given position"""
+        filename = world_name + dimension + str(position)
+        return hashlib.sha256(filename.encode()).hexdigest()
+
     def _get_schematic_path(
         self, world_name: str, dimension: str, position: tuple
     ) -> str:
         """Returns the path to the schematic file for the given position"""
-        filename = world_name + dimension + str(position)
-        file_hash = hashlib.sha256(filename.encode()).hexdigest()
+        file_hash = self._get_schematic_hash(world_name, dimension, position)
         path = os.path.join(self.schematic_directory, world_name, file_hash + ".schem")
         return path
 
@@ -877,15 +930,29 @@ class WorldSampler:
 
         # Filter out positions that already have a schematic
         world_name = os.path.relpath(directory, root_directory)
-        sample_positions = set(
-            [
-                p
-                for p in all_sample_positions
-                if not os.path.exists(
-                    self._get_schematic_path(world_name, dimension, p)
-                )
-            ]
-        )
+        schematic_directory = os.path.join(self.schematic_directory, world_name)
+
+        # Check if the schematic directory exists
+        if not os.path.exists(schematic_directory):
+            os.makedirs(schematic_directory)
+            sample_positions = all_sample_positions
+        else:
+            # Get set of existing schematic hashes
+            existing_schematics = {
+                f.split(".")[0]
+                for f in os.listdir(schematic_directory)
+                if f.endswith(".schem")
+            }
+
+            # Go through all sample positions and check if a schematic already exists
+            sample_positions = set()
+            for position in all_sample_positions:
+                if (
+                    self._get_schematic_hash(world_name, dimension, position)
+                    not in existing_schematics
+                ):
+                    sample_positions.add(position)
+
         if len(sample_positions) == 0:
             print(
                 f"All {len(all_sample_positions)} samples have already been collected"
@@ -918,7 +985,8 @@ class WorldSampler:
             # Create and start worker processes
             for i in tqdm(
                 range(self.num_collect_samples_workers),
-                desc="Starting worker processes for collecting samples",
+                desc="Starting worker processes",
+                leave=False,
             ):
                 process = Process(
                     target=self._collect_samples_worker,
@@ -990,14 +1058,20 @@ class WorldSampler:
             if len(relevant_chunks) == 0:
                 print("No relevant chunks found")
                 continue
-            self._visualize_marked_chunks(directory, dimension, relevant_chunks)
+            try:
+                self._visualize_marked_chunks(directory, dimension, relevant_chunks)
+            except Exception as e:
+                print(f"Error visualizing marked chunks: {e}")
             sample_positions = self._identify_samples(
                 root_directory, directory, dimension, relevant_chunks
             )
             if len(sample_positions) == 0:
                 print("No sample positions found")
                 continue
-            self._visualize_sample_positions(directory, dimension, sample_positions)
+            try:
+                self._visualize_sample_positions(directory, dimension, sample_positions)
+            except Exception as e:
+                print(f"Error visualizing sample positions: {e}")
             self._collect_samples(
                 root_directory, directory, dimension, sample_positions
             )
