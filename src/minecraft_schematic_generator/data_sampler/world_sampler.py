@@ -50,7 +50,7 @@ class WorldSampler:
         chunk_mark_radius,
         sample_offset,
         sample_size,
-        sample_interested_block_threshold,
+        sample_target_block_threshold,
         sample_minimum_air_threshold,
         sample_progress_save_interval,
         sampling_purge_interval,
@@ -68,7 +68,7 @@ class WorldSampler:
         self.chunk_mark_radius = chunk_mark_radius
         self.sample_offset = sample_offset
         self.sample_size = sample_size
-        self.sample_interested_block_threshold = sample_interested_block_threshold
+        self.sample_target_block_threshold = sample_target_block_threshold
         self.sample_minimum_air_threshold = sample_minimum_air_threshold
         self.sample_progress_save_interval = sample_progress_save_interval
         self.sampling_purge_interval = sampling_purge_interval
@@ -86,11 +86,11 @@ class WorldSampler:
         """Returns the path to the data directory for a world"""
         return os.path.join(directory, ".minecraft_schematic_generator")
 
-    def load_interested_blocks(self, directory: str) -> None:
-        """Loads the interested blocks from the files"""
+    def load_target_blocks(self, directory: str) -> tuple[dict, dict]:
+        """Loads the target blocks from the files and returns them"""
         # Initialize dictionaries
-        self.chunk_target_blocks = {}
-        self.sample_target_blocks = {}
+        chunk_target_blocks = {}
+        sample_target_blocks = {}
 
         data_dir = self._get_data_directory(directory)
 
@@ -106,7 +106,7 @@ class WorldSampler:
 
             # Load chunk blocks
             with open(config_path, "r") as file:
-                self.chunk_target_blocks[dimension] = json.load(file)
+                chunk_target_blocks[dimension] = json.load(file)
 
             # Check for sample blocks file
             sample_filename = f"{prefix}_sample_blocks.json"
@@ -118,7 +118,9 @@ class WorldSampler:
 
             # Load sample blocks
             with open(config_path, "r") as file:
-                self.sample_target_blocks[dimension] = json.load(file)
+                sample_target_blocks[dimension] = json.load(file)
+
+        return chunk_target_blocks, sample_target_blocks
 
     def get_worker_directory(
         self, root_directory: str, src_directory: str, worker_id: int
@@ -192,7 +194,7 @@ class WorldSampler:
                     break
 
     def _check_block(
-        self, block: Block, target_blocks: list, translator: BlockTranslator
+        self, block: Block, target_blocks: set, translator: BlockTranslator
     ) -> bool:
         """Returns True if the block is one of the target blocks"""
         cache_key = block.namespaced_name
@@ -287,7 +289,7 @@ class WorldSampler:
         return None
 
     def _chunk_contains_target_blocks(
-        self, chunk: Chunk, target_blocks: list, translator: BlockTranslator
+        self, chunk: Chunk, target_blocks: set, translator: BlockTranslator
     ) -> bool:
         """Returns True if the chunk contains any of the target blocks"""
         for block in chunk.block_palette:
@@ -295,27 +297,34 @@ class WorldSampler:
                 return True
         return False
 
-    def _get_chunk_config(self, dimension: str) -> dict:
+    def _get_chunk_config(self, target_blocks: list) -> dict:
         """Returns the configuration for marking chunks"""
         return {
-            "chunk_target_blocks": self.chunk_target_blocks[dimension],
-            "chunk_mark_radius": self.chunk_mark_radius,
+            "target_blocks": target_blocks,
+            "mark_radius": self.chunk_mark_radius,
         }
 
     def _save_chunk_progress(
-        self, directory: str, dimension: str, visited_chunks: set, relevant_chunks: set
+        self,
+        directory: str,
+        dimension: str,
+        target_blocks: list,
+        visited_chunks: set,
+        relevant_chunks: set,
     ) -> None:
         """Save the current chunk progress to a file"""
-        config = self._get_chunk_config(dimension)
+        config = self._get_chunk_config(target_blocks)
         data = {
             "visited_chunks": visited_chunks,
             "relevant_chunks": relevant_chunks,
         }
         self._save_progress(directory, dimension, "chunk", config, data)
 
-    def _load_chunk_progress(self, directory: str, dimension: str) -> tuple:
+    def _load_chunk_progress(
+        self, directory: str, dimension: str, target_blocks: list
+    ) -> tuple:
         """Load the current chunk progress from a file"""
-        current_config = self._get_chunk_config(dimension)
+        current_config = self._get_chunk_config(target_blocks)
         data = self._load_progress(directory, dimension, "chunk", current_config)
         return (
             (data["visited_chunks"], data["relevant_chunks"])
@@ -323,30 +332,37 @@ class WorldSampler:
             else (set(), set())
         )
 
-    def _get_sample_config(self, dimension: str) -> dict:
+    def _get_sample_config(self, target_blocks: list) -> dict:
         """Returns the configuration for identifying samples"""
         return {
-            "sample_target_blocks": self.sample_target_blocks[dimension],
-            "sample_offset": self.sample_offset,
-            "sample_size": self.sample_size,
-            "sample_interested_block_threshold": self.sample_interested_block_threshold,
-            "sample_minimum_air_threshold": self.sample_minimum_air_threshold,
+            "target_blocks": target_blocks,
+            "offset": self.sample_offset,
+            "size": self.sample_size,
+            "target_block_threshold": self.sample_target_block_threshold,
+            "minimum_air_threshold": self.sample_minimum_air_threshold,
         }
 
     def _save_sample_progress(
-        self, directory: str, dimension: str, sampled_chunks: set, sample_positions: set
+        self,
+        directory: str,
+        dimension: str,
+        target_blocks: list,
+        sampled_chunks: set,
+        sample_positions: set,
     ) -> None:
         """Save the current sample progress to a file"""
-        config = self._get_sample_config(dimension)
+        config = self._get_sample_config(target_blocks)
         data = {
             "sampled_chunks": sampled_chunks,
             "sample_positions": sample_positions,
         }
         self._save_progress(directory, dimension, "sample", config, data)
 
-    def _load_sample_progress(self, directory: str, dimension: str) -> tuple:
+    def _load_sample_progress(
+        self, directory: str, dimension: str, target_blocks: list
+    ) -> tuple:
         """Load the current sample progress from a file"""
-        current_config = self._get_sample_config(dimension)
+        current_config = self._get_sample_config(target_blocks)
         data = self._load_progress(directory, dimension, "sample", current_config)
         return (
             (data["sampled_chunks"], data["sample_positions"])
@@ -358,6 +374,7 @@ class WorldSampler:
         self,
         directory: str,
         dimension: str,
+        target_blocks: set,
         all_chunks_queue: Queue,
         visited_chunks_queue: Queue,
         relevant_chunks_queue: Queue,
@@ -367,7 +384,7 @@ class WorldSampler:
             # Load the world data from the directory
             world = amulet.load_level(directory)
 
-            # Use the translator for the project level Minecraft version which interested blocks are defined for
+            # Use the translator for the project level Minecraft version which target blocks are defined for
             translator = world.translation_manager.get_version(
                 MINECRAFT_PLATFORM, MINECRAFT_VERSION
             ).block
@@ -381,7 +398,7 @@ class WorldSampler:
                 try:
                     chunk = world.level_wrapper.load_chunk(*chunk_coords, dimension)
                     if self._chunk_contains_target_blocks(
-                        chunk, self.chunk_target_blocks[dimension], translator
+                        chunk, target_blocks, translator
                     ):
                         # Add this chunk and its neighbors
                         for dx in range(
@@ -499,7 +516,13 @@ class WorldSampler:
             "Sample Count",
         )
 
-    def _mark_chunks(self, root_directory: str, directory: str, dimension: str) -> set:
+    def _mark_chunks(
+        self,
+        root_directory: str,
+        directory: str,
+        dimension: str,
+        target_blocks: list,
+    ) -> set:
         """Looks through chunks in a world and marks them as relevant or not relevant"""
 
         # Get all chunk coordinates
@@ -513,7 +536,7 @@ class WorldSampler:
 
         # Load progress
         visited_chunks, relevant_chunks = self._load_chunk_progress(
-            directory, dimension
+            directory, dimension, target_blocks
         )
 
         # Remove visited chunks from the list
@@ -545,6 +568,7 @@ class WorldSampler:
         relevant_chunks_queue = Queue()
 
         processes = []
+        target_blocks_set = set(target_blocks)
         try:
             # Create and start worker processes
             for i in tqdm(
@@ -557,6 +581,7 @@ class WorldSampler:
                     args=(
                         self.get_worker_directory(root_directory, directory, i),
                         dimension,
+                        target_blocks_set,
                         all_chunks_queue,
                         visited_chunks_queue,
                         relevant_chunks_queue,
@@ -584,7 +609,11 @@ class WorldSampler:
                         unsuccessful_chunks_count += 1
                     if len(visited_chunks) % self.chunk_progress_save_interval == 0:
                         self._save_chunk_progress(
-                            directory, dimension, visited_chunks, relevant_chunks
+                            directory,
+                            dimension,
+                            target_blocks,
+                            visited_chunks,
+                            relevant_chunks,
                         )
                 while not relevant_chunks_queue.empty():
                     relevant_chunks.add(relevant_chunks_queue.get())
@@ -609,22 +638,23 @@ class WorldSampler:
 
         # Final save
         self._save_chunk_progress(
-            directory, dimension, all_chunk_coords, relevant_chunks
+            directory, dimension, target_blocks, visited_chunks, relevant_chunks
         )
 
         return relevant_chunks
 
-    def _get_interested_palette_indices(
-        self, chunk: Chunk, translator: BlockTranslator, dimension: str
+    def _get_target_palette_indices(
+        self,
+        translator: BlockTranslator,
+        target_blocks: set,
+        chunk: Chunk,
     ) -> set:
-        """Returns a set of indices of blocks from the chunk palette that we are interested in"""
-        interested_indices = set()
+        """Returns a set of indices of blocks from the chunk palette that we are targeting"""
+        target_indices = set()
         for i, block in enumerate(chunk.block_palette):
-            if self._check_block(
-                block, self.sample_target_blocks[dimension], translator
-            ):
-                interested_indices.add(i)
-        return interested_indices
+            if self._check_block(block, target_blocks, translator):
+                target_indices.add(i)
+        return target_indices
 
     def _get_deterministic_random_offsets(self, chunk_coords: tuple) -> tuple:
         # Convert the chunk coordinates to a string
@@ -644,6 +674,7 @@ class WorldSampler:
         world: World,
         dimension: str,
         translator: BlockTranslator,
+        target_blocks: set,
         chunk_coords: tuple,
     ) -> set:
         """Identifies samples from a chunk"""
@@ -659,7 +690,7 @@ class WorldSampler:
             dtype=np.int32,
             order="C",
         )
-        interested_block = np.zeros_like(chunk_blocks, dtype=bool)
+        target_block = np.zeros_like(chunk_blocks, dtype=bool)
         air_block = np.zeros_like(chunk_blocks, dtype=bool)
 
         # Load chunks directly into the arrays
@@ -674,20 +705,20 @@ class WorldSampler:
                 if world.has_chunk(*inner_chunk_coords, dimension):
                     chunk = world.get_chunk(*inner_chunk_coords, dimension)
                     blocks = np.asarray(chunk.blocks[:, min_height:max_height, :])
-                    interested_indices = self._get_interested_palette_indices(
-                        chunk, translator, dimension
+                    target_indices = self._get_target_palette_indices(
+                        translator, target_blocks, chunk
                     )
                 else:
                     blocks = np.zeros((16, max_height - min_height, 16), dtype=np.int32)
-                    interested_indices = set()
+                    target_indices = set()
 
                 # Use pre-calculated slices
                 chunk_blocks[x_slice, :, z_slice] = blocks
 
-                # Create masks for interested blocks and air blocks
-                if interested_indices:
-                    interested_block[x_slice, :, z_slice] = np.isin(
-                        blocks, list(interested_indices)
+                # Create masks for target blocks and air blocks
+                if target_indices:
+                    target_block[x_slice, :, z_slice] = np.isin(
+                        blocks, list(target_indices)
                     )
                 air_block[x_slice, :, z_slice] = blocks == 0
 
@@ -695,7 +726,7 @@ class WorldSampler:
 
         # Calculate cumulative sums with optimal axis order for memory access
         marked_count = np.cumsum(
-            np.cumsum(np.cumsum(interested_block, axis=2), axis=1), axis=0
+            np.cumsum(np.cumsum(target_block, axis=2), axis=1), axis=0
         )
         air_count = np.cumsum(np.cumsum(np.cumsum(air_block, axis=2), axis=1), axis=0)
 
@@ -727,7 +758,7 @@ class WorldSampler:
                         continue
                     found_valid_position_y = True
 
-                    # Calculate total marked (interested) blocks
+                    # Calculate total marked (target) blocks
                     total_marked = marked_count[i + m - 1, j + m - 1, k + m - 1]
                     # Calculate total air blocks
                     total_air = air_count[i + m - 1, j + m - 1, k + m - 1]
@@ -761,7 +792,7 @@ class WorldSampler:
 
                     # Check both conditions
                     if (
-                        total_marked > self.sample_interested_block_threshold
+                        total_marked > self.sample_target_block_threshold
                         and total_air > self.sample_minimum_air_threshold
                     ):
                         x = x_start + i
@@ -788,6 +819,7 @@ class WorldSampler:
         self,
         directory: str,
         dimension: str,
+        target_blocks: set,
         relevant_chunks_queue: Queue,
         sampled_chunks_queue: Queue,
         sample_positions_queue: Queue,
@@ -798,7 +830,7 @@ class WorldSampler:
             # Load the world data from the directory
             world = amulet.load_level(directory)
 
-            # Use the translator for the project level Minecraft version which interested blocks are defined for
+            # Use the translator for the project level Minecraft version which target blocks are defined for
             translator = world.translation_manager.get_version(
                 MINECRAFT_PLATFORM, MINECRAFT_VERSION
             ).block
@@ -812,7 +844,7 @@ class WorldSampler:
                 try:
                     if world.has_chunk(*chunk_coords, dimension):
                         samples = self._identify_samples_in_chunk(
-                            world, dimension, translator, chunk_coords
+                            world, dimension, translator, target_blocks, chunk_coords
                         )
                         sample_positions_queue.put(samples)
                     successful = True
@@ -830,13 +862,18 @@ class WorldSampler:
             world.close()
 
     def _identify_samples(
-        self, root_directory: str, directory: str, dimension: str, relevant_chunks: set
+        self,
+        root_directory: str,
+        directory: str,
+        dimension: str,
+        target_blocks: list,
+        relevant_chunks: set,
     ) -> set:
         """Identifies samples from the marked chunks"""
 
         # Load progress
         sampled_chunks, sample_positions = self._load_sample_progress(
-            directory, dimension
+            directory, dimension, target_blocks
         )
 
         # Get all relevant chunks that have not been sampled
@@ -870,6 +907,7 @@ class WorldSampler:
         sample_positions_queue = Queue()
 
         processes = []
+        target_blocks_set = set(target_blocks)
         try:
             # Create and start worker processes
             for i in tqdm(
@@ -882,6 +920,7 @@ class WorldSampler:
                     args=(
                         self.get_worker_directory(root_directory, directory, i),
                         dimension,
+                        target_blocks_set,
                         relevant_chunks_queue,
                         sampled_chunks_queue,
                         sample_positions_queue,
@@ -909,7 +948,11 @@ class WorldSampler:
                         unsuccessful_chunks_count += 1
                     if len(sampled_chunks) % self.sample_progress_save_interval == 0:
                         self._save_sample_progress(
-                            directory, dimension, sampled_chunks, sample_positions
+                            directory,
+                            dimension,
+                            target_blocks,
+                            sampled_chunks,
+                            sample_positions,
                         )
                 while not sample_positions_queue.empty():
                     sample_positions.update(sample_positions_queue.get())
@@ -934,7 +977,7 @@ class WorldSampler:
 
         # Final save
         self._save_sample_progress(
-            directory, dimension, sampled_chunks, sample_positions
+            directory, dimension, target_blocks, sampled_chunks, sample_positions
         )
 
         return sample_positions
@@ -1171,10 +1214,12 @@ class WorldSampler:
     def sample_world(self, root_directory: str, directory: str) -> None:
         """Samples a world"""
         print(f"Sampling {directory}")
-        self.load_interested_blocks(directory)
+        chunk_target_blocks, sample_target_blocks = self.load_target_blocks(directory)
         for dimension in self.DIMENSIONS:
             print(f"Sampling dimension: {dimension}")
-            relevant_chunks = self._mark_chunks(root_directory, directory, dimension)
+            relevant_chunks = self._mark_chunks(
+                root_directory, directory, dimension, chunk_target_blocks[dimension]
+            )
             if len(relevant_chunks) == 0:
                 print("No relevant chunks found")
                 continue
@@ -1183,7 +1228,11 @@ class WorldSampler:
             except Exception as e:
                 print(f"Error visualizing marked chunks: {e}")
             sample_positions = self._identify_samples(
-                root_directory, directory, dimension, relevant_chunks
+                root_directory,
+                directory,
+                dimension,
+                sample_target_blocks[dimension],
+                relevant_chunks,
             )
             if len(sample_positions) == 0:
                 print("No sample positions found")
