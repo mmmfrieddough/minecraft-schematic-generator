@@ -132,6 +132,12 @@ class WorldSampler:
         self, root_directory: str, src_directory: str, num_workers: int
     ) -> None:
         """Sets up worker directories for a given source directory"""
+        COPY_LIST = {
+            "level.dat",  # Essential world data
+            "region",  # Block data
+            "DIM-1",  # Nether
+            "DIM1",  # End
+        }
 
         # Check if the worker directories have already been set up
         for i in range(num_workers):
@@ -143,14 +149,24 @@ class WorldSampler:
         else:
             return
 
-        # Create a copy of the source directory for each worker
+        # Create a copy of only the necessary files for each worker
         pbar = tqdm(range(num_workers), desc="Setting up worker directories")
         for i in pbar:
             worker_directory = self.get_worker_directory(
                 root_directory, src_directory, i
             )
             if not os.path.exists(worker_directory):
-                shutil.copytree(src_directory, worker_directory)
+                os.makedirs(worker_directory)
+
+                # Copy only the files/directories we need
+                for item in os.listdir(src_directory):
+                    if item in COPY_LIST:
+                        src_path = os.path.join(src_directory, item)
+                        dst_path = os.path.join(worker_directory, item)
+                        if os.path.isfile(src_path):
+                            shutil.copy2(src_path, dst_path)
+                        elif os.path.isdir(src_path):
+                            shutil.copytree(src_path, dst_path)
 
     def _clear_worker_directories(
         self, root_directory: str, src_directory: str
@@ -158,11 +174,20 @@ class WorldSampler:
         """Clears the worker directories for a given source directory"""
 
         rel_path = os.path.relpath(src_directory, root_directory)
+        copies_directory = os.path.join(self.temp_directory, rel_path)
 
         # Clear the worker directories if they exist
-        copies_directory = os.path.join(self.temp_directory, rel_path)
         if os.path.exists(copies_directory):
             shutil.rmtree(copies_directory)
+
+            # Clean up empty parent directories
+            parent = os.path.dirname(copies_directory)
+            while parent >= self.temp_directory:
+                if len(os.listdir(parent)) == 0:
+                    os.rmdir(parent)
+                    parent = os.path.dirname(parent)
+                else:
+                    break
 
     def _check_block(self, block, target_blocks, translator):
         """Returns True if the block is one of the target blocks"""
