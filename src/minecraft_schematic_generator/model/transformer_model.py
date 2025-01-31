@@ -3,6 +3,8 @@ from huggingface_hub import ModelCard, PyTorchModelHubMixin
 from torch import nn
 from torch.nn import functional as F
 
+from minecraft_schematic_generator.constants import AIR_BLOCK_ID, MASK_BLOCK_ID
+
 MODEL_CARD_TEMPLATE = """
 ---
 language: en
@@ -157,10 +159,10 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         kernel = torch.ones((1, 1, 3, 3, 3), dtype=tensor.dtype, device=tensor.device)
         kernel[0, 0, 1, 1, 1] = 0  # Ignore the central element
 
-        # Create a mask of elements greater than 1
-        greater_than_1 = tensor > 1
+        # Create a mask of elements greater than AIR_BLOCK_ID
+        greater_than_1 = tensor > AIR_BLOCK_ID
 
-        # Convolve to count neighbors that are greater than 1
+        # Convolve to count neighbors that are greater than AIR_BLOCK_ID
         neighbors_greater_than_1 = (
             F.conv3d(greater_than_1.float(), kernel.float(), padding=1) >= 1
         )
@@ -174,7 +176,9 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         """Get ordered list of valid positions to fill, from center outward."""
         # Generate mask of valid next elements
         mask_structure = structure * filled_positions
-        mask = self.generate_neighbor_mask(mask_structure) & (structure == 0)
+        mask = self.generate_neighbor_mask(mask_structure) & (
+            structure == MASK_BLOCK_ID
+        )
 
         if not mask.any():
             return None
@@ -205,7 +209,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
             logits_for_position = logits[0, :, flat_idx]
 
             # Apply air probability scaling
-            logits_for_position[1] += iteration * air_probability_scaling
+            logits_for_position[AIR_BLOCK_ID] += iteration * air_probability_scaling
 
             # Sample from the distribution
             probabilities = F.softmax(logits_for_position / temperature, dim=-1)
@@ -317,7 +321,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
                     z, y, x = pos
                     yield predicted_token, z, y, x
 
-                    if predicted_token != 1:
+                    if predicted_token != AIR_BLOCK_ID:
                         filled_positions[0, 0, z, y, x] = 1
                         filled_blocks += 1
                         # print(f"Filled {filled_blocks}/{max_blocks} solid blocks")

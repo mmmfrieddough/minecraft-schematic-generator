@@ -3,7 +3,6 @@ import logging
 import traceback
 
 import aiohttp
-import PyMCTranslate
 import semver
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -19,6 +18,10 @@ from .config import AppState
 from .model_loader import ModelLoader
 from .models import Block, StructureRequest
 from .services import StructureGenerator
+
+# Set PyMCTranslate logging level before importing it
+logging.getLogger("PyMCTranslate").setLevel(logging.WARNING)
+import PyMCTranslate  # noqa: E402
 
 logger = logging.getLogger(__name__)
 

@@ -3,6 +3,8 @@ from importlib import resources
 
 import portalocker
 
+from minecraft_schematic_generator.constants import AIR_BLOCK_ID, AIR_BLOCK_STR
+
 
 class BlockTokenFileHandler:
     def __init__(self):
@@ -11,14 +13,14 @@ class BlockTokenFileHandler:
         self.mapping_path = data_path.joinpath("block_state_mapping.json")
 
         # Initialize the mapping
-        self.next_available_token = 1
+        self.next_available_token = AIR_BLOCK_ID
         self.block_id_to_token_map = {}
         self.token_to_block_id_map = {}
         self._ensure_air_block()
 
     def _ensure_air_block(self):
         """Ensures the air block is mapped to token 1"""
-        self.get_token("universal_minecraft:air", update_mapping=True)
+        self.get_token(AIR_BLOCK_STR, update_mapping=True)
 
     def find_next_available_token(self) -> int:
         while self.next_available_token in self.token_to_block_id_map:

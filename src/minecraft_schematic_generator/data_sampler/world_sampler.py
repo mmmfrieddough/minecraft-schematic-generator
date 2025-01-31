@@ -10,13 +10,15 @@ from collections import Counter
 from multiprocessing import Process, Queue
 from queue import Empty
 
+from tqdm import tqdm
+
 from minecraft_schematic_generator.constants import (
     MINECRAFT_PLATFORM,
     MINECRAFT_VERSION,
 )
 
-logging.getLogger("amulet").setLevel(logging.CRITICAL)
-logging.getLogger("PyMCTranslate").setLevel(logging.CRITICAL)
+logging.getLogger("amulet").setLevel(logging.WARNING)
+logging.getLogger("PyMCTranslate").setLevel(logging.WARNING)
 
 import amulet  # noqa: E402
 import matplotlib  # noqa: E402
@@ -28,7 +30,6 @@ from amulet.api.level import World  # noqa: E402
 from amulet.api.selection import SelectionBox, SelectionGroup  # noqa: E402
 from amulet.level.formats.sponge_schem import SpongeSchemFormatWrapper  # noqa: E402
 from amulet.utils.world_utils import chunk_coords_to_block_coords  # noqa: E402
-from tqdm import tqdm  # noqa: E402
 
 
 class WorldSampler:
@@ -202,10 +203,12 @@ class WorldSampler:
                 os.replace(temp_file_path, final_file_path)
                 break
             except PermissionError:
+                print(f"Failed to save chunk progress to {final_file_path}")
                 if attempt < max_retries - 1:
-                    time.sleep(0.5)  # Wait half a second before retrying
+                    time.sleep(5)
                     continue
-                raise  # Re-raise the exception if all retries failed
+                print("All retries failed")
+                raise
 
     def _load_chunk_progress(self, directory: str, dimension: str) -> tuple:
         """Load the current chunk progress from a file"""
@@ -257,10 +260,12 @@ class WorldSampler:
                 os.replace(temp_file_path, final_file_path)
                 break
             except PermissionError:
+                print(f"Failed to save sample progress to {final_file_path}")
                 if attempt < max_retries - 1:
-                    time.sleep(0.5)  # Wait half a second before retrying
+                    time.sleep(5)
                     continue
-                raise  # Re-raise the exception if all retries failed
+                print("All retries failed")
+                raise
 
     def _load_sample_progress(self, directory: str, dimension: str) -> tuple:
         """Load the current sample progress from a file"""

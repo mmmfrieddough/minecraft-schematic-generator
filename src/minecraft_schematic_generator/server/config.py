@@ -1,12 +1,16 @@
 import argparse
+import logging
 import os
 from typing import Optional
 
 from pydantic import BaseModel
-from PyMCTranslate import TranslationManager
 
 from minecraft_schematic_generator.converter import BlockTokenFileHandler
 from minecraft_schematic_generator.model import TransformerMinecraftStructureGenerator
+
+# Set PyMCTranslate logging level before importing it
+logging.getLogger("PyMCTranslate").setLevel(logging.WARNING)
+from PyMCTranslate import TranslationManager  # noqa: E402
 
 
 class AppState(BaseModel):

@@ -1,12 +1,17 @@
-import amulet
-import PyMCTranslate
+import logging
 
 from minecraft_schematic_generator.constants import (
+    AIR_BLOCK_STR,
     MINECRAFT_PLATFORM,
     MINECRAFT_VERSION,
 )
 
 from .file_handler import BlockTokenFileHandler
+
+# Set PyMCTranslate logging level before importing it
+logging.getLogger("PyMCTranslate").setLevel(logging.WARNING)
+import amulet  # noqa: E402
+import PyMCTranslate  # noqa: E402
 
 
 class BlockTokenMapper:
@@ -24,11 +29,24 @@ class BlockTokenMapper:
             )
         )
 
+    def _preserve_waterlogging(
+        self, source_block: amulet.Block, target_block: amulet.Block
+    ) -> amulet.Block:
+        waterlogged = source_block.properties.get("waterlogged")
+        if waterlogged and waterlogged.value == "true":
+            return amulet.Block(
+                namespace=target_block.namespace,
+                base_name=target_block.base_name,
+                properties={"waterlogged": waterlogged, **target_block.properties},
+            )
+        return target_block
+
     def _versioned_to_universal(self, versioned_block_str: str) -> str:
         versioned_block = amulet.Block.from_string_blockstate(versioned_block_str)
         universal_block, _, _ = self.version_translator.block.to_universal(
             versioned_block
         )
+        universal_block = self._preserve_waterlogging(versioned_block, universal_block)
         return universal_block.blockstate
 
     def _universal_to_versioned(self, universal_block_str: str) -> str:
@@ -36,13 +54,14 @@ class BlockTokenMapper:
         versioned_block, _, _ = self.version_translator.block.from_universal(
             universal_block
         )
+        versioned_block = self._preserve_waterlogging(universal_block, versioned_block)
         return versioned_block.blockstate
 
     def token_to_universal(self, token: int) -> str:
         try:
             return self.file_handler.get_block_str(token)
         except KeyError:
-            return "universal_minecraft:air"
+            return AIR_BLOCK_STR
 
     def universal_to_token(
         self, universal_block_str: str, update_mapping: bool = False

@@ -20,16 +20,7 @@ class ModelLoader:
     def __init__(self):
         self.model: TransformerMinecraftStructureGenerator = None
 
-    def load_model(
-        self,
-        checkpoint_path: str,
-        model_path: str,
-        model_id: str,
-        model_revision: str,
-        device_type: str,
-    ) -> TransformerMinecraftStructureGenerator:
-        """Load model based on specified mode and path"""
-
+    def configure_device(self, device_type: str) -> torch.device:
         if device_type == "auto":
             logger.info("Auto selecting PyTorch device")
             if torch.cuda.is_available():
@@ -40,7 +31,25 @@ class ModelLoader:
                 device = torch.device("cpu")
         else:
             device = torch.device(device_type)
+
         logger.info(f"Using device: {device}")
+
+        if device == torch.device("cpu"):
+            logger.warning("Performance may be slow when using CPU")
+
+        return device
+
+    def load_model(
+        self,
+        checkpoint_path: str,
+        model_path: str,
+        model_id: str,
+        model_revision: str,
+        device_type: str,
+    ) -> TransformerMinecraftStructureGenerator:
+        """Load model based on specified mode and path"""
+
+        device = self.configure_device(device_type)
 
         try:
             if checkpoint_path:

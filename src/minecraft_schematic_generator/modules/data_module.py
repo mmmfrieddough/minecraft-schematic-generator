@@ -50,7 +50,7 @@ class MinecraftDataModule(LightningDataModule):
     def get_val_dataset_name(self, dataloader_idx: int):
         return self.val_dataset_names[dataloader_idx]
 
-    def setup(self, _: Any = None, index: int | None = None):
+    def setup(self, stage: Any = None, index: int | None = None):
         with h5py.File(self.file_path, "r") as file:
             if index is not None:
                 train_keys = [list(file["train"].keys())[index]]

@@ -41,7 +41,8 @@ class StructureBenchmark(BaseBenchmark):
     def convert_to_model_input(self, partial_schematic):
         """Convert schematic to model input format"""
         partial_structure = self.schematic_array_converter.schematic_to_array(
-            partial_schematic
+            partial_schematic,
+            update_mapping=True,
         )
         partial_structure = (
             torch.from_numpy(partial_structure.astype(np.int64)).long().contiguous()
@@ -97,7 +98,8 @@ class StructureBenchmark(BaseBenchmark):
         # Convert to model input
         partial_structure = self.convert_to_model_input(partial_schematic)
         complete_structure = self.schematic_array_converter.schematic_to_array(
-            complete_schematic
+            complete_schematic,
+            update_mapping=True,
         )
 
         return partial_structure, (complete_structure, removed_positions)
