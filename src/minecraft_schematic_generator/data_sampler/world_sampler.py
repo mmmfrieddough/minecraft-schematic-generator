@@ -24,12 +24,14 @@ import amulet  # noqa: E402
 import matplotlib  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
+from amulet.api.block import Block  # noqa: E402
 from amulet.api.chunk import Chunk  # noqa: E402
 from amulet.api.errors import ChunkDoesNotExist, ChunkLoadError  # noqa: E402
 from amulet.api.level import World  # noqa: E402
 from amulet.api.selection import SelectionBox, SelectionGroup  # noqa: E402
 from amulet.level.formats.sponge_schem import SpongeSchemFormatWrapper  # noqa: E402
 from amulet.utils.world_utils import chunk_coords_to_block_coords  # noqa: E402
+from PyMCTranslate.py3.api.version.translators import BlockTranslator  # noqa: E402
 
 
 class WorldSampler:
@@ -104,7 +106,7 @@ class WorldSampler:
 
             # Load chunk blocks
             with open(config_path, "r") as file:
-                self.chunk_target_blocks[dimension] = set(json.load(file))
+                self.chunk_target_blocks[dimension] = json.load(file)
 
             # Check for sample blocks file
             sample_filename = f"{prefix}_sample_blocks.json"
@@ -116,7 +118,7 @@ class WorldSampler:
 
             # Load sample blocks
             with open(config_path, "r") as file:
-                self.sample_target_blocks[dimension] = set(json.load(file))
+                self.sample_target_blocks[dimension] = json.load(file)
 
     def get_worker_directory(
         self, root_directory: str, src_directory: str, worker_id: int
@@ -189,13 +191,15 @@ class WorldSampler:
                 else:
                     break
 
-    def _check_block(self, block, target_blocks, translator):
+    def _check_block(
+        self, block: Block, target_blocks: list, translator: BlockTranslator
+    ) -> bool:
         """Returns True if the block is one of the target blocks"""
         cache_key = block.namespaced_name
         if cache_key in self._block_cache:
             return self._block_cache[cache_key]
 
-        block, _, _ = translator.block.from_universal(block)
+        block, _, _ = translator.from_universal(block)
         if "universal" in block.namespaced_name:
             print(f"Conversion failed for {block.namespaced_name}")
             result = False
@@ -206,130 +210,149 @@ class WorldSampler:
         self._block_cache[cache_key] = result
         return result
 
-    def _chunk_contains_target_blocks(self, chunk, target_blocks, translator):
+    def _save_progress(
+        self, directory: str, dimension: str, name: str, config: dict, data: dict
+    ) -> None:
+        data_dir = self._get_data_directory(directory)
+        os.makedirs(data_dir, exist_ok=True)
+
+        dimension = dimension.replace(":", "_")
+        temp_file_path = os.path.join(data_dir, f"{dimension}_{name}_progress_temp.pkl")
+        final_file_path = os.path.join(data_dir, f"{dimension}_{name}_progress.pkl")
+
+        # Try to save multiple times with a delay in case the file is locked
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Make sure temp file is closed and deleted if it exists
+                if os.path.exists(temp_file_path):
+                    try:
+                        os.remove(temp_file_path)
+                    except FileNotFoundError:
+                        pass
+
+                # Write to temp file
+                with open(temp_file_path, "wb") as file:
+                    pickle.dump(
+                        {
+                            "config": config,
+                            "data": data,
+                        },
+                        file,
+                        protocol=pickle.HIGHEST_PROTOCOL,
+                    )
+
+                # Try to replace the file
+                os.replace(temp_file_path, final_file_path)
+                break
+            except PermissionError:
+                print(f"Failed to save {name} progress to {final_file_path}")
+                if attempt < max_retries - 1:
+                    time.sleep(5)
+                    continue
+                print("All retries failed")
+                raise
+
+    def _load_progress(
+        self, directory: str, dimension: str, name: str, current_config: dict
+    ) -> dict | None:
+        data_dir = self._get_data_directory(directory)
+        dimension = dimension.replace(":", "_")
+        path = os.path.join(data_dir, f"{dimension}_{name}_progress.pkl")
+
+        if os.path.exists(path):
+            try:
+                with open(path, "rb") as file:
+                    progress = pickle.load(file)
+
+                # Handle unrecognized progress file format
+                if (
+                    not isinstance(progress, dict)
+                    or "config" not in progress
+                    or "data" not in progress
+                ):
+                    print(
+                        f"Unrecognized progress file format detected, resetting {name} progress"
+                    )
+                    return None
+
+                if progress["config"] != current_config:
+                    print(f"Configuration has changed, resetting {name} progress")
+                    return None
+
+                return progress["data"]
+            except (pickle.UnpicklingError, EOFError, AttributeError) as e:
+                print(f"Error reading {name} progress file, resetting progress: {e}")
+                return None
+        return None
+
+    def _chunk_contains_target_blocks(
+        self, chunk: Chunk, target_blocks: list, translator: BlockTranslator
+    ) -> bool:
         """Returns True if the chunk contains any of the target blocks"""
         for block in chunk.block_palette:
             if self._check_block(block, target_blocks, translator):
                 return True
         return False
 
+    def _get_chunk_config(self, dimension: str) -> dict:
+        """Returns the configuration for marking chunks"""
+        return {
+            "chunk_target_blocks": self.chunk_target_blocks[dimension],
+            "chunk_mark_radius": self.chunk_mark_radius,
+        }
+
     def _save_chunk_progress(
         self, directory: str, dimension: str, visited_chunks: set, relevant_chunks: set
     ) -> None:
         """Save the current chunk progress to a file"""
-        data_dir = self._get_data_directory(directory)
-        os.makedirs(data_dir, exist_ok=True)
-
-        dimension = dimension.replace(":", "_")
-        temp_file_path = os.path.join(data_dir, f"{dimension}_chunk_progress_temp.pkl")
-        final_file_path = os.path.join(data_dir, f"{dimension}_chunk_progress.pkl")
-
-        # Add retry logic with a small delay
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                # Make sure temp file is closed and deleted if it exists
-                if os.path.exists(temp_file_path):
-                    try:
-                        os.remove(temp_file_path)
-                    except FileNotFoundError:
-                        pass
-
-                # Write to temp file
-                with open(temp_file_path, "wb") as file:
-                    pickle.dump(
-                        {
-                            "visited_chunks": visited_chunks,
-                            "relevant_chunks": relevant_chunks,
-                        },
-                        file,
-                        protocol=pickle.HIGHEST_PROTOCOL,
-                    )
-
-                # Try to replace the file
-                os.replace(temp_file_path, final_file_path)
-                break
-            except PermissionError:
-                print(f"Failed to save chunk progress to {final_file_path}")
-                if attempt < max_retries - 1:
-                    time.sleep(5)
-                    continue
-                print("All retries failed")
-                raise
+        config = self._get_chunk_config(dimension)
+        data = {
+            "visited_chunks": visited_chunks,
+            "relevant_chunks": relevant_chunks,
+        }
+        self._save_progress(directory, dimension, "chunk", config, data)
 
     def _load_chunk_progress(self, directory: str, dimension: str) -> tuple:
         """Load the current chunk progress from a file"""
-        data_dir = self._get_data_directory(directory)
-        dimension = dimension.replace(":", "_")
-        path = os.path.join(data_dir, f"{dimension}_chunk_progress.pkl")
-        if os.path.exists(path):
-            with open(path, "rb") as file:
-                data = pickle.load(file)
-            visited_chunks = data["visited_chunks"]
-            relevant_chunks = data["relevant_chunks"]
-        else:
-            visited_chunks = set()
-            relevant_chunks = set()
-        return visited_chunks, relevant_chunks
+        current_config = self._get_chunk_config(dimension)
+        data = self._load_progress(directory, dimension, "chunk", current_config)
+        return (
+            (data["visited_chunks"], data["relevant_chunks"])
+            if data
+            else (set(), set())
+        )
+
+    def _get_sample_config(self, dimension: str) -> dict:
+        """Returns the configuration for identifying samples"""
+        return {
+            "sample_target_blocks": self.sample_target_blocks[dimension],
+            "sample_offset": self.sample_offset,
+            "sample_size": self.sample_size,
+            "sample_interested_block_threshold": self.sample_interested_block_threshold,
+            "sample_minimum_air_threshold": self.sample_minimum_air_threshold,
+        }
 
     def _save_sample_progress(
         self, directory: str, dimension: str, sampled_chunks: set, sample_positions: set
     ) -> None:
         """Save the current sample progress to a file"""
-        data_dir = self._get_data_directory(directory)
-        os.makedirs(data_dir, exist_ok=True)
-
-        dimension = dimension.replace(":", "_")
-        temp_file_path = os.path.join(data_dir, f"{dimension}_sample_progress_temp.pkl")
-        final_file_path = os.path.join(data_dir, f"{dimension}_sample_progress.pkl")
-
-        # Add retry logic with a small delay
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                # Make sure temp file is closed and deleted if it exists
-                if os.path.exists(temp_file_path):
-                    try:
-                        os.remove(temp_file_path)
-                    except FileNotFoundError:
-                        pass
-
-                # Write to temp file
-                with open(temp_file_path, "wb") as file:
-                    pickle.dump(
-                        {
-                            "sampled_chunks": sampled_chunks,
-                            "sample_positions": sample_positions,
-                        },
-                        file,
-                        protocol=pickle.HIGHEST_PROTOCOL,
-                    )
-
-                # Try to replace the file
-                os.replace(temp_file_path, final_file_path)
-                break
-            except PermissionError:
-                print(f"Failed to save sample progress to {final_file_path}")
-                if attempt < max_retries - 1:
-                    time.sleep(5)
-                    continue
-                print("All retries failed")
-                raise
+        config = self._get_sample_config(dimension)
+        data = {
+            "sampled_chunks": sampled_chunks,
+            "sample_positions": sample_positions,
+        }
+        self._save_progress(directory, dimension, "sample", config, data)
 
     def _load_sample_progress(self, directory: str, dimension: str) -> tuple:
         """Load the current sample progress from a file"""
-        data_dir = self._get_data_directory(directory)
-        dimension = dimension.replace(":", "_")
-        path = os.path.join(data_dir, f"{dimension}_sample_progress.pkl")
-        if os.path.exists(path):
-            with open(path, "rb") as file:
-                data = pickle.load(file)
-            sampled_chunks = data["sampled_chunks"]
-            sample_positions = data["sample_positions"]
-        else:
-            sampled_chunks = set()
-            sample_positions = set()
-        return sampled_chunks, sample_positions
+        current_config = self._get_sample_config(dimension)
+        data = self._load_progress(directory, dimension, "sample", current_config)
+        return (
+            (data["sampled_chunks"], data["sample_positions"])
+            if data
+            else (set(), set())
+        )
 
     def _mark_chunks_worker(
         self,
@@ -347,7 +370,7 @@ class WorldSampler:
             # Use the translator for the project level Minecraft version which interested blocks are defined for
             translator = world.translation_manager.get_version(
                 MINECRAFT_PLATFORM, MINECRAFT_VERSION
-            )
+            ).block
 
             while True:
                 chunk_coords = all_chunks_queue.get()
@@ -386,9 +409,9 @@ class WorldSampler:
         self,
         directory: str,
         dimension: str,
-        x_coords,
-        z_coords,
-        intensities,
+        x_coords: list,
+        z_coords: list,
+        intensities: list,
         title: str,
         colorbar: str = None,
     ) -> None:
@@ -592,7 +615,7 @@ class WorldSampler:
         return relevant_chunks
 
     def _get_interested_palette_indices(
-        self, chunk: Chunk, translator, dimension: str
+        self, chunk: Chunk, translator: BlockTranslator, dimension: str
     ) -> set:
         """Returns a set of indices of blocks from the chunk palette that we are interested in"""
         interested_indices = set()
@@ -603,7 +626,7 @@ class WorldSampler:
                 interested_indices.add(i)
         return interested_indices
 
-    def _get_deterministic_random_offsets(self, chunk_coords):
+    def _get_deterministic_random_offsets(self, chunk_coords: tuple) -> tuple:
         # Convert the chunk coordinates to a string
         coord_str = f"{chunk_coords[0]}_{chunk_coords[1]}"
         # Use a hash function, e.g., SHA-256
@@ -617,7 +640,11 @@ class WorldSampler:
         return x_offset, y_offset, z_offset
 
     def _identify_samples_in_chunk(
-        self, world: World, dimension: str, translator, chunk_coords
+        self,
+        world: World,
+        dimension: str,
+        translator: BlockTranslator,
+        chunk_coords: tuple,
     ) -> set:
         """Identifies samples from a chunk"""
         sample_positions = set()
@@ -774,7 +801,7 @@ class WorldSampler:
             # Use the translator for the project level Minecraft version which interested blocks are defined for
             translator = world.translation_manager.get_version(
                 MINECRAFT_PLATFORM, MINECRAFT_VERSION
-            )
+            ).block
 
             while True:
                 chunk_coords = relevant_chunks_queue.get()
