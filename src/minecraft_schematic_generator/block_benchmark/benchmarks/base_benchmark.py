@@ -5,8 +5,10 @@ from typing import Any, List, Tuple
 
 import numpy as np
 import torch
+from schempy import Schematic
 from tqdm import tqdm
 
+from minecraft_schematic_generator.converter import SchematicArrayConverter
 from minecraft_schematic_generator.model import TransformerMinecraftStructureGenerator
 
 
@@ -31,20 +33,29 @@ class BaseBenchmark(ABC):
     def __init__(
         self,
         name: str,
-        save_debug_schematics=False,
-        debug_output_dir="debug_schematics",
+        schematic_array_converter: SchematicArrayConverter,
+        save_debug_schematics: bool = False,
+        debug_output_dir: str = "debug_schematics",
     ):
+        self.schematic_array_converter = schematic_array_converter
         self.name = name
         self.save_debug_schematics = save_debug_schematics
         self.debug_output_dir = Path(debug_output_dir)
         if save_debug_schematics:
             self.debug_output_dir.mkdir(parents=True, exist_ok=True)
 
-    def save_debug_schematic(self, schematic, filename):
-        if self.save_debug_schematics:
-            output_path = self.debug_output_dir / filename
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            schematic.save_to_file(output_path, 2)
+    def save_debug_schematic_array(self, array: torch.Tensor, filename: str) -> None:
+        if not self.save_debug_schematics:
+            return
+        schematic = self.schematic_array_converter.array_to_schematic(array)
+        self.save_debug_schematic(schematic, filename)
+
+    def save_debug_schematic(self, schematic: Schematic, filename: str) -> None:
+        if not self.save_debug_schematics:
+            return
+        output_path = self.debug_output_dir / filename
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        schematic.save_to_file(output_path, 2)
 
     @abstractmethod
     def get_model_inputs(self, seed: int) -> Tuple[torch.Tensor, Any]:

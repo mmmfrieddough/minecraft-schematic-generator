@@ -10,8 +10,14 @@ from minecraft_schematic_generator.converter import BlockTokenMapper
 
 
 class MinecraftDataset(Dataset):
-    def __init__(self, file_path: str, split: str, generator: str):
-        # These should be in universal format as we are feeding them into the mapping
+    def __init__(
+        self,
+        file_path: str,
+        split: str,
+        generator: str,
+        block_token_mapper: BlockTokenMapper,
+    ):
+        # These should be in universal format as we are feeding them directly into the mapping
         natural_block_strings = [
             "universal_minecraft:dirt",
             "universal_minecraft:stone",
@@ -42,9 +48,11 @@ class MinecraftDataset(Dataset):
             "universal_minecraft:stained_terracotta[color=light_gray]",
             "universal_minecraft:end_stone",
         ]
-        mapper = BlockTokenMapper()
         self.natural_block_tokens = torch.tensor(
-            [mapper.block_str_to_token(block) for block in natural_block_strings]
+            [
+                block_token_mapper.universal_to_token(block)
+                for block in natural_block_strings
+            ]
         )
 
         self.file_path = file_path

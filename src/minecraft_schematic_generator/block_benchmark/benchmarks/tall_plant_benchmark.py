@@ -7,9 +7,6 @@ from .structure_benchmark import StructureBenchmark
 
 
 class TallPlantBenchmark(StructureBenchmark):
-    SCHEMATIC_SIZE = 11
-    SCHEMATIC_MIDDLE = SCHEMATIC_SIZE // 2
-
     @staticmethod
     def get_plant_states():
         plant_types = [

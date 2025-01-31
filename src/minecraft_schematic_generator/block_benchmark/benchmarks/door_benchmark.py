@@ -7,9 +7,6 @@ from .structure_benchmark import StructureBenchmark
 
 
 class DoorBenchmark(StructureBenchmark):
-    SCHEMATIC_SIZE = 11
-    SCHEMATIC_MIDDLE = SCHEMATIC_SIZE // 2
-
     @staticmethod
     def get_door_states():
         door_types = [

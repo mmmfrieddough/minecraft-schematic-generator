@@ -2,6 +2,8 @@ import random
 
 from schempy import Block, Schematic
 
+from minecraft_schematic_generator.converter import SchematicArrayConverter
+
 from .structure_benchmark import StructureBenchmark
 
 
@@ -61,13 +63,16 @@ class StairsBenchmark(StructureBenchmark):
     def __init__(
         self,
         name: str,
+        schematic_array_converter: SchematicArrayConverter,
         removal_chance: float = 0.3,
         min_width: int = 1,
         max_width: int = 3,
         save_debug_schematics=False,
         debug_output_dir="debug_schematics",
     ):
-        super().__init__(name, save_debug_schematics, debug_output_dir)
+        super().__init__(
+            name, schematic_array_converter, save_debug_schematics, debug_output_dir
+        )
         self.removal_chance = removal_chance
         self.min_width = min_width
         self.max_width = max_width

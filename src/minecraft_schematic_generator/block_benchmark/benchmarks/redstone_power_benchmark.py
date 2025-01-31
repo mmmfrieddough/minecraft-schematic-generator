@@ -4,6 +4,8 @@ from typing import List, Optional, Tuple
 
 from schempy import Block, Schematic
 
+from minecraft_schematic_generator.converter import SchematicArrayConverter
+
 from .structure_benchmark import StructureBenchmark
 
 
@@ -47,11 +49,14 @@ class RedstonePowerBenchmark(StructureBenchmark):
     def __init__(
         self,
         name: str,
+        schematic_array_converter: SchematicArrayConverter,
         component_type: RedstoneComponentType,
         save_debug_schematics=False,
         debug_output_dir="debug_schematics",
     ):
-        super().__init__(name, save_debug_schematics, debug_output_dir)
+        super().__init__(
+            name, schematic_array_converter, save_debug_schematics, debug_output_dir
+        )
         self.component_type = component_type
 
     def get_component_states(

@@ -10,6 +10,11 @@ from collections import Counter
 from multiprocessing import Process, Queue
 from queue import Empty
 
+from minecraft_schematic_generator.constants import (
+    MINECRAFT_PLATFORM,
+    MINECRAFT_VERSION,
+)
+
 logging.getLogger("amulet").setLevel(logging.CRITICAL)
 logging.getLogger("PyMCTranslate").setLevel(logging.CRITICAL)
 
@@ -65,7 +70,6 @@ class WorldSampler:
         self.sample_search_limit = sample_search_limit
         self.sample_limit = sample_limit
 
-        self.MC_VERSION = (1, 21, 4)
         self._block_cache = {}
 
     def load_interested_blocks(self, directory: str) -> None:
@@ -284,7 +288,11 @@ class WorldSampler:
         try:
             # Load the world data from the directory
             world = amulet.load_level(directory)
-            translator = world.translation_manager.get_version("java", self.MC_VERSION)
+
+            # Use the translator for the project level Minecraft version which interested blocks are defined for
+            translator = world.translation_manager.get_version(
+                MINECRAFT_PLATFORM, MINECRAFT_VERSION
+            )
 
             while True:
                 chunk_coords = all_chunks_queue.get()
@@ -703,7 +711,11 @@ class WorldSampler:
         try:
             # Load the world data from the directory
             world = amulet.load_level(directory)
-            translator = world.translation_manager.get_version("java", self.MC_VERSION)
+
+            # Use the translator for the project level Minecraft version which interested blocks are defined for
+            translator = world.translation_manager.get_version(
+                MINECRAFT_PLATFORM, MINECRAFT_VERSION
+            )
 
             while True:
                 chunk_coords = relevant_chunks_queue.get()
@@ -894,12 +906,15 @@ class WorldSampler:
                 try:
                     # Save the schematic to a temporary file
                     wrapper = SpongeSchemFormatWrapper(tmp_path)
+
+                    # The schematic must be saved in a specific MC version so we choose the one we are using thoughout the project
                     wrapper.create_and_open(
-                        "java",
-                        self.MC_VERSION,
+                        MINECRAFT_PLATFORM,
+                        MINECRAFT_VERSION,
                         bounds=SelectionGroup(structure.bounds(dimension)),
                         overwrite=True,
                     )
+
                     structure.save(wrapper)
                 finally:
                     wrapper.close()

@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from schempy import Schematic
 
+from minecraft_schematic_generator.constants import MAX_STRUCTURE_SIZE
 from minecraft_schematic_generator.converter import SchematicArrayConverter
 
 from .base_benchmark import BaseBenchmark
@@ -13,17 +14,19 @@ from .base_benchmark import BaseBenchmark
 class StructureBenchmark(BaseBenchmark):
     """Base class for benchmarks that test structure generation"""
 
-    SCHEMATIC_SIZE = 11
+    SCHEMATIC_SIZE = MAX_STRUCTURE_SIZE
     SCHEMATIC_MIDDLE = SCHEMATIC_SIZE // 2
 
     def __init__(
         self,
         name: str,
-        save_debug_schematics=False,
-        debug_output_dir="debug_schematics",
+        schematic_array_converter: SchematicArrayConverter,
+        save_debug_schematics: bool = False,
+        debug_output_dir: str = "debug_schematics",
     ):
-        super().__init__(name, save_debug_schematics, debug_output_dir)
-        self.schematic_array_converter = SchematicArrayConverter()
+        super().__init__(
+            name, schematic_array_converter, save_debug_schematics, debug_output_dir
+        )
 
     def create_schematics(self):
         """Create empty complete and partial schematics"""
@@ -109,11 +112,8 @@ class StructureBenchmark(BaseBenchmark):
         complete_structure, removed_positions = comparison_data
 
         # Save generated result
-        generated_schematic = self.schematic_array_converter.array_to_schematic(
-            model_output
-        )
-        self.save_debug_schematic(
-            generated_schematic, f"{self.name}/generated_{seed}.schem"
+        self.save_debug_schematic_array(
+            model_output, f"{self.name}/generated_{seed}.schem"
         )
 
         return self.compare_structures(

@@ -3,12 +3,16 @@ import os
 from typing import Optional
 
 from pydantic import BaseModel
+from PyMCTranslate import TranslationManager
 
+from minecraft_schematic_generator.converter import BlockTokenFileHandler
 from minecraft_schematic_generator.model import TransformerMinecraftStructureGenerator
 
 
 class AppState(BaseModel):
     model: TransformerMinecraftStructureGenerator = None
+    file_handler: BlockTokenFileHandler = None
+    translation_manager: TranslationManager = None
     checkpoint_path: Optional[str]
     model_path: Optional[str]
     model_id: str

@@ -52,6 +52,6 @@ def plot_subdirectory_file_counts(subdir_file_counts):
 
 
 # Example usage
-directory = input("Enter the path of the directory: ")
+directory = "data/schematics"
 subdir_file_counts = list_subdirectories_with_file_counts(directory)
 plot_subdirectory_file_counts(subdir_file_counts)

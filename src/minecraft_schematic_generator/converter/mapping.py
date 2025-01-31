@@ -1,75 +1,63 @@
-import json
-from importlib import resources
+import amulet
+import PyMCTranslate
 
-import portalocker
+from minecraft_schematic_generator.constants import (
+    MINECRAFT_PLATFORM,
+    MINECRAFT_VERSION,
+)
+
+from .file_handler import BlockTokenFileHandler
 
 
 class BlockTokenMapper:
-    def find_next_available_token(self) -> int:
-        while self.next_available_token in self.token_to_block_id_map:
-            self.next_available_token += 1
-        return self.next_available_token
+    def __init__(
+        self,
+        file_handler: BlockTokenFileHandler | None = None,
+        version_translator: PyMCTranslate.Version | None = None,
+    ):
+        self.file_handler = file_handler or BlockTokenFileHandler()
+        self.version_translator = (
+            version_translator
+            # Default to the version we are using for the project
+            or PyMCTranslate.new_translation_manager().get_version(
+                MINECRAFT_PLATFORM, MINECRAFT_VERSION
+            )
+        )
 
-    def __init__(self):
-        # Get the data directory path
-        data_path = resources.files("minecraft_schematic_generator.converter")
-        self.mapping_path = data_path.joinpath("block_state_mapping.json")
+    def _versioned_to_universal(self, versioned_block_str: str) -> str:
+        versioned_block = amulet.Block.from_string_blockstate(versioned_block_str)
+        universal_block, _, _ = self.version_translator.block.to_universal(
+            versioned_block
+        )
+        return universal_block.blockstate
 
-        # Initialize the mapping
-        self.next_available_token = 1
-        self.block_id_to_token_map = {}
-        self.token_to_block_id_map = {}
-        self.block_str_to_token("universal_minecraft:air", update_mapping=True)
+    def _universal_to_versioned(self, universal_block_str: str) -> str:
+        universal_block = amulet.Block.from_string_blockstate(universal_block_str)
+        versioned_block, _, _ = self.version_translator.block.from_universal(
+            universal_block
+        )
+        return versioned_block.blockstate
 
-    def token_to_block_str(self, token: int) -> str:
-        if token not in self.token_to_block_id_map:
-            raise KeyError(f"Token {token} not found in mapping")
-
-        # Get the block ID from the reverse mapping
-        return self.token_to_block_id_map[token]
-
-    def block_str_to_token(self, block_str: str, update_mapping: bool = False) -> int:
-        # If the block ID is already in the mapping, return the token
-        if block_str in self.block_id_to_token_map:
-            return self.block_id_to_token_map[block_str]
-
-        # Throw an error if updates are not allowed
-        if not update_mapping:
-            raise KeyError(f"Block {block_str} not found in mapping")
-
+    def token_to_universal(self, token: int) -> str:
         try:
-            # Acquire an exclusive lock on the mapping file before reading/updating
-            with portalocker.Lock(self.mapping_path, "a+", timeout=60) as fh:
-                # Read the file again in case it was updated by another process
-                fh.seek(0)
-                file_contents = fh.read().strip()
+            return self.file_handler.get_block_str(token)
+        except KeyError:
+            return "universal_minecraft:air"
 
-                # Check if the file is empty
-                if file_contents:
-                    # Load the mapping from the file
-                    self.block_id_to_token_map = json.loads(file_contents)
+    def universal_to_token(
+        self, universal_block_str: str, update_mapping: bool = False
+    ) -> int:
+        return self.file_handler.get_token(universal_block_str, update_mapping)
 
-                # Generate the reverse mapping
-                self.token_to_block_id_map = {
-                    v: k for k, v in self.block_id_to_token_map.items()
-                }
+    def token_to_versioned(self, token: int) -> str:
+        return self._universal_to_versioned(self.token_to_universal(token))
 
-                # Check if the block ID is already in the mapping
-                if block_str not in self.block_id_to_token_map:
-                    # Generate a new token for the block ID
-                    token = self.find_next_available_token()
+    def versioned_to_token(
+        self, versioned_block_str: str, update_mapping: bool = False
+    ) -> int:
+        return self.universal_to_token(
+            self._versioned_to_universal(versioned_block_str), update_mapping
+        )
 
-                    # Update the mapping
-                    self.block_id_to_token_map[block_str] = token
-                    self.token_to_block_id_map[token] = block_str
-
-                    # Save the updated mapping to the file
-                    fh.seek(0)
-                    fh.truncate()
-                    json.dump(self.block_id_to_token_map, fh)
-
-        except portalocker.exceptions.LockException:
-            raise TimeoutError("Unable to acquire lock for mapping file after")
-
-        # Return the token
-        return self.block_id_to_token_map[block_str]
+    def get_unused_token(self):
+        return self.file_handler.find_next_available_token()

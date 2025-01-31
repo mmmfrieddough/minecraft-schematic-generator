@@ -1,7 +1,7 @@
 import logging
 
 import torch
-from schempy.components import BlockPalette
+from schempy.components import Block
 
 from minecraft_schematic_generator.converter import BlockTokenMapper
 from minecraft_schematic_generator.data_preparer import clean_block_properties
@@ -9,21 +9,25 @@ from minecraft_schematic_generator.model import TransformerMinecraftStructureGen
 
 
 class StructureGenerator:
-    def __init__(self, model: TransformerMinecraftStructureGenerator):
+    def __init__(
+        self,
+        model: TransformerMinecraftStructureGenerator,
+        block_token_mapper: BlockTokenMapper,
+    ):
         self.logger = logging.getLogger(__name__)
         self.model = model
-        self.block_token_mapper = BlockTokenMapper()
+        self.block_token_mapper = block_token_mapper
 
     def convert_block_to_token(self, block_str: str) -> int:
-        block = BlockPalette._parse_block_str(block_str.lower())
+        block = Block.from_string(block_str.lower())
         clean_block_properties(block)
         try:
-            return self.block_token_mapper.block_to_token(block)
+            return self.block_token_mapper.versioned_to_token(str(block))
         except KeyError:
             self.logger.warning(
-                f"Block {block_str} not found in mapping. Returning unused token."
+                f"Block {str(block)} not found in mapping. Returning unused token."
             )
-            return self.block_token_mapper.find_next_available_token()
+            return self.block_token_mapper.get_unused_token()
 
     def prepare_input_tensor(self, structure: list) -> torch.Tensor:
         input_structure_ids = [
@@ -57,7 +61,7 @@ class StructureGenerator:
             )
 
             blocks_generated = 0
-            for block, z, y, x in self.model.fill_structure(
+            for token, z, y, x in self.model.fill_structure(
                 input_tensor,
                 temperature,
                 start_radius,
@@ -66,8 +70,8 @@ class StructureGenerator:
                 air_probability_iteration_scaling,
             ):
                 blocks_generated += 1
-                block = self.block_token_mapper.token_to_block(block)
-                yield {"block_state": str(block), "z": z, "y": y, "x": x}
+                versioned_block_str = self.block_token_mapper.token_to_versioned(token)
+                yield {"block_state": versioned_block_str, "z": z, "y": y, "x": x}
 
             self.logger.info(
                 "Structure generation completed",

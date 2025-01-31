@@ -34,7 +34,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
     def __init__(
         self,
         num_classes: int,
-        max_sequence_length: int,
+        max_structure_size: int,
         embedding_dropout: float,
         model_dim: int,
         num_heads: int,
@@ -44,7 +44,8 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
     ):
         super().__init__()
         self.num_classes = num_classes
-        self.max_sequence_length = max_sequence_length
+        self.max_structure_size = max_structure_size
+        self.max_sequence_length = max_structure_size**3
         self.embedding_dim = embedding_dim or model_dim
         self.model_dim = model_dim
 
@@ -52,8 +53,8 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         self.embedding = nn.Embedding(num_classes, self.embedding_dim)
         if self.embedding_dim != model_dim:
             self.embedding_projection = nn.Linear(self.embedding_dim, model_dim)
-        self.register_buffer("positions", torch.arange(max_sequence_length))
-        self.positional_embedding = nn.Embedding(max_sequence_length, model_dim)
+        self.register_buffer("positions", torch.arange(self.max_sequence_length))
+        self.positional_embedding = nn.Embedding(self.max_sequence_length, model_dim)
         self.embedding_dropout = nn.Dropout(embedding_dropout)
 
         # Transformer
@@ -199,7 +200,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         """Make a prediction for a single position in the structure."""
         with torch.autocast(device_type="cuda"):
             z, y, x = pos
-            flat_idx = z * 11 * 11 + y * 11 + x
+            flat_idx = z * self.max_structure_size**2 + y * self.max_structure_size + x
             logits = self(flattened_structure)
             logits_for_position = logits[0, :, flat_idx]
 

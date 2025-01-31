@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 
 import h5py
 import torch
@@ -6,6 +6,7 @@ from lightning import LightningDataModule
 from torch.utils.data import ConcatDataset
 from tqdm import tqdm
 
+from minecraft_schematic_generator.converter import BlockTokenMapper
 from minecraft_schematic_generator.model import MinecraftDataset, ResumableDataLoader
 
 
@@ -30,6 +31,7 @@ class MinecraftDataModule(LightningDataModule):
         self.separate_validation_datasets = separate_validation_datasets
         self.val_dataset_names = {}
         self._rng_state = None
+        self._block_token_mapper = BlockTokenMapper()
 
     def state_dict(self) -> dict:
         """Save datamodule state."""
@@ -48,7 +50,7 @@ class MinecraftDataModule(LightningDataModule):
     def get_val_dataset_name(self, dataloader_idx: int):
         return self.val_dataset_names[dataloader_idx]
 
-    def setup(self, stage=None, index: int = None):
+    def setup(self, _: Any = None, index: int | None = None):
         with h5py.File(self.file_path, "r") as file:
             if index is not None:
                 train_keys = [list(file["train"].keys())[index]]
@@ -62,21 +64,33 @@ class MinecraftDataModule(LightningDataModule):
             self.train_datasets = [
                 (
                     generator_type,
-                    MinecraftDataset(self.file_path, "train", generator_type),
+                    MinecraftDataset(
+                        self.file_path,
+                        "train",
+                        generator_type,
+                        self._block_token_mapper,
+                    ),
                 )
                 for generator_type in tqdm(train_keys, desc="Loading training datasets")
             ]
             self.val_datasets = [
                 (
                     generator_type,
-                    MinecraftDataset(self.file_path, "validation", generator_type),
+                    MinecraftDataset(
+                        self.file_path,
+                        "validation",
+                        generator_type,
+                        self._block_token_mapper,
+                    ),
                 )
                 for generator_type in tqdm(val_keys, desc="Loading validation datasets")
             ]
             self.test_datasets = [
                 (
                     generator_type,
-                    MinecraftDataset(self.file_path, "test", generator_type),
+                    MinecraftDataset(
+                        self.file_path, "test", generator_type, self._block_token_mapper
+                    ),
                 )
                 for generator_type in tqdm(test_keys, desc="Loading test datasets")
             ]

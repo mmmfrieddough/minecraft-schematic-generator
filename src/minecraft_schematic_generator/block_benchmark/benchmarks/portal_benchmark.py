@@ -4,6 +4,8 @@ from typing import Dict, Set, Tuple
 
 from schempy import Block, Schematic
 
+from minecraft_schematic_generator.converter import SchematicArrayConverter
+
 from .structure_benchmark import StructureBenchmark
 
 
@@ -13,8 +15,16 @@ class PortalBenchmark(StructureBenchmark):
     MIN_PORTAL_HEIGHT = 3
     MAX_PORTAL_HEIGHT = 6
 
-    def __init__(self, name: str, save_debug_schematics=False):
-        super().__init__(name, save_debug_schematics)
+    def __init__(
+        self,
+        name: str,
+        schematic_array_converter: SchematicArrayConverter,
+        save_debug_schematics: bool = False,
+        debug_output_dir: str = "debug_schematics",
+    ):
+        super().__init__(
+            name, schematic_array_converter, save_debug_schematics, debug_output_dir
+        )
         self.portal_groups: Dict[Tuple[int, int, int], Set[Tuple[int, int, int]]] = {}
         self.portal_frames: Dict[Tuple[int, int, int], Set[Tuple[int, int, int]]] = {}
 

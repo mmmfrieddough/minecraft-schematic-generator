@@ -61,13 +61,12 @@ def get_schematic_data(sample_name: str, schematic_path: str) -> None:
     except Exception as e:
         print(f"Failed to load schematic: {sample_name}")
         raise e
-        # print(e)
-        # return
 
     # Clean the schematic
     clean_schematic(schematic)
 
     # Convert the schematic to an array
+    # The update_mapping flag is set to True because loading the schematics here is the source of the mapping
     schematic_data = converter.schematic_to_array(schematic, update_mapping=True)
 
     return schematic_data

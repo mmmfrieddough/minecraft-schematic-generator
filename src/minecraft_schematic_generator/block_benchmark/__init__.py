@@ -1,3 +1,5 @@
+from minecraft_schematic_generator.converter import SchematicArrayConverter
+
 from .benchmark_registry import BenchmarkCategory, BenchmarkRegistry
 from .benchmarks.bed_benchmark import BedBenchmark
 from .benchmarks.door_benchmark import DoorBenchmark
@@ -14,34 +16,41 @@ from .benchmarks.tall_plant_benchmark import TallPlantBenchmark
 def create_default_registry(save_debug_schematics) -> BenchmarkRegistry:
     """Create and populate a registry with all standard benchmarks"""
     registry = BenchmarkRegistry()
+    schematic_array_converter = SchematicArrayConverter()
 
     registry.register_benchmark(
         BenchmarkCategory.STRUCTURES,
-        DoorBenchmark("doors", save_debug_schematics),
+        DoorBenchmark("doors", schematic_array_converter, save_debug_schematics),
     )
     registry.register_benchmark(
         BenchmarkCategory.STRUCTURES,
-        BedBenchmark("beds", save_debug_schematics),
+        BedBenchmark("beds", schematic_array_converter, save_debug_schematics),
     )
     registry.register_benchmark(
         BenchmarkCategory.STRUCTURES,
-        TallPlantBenchmark("tall_plants", save_debug_schematics),
+        TallPlantBenchmark(
+            "tall_plants", schematic_array_converter, save_debug_schematics
+        ),
     )
     registry.register_benchmark(
         BenchmarkCategory.STRUCTURES,
-        PortalBenchmark("portals", save_debug_schematics),
+        PortalBenchmark("portals", schematic_array_converter, save_debug_schematics),
     )
 
     registry.register_benchmark(
         BenchmarkCategory.PATTERNS,
         PatternBenchmark(
-            "plane", PatternType.PLANE, save_debug_schematics=save_debug_schematics
+            "plane",
+            schematic_array_converter,
+            PatternType.PLANE,
+            save_debug_schematics=save_debug_schematics,
         ),
     )
     registry.register_benchmark(
         BenchmarkCategory.PATTERNS,
         PatternBenchmark(
             "checkerboard_plane",
+            schematic_array_converter,
             PatternType.PLANE,
             checkerboard=True,
             save_debug_schematics=save_debug_schematics,
@@ -50,13 +59,17 @@ def create_default_registry(save_debug_schematics) -> BenchmarkRegistry:
     registry.register_benchmark(
         BenchmarkCategory.PATTERNS,
         PatternBenchmark(
-            "cross", PatternType.CROSS, save_debug_schematics=save_debug_schematics
+            "cross",
+            schematic_array_converter,
+            PatternType.CROSS,
+            save_debug_schematics=save_debug_schematics,
         ),
     )
     registry.register_benchmark(
         BenchmarkCategory.PATTERNS,
         PatternBenchmark(
             "checkerboard_cross",
+            schematic_array_converter,
             PatternType.CROSS,
             checkerboard=True,
             save_debug_schematics=save_debug_schematics,
@@ -66,6 +79,7 @@ def create_default_registry(save_debug_schematics) -> BenchmarkRegistry:
         BenchmarkCategory.PATTERNS,
         StairsBenchmark(
             "stairs",
+            schematic_array_converter,
             min_width=0,
             max_width=3,
             save_debug_schematics=save_debug_schematics,
@@ -75,19 +89,28 @@ def create_default_registry(save_debug_schematics) -> BenchmarkRegistry:
     registry.register_benchmark(
         BenchmarkCategory.REDSTONE,
         RedstonePowerBenchmark(
-            "redstone_lamps", RedstoneComponentType.LAMP, save_debug_schematics
+            "redstone_lamps",
+            schematic_array_converter,
+            RedstoneComponentType.LAMP,
+            save_debug_schematics,
         ),
     )
     registry.register_benchmark(
         BenchmarkCategory.REDSTONE,
         RedstonePowerBenchmark(
-            "iron_doors", RedstoneComponentType.DOOR, save_debug_schematics
+            "iron_doors",
+            schematic_array_converter,
+            RedstoneComponentType.DOOR,
+            save_debug_schematics,
         ),
     )
     registry.register_benchmark(
         BenchmarkCategory.REDSTONE,
         RedstonePowerBenchmark(
-            "pistons", RedstoneComponentType.PISTON, save_debug_schematics
+            "pistons",
+            schematic_array_converter,
+            RedstoneComponentType.PISTON,
+            save_debug_schematics,
         ),
     )
 

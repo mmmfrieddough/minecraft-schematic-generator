@@ -3,11 +3,16 @@ import logging
 import traceback
 
 import aiohttp
+import PyMCTranslate
 import semver
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from minecraft_schematic_generator.converter import (
+    BlockTokenFileHandler,
+    BlockTokenMapper,
+)
 from minecraft_schematic_generator.version import GITHUB_REPO, __version__
 
 from .config import AppState
@@ -64,6 +69,10 @@ async def lifespan(app: SchematicGeneratorApp):
         app.state.device,
     )
     logger.info("Model loaded successfully")
+
+    app.state.file_handler = BlockTokenFileHandler()
+    app.state.translation_manager = PyMCTranslate.new_translation_manager()
+
     yield
 
 
@@ -92,7 +101,13 @@ async def general_exception_handler(_: Request, exc: Exception):
 async def complete_structure(input: StructureRequest, request: Request):
     logger.info("Received structure generation request")
     try:
-        generator = StructureGenerator(app.state.model)
+        version_translator = app.state.translation_manager.get_version(
+            input.platform, input.version_number
+        )
+        block_token_mapper = BlockTokenMapper(
+            app.state.file_handler, version_translator
+        )
+        generator = StructureGenerator(app.state.model, block_token_mapper)
         input_tensor = generator.prepare_input_tensor(input.structure)
 
         async def generate():
