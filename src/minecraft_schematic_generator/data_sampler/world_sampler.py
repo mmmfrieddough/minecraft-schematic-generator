@@ -33,6 +33,13 @@ from amulet.utils.world_utils import chunk_coords_to_block_coords  # noqa: E402
 
 
 class WorldSampler:
+    # Define dimensions as a class variable
+    DIMENSIONS = {
+        "minecraft:overworld": "overworld",
+        "minecraft:the_nether": "nether",
+        "minecraft:the_end": "end",
+    }
+
     def __init__(
         self,
         schematic_directory,
@@ -73,31 +80,43 @@ class WorldSampler:
 
         self._block_cache = {}
 
+    def _get_data_directory(self, directory: str) -> str:
+        """Returns the path to the data directory for a world"""
+        return os.path.join(directory, ".minecraft_schematic_generator")
+
     def load_interested_blocks(self, directory: str) -> None:
-        """Loads the interested blocks from the file"""
-        # Check if a custom interested blocks file exists
-        filename = "interested_blocks.json"
-        if os.path.exists(os.path.join(directory, filename)):
-            config_path = os.path.join(directory, filename)
-            print(f"Using custom interested blocks file: {config_path}")
-        else:
-            config_path = os.path.join(os.path.dirname(__file__), filename)
+        """Loads the interested blocks from the files"""
+        # Initialize dictionaries
+        self.chunk_target_blocks = {}
+        self.sample_target_blocks = {}
 
-        # Load the interested blocks from the file
-        with open(config_path, "r") as file:
-            interested_blocks = json.load(file)
+        data_dir = self._get_data_directory(directory)
 
-        # Set the interested blocks
-        self.chunk_target_blocks = {
-            "minecraft:overworld": set(interested_blocks["chunk"]["overworld"]),
-            "minecraft:the_nether": set(interested_blocks["chunk"]["nether"]),
-            "minecraft:the_end": set(interested_blocks["chunk"]["end"]),
-        }
-        self.sample_target_blocks = {
-            "minecraft:overworld": set(interested_blocks["sample"]["overworld"]),
-            "minecraft:the_nether": set(interested_blocks["sample"]["nether"]),
-            "minecraft:the_end": set(interested_blocks["sample"]["end"]),
-        }
+        # Load each dimension's blocks from separate files
+        for dimension, prefix in self.DIMENSIONS.items():
+            # Check for chunk blocks file
+            chunk_filename = f"{prefix}_chunk_blocks.json"
+            if os.path.exists(os.path.join(data_dir, chunk_filename)):
+                config_path = os.path.join(data_dir, chunk_filename)
+                print(f"Using custom chunk blocks file for {prefix}: {config_path}")
+            else:
+                config_path = os.path.join(os.path.dirname(__file__), chunk_filename)
+
+            # Load chunk blocks
+            with open(config_path, "r") as file:
+                self.chunk_target_blocks[dimension] = set(json.load(file))
+
+            # Check for sample blocks file
+            sample_filename = f"{prefix}_sample_blocks.json"
+            if os.path.exists(os.path.join(data_dir, sample_filename)):
+                config_path = os.path.join(data_dir, sample_filename)
+                print(f"Using custom sample blocks file for {prefix}: {config_path}")
+            else:
+                config_path = os.path.join(os.path.dirname(__file__), sample_filename)
+
+            # Load sample blocks
+            with open(config_path, "r") as file:
+                self.sample_target_blocks[dimension] = set(json.load(file))
 
     def get_worker_directory(
         self, root_directory: str, src_directory: str, worker_id: int
@@ -173,9 +192,12 @@ class WorldSampler:
         self, directory: str, dimension: str, visited_chunks: set, relevant_chunks: set
     ) -> None:
         """Save the current chunk progress to a file"""
+        data_dir = self._get_data_directory(directory)
+        os.makedirs(data_dir, exist_ok=True)
+
         dimension = dimension.replace(":", "_")
-        temp_file_path = os.path.join(directory, f"{dimension}_chunk_progress_temp.pkl")
-        final_file_path = os.path.join(directory, f"{dimension}_chunk_progress.pkl")
+        temp_file_path = os.path.join(data_dir, f"{dimension}_chunk_progress_temp.pkl")
+        final_file_path = os.path.join(data_dir, f"{dimension}_chunk_progress.pkl")
 
         # Add retry logic with a small delay
         max_retries = 3
@@ -212,8 +234,9 @@ class WorldSampler:
 
     def _load_chunk_progress(self, directory: str, dimension: str) -> tuple:
         """Load the current chunk progress from a file"""
+        data_dir = self._get_data_directory(directory)
         dimension = dimension.replace(":", "_")
-        path = os.path.join(directory, f"{dimension}_chunk_progress.pkl")
+        path = os.path.join(data_dir, f"{dimension}_chunk_progress.pkl")
         if os.path.exists(path):
             with open(path, "rb") as file:
                 data = pickle.load(file)
@@ -228,11 +251,12 @@ class WorldSampler:
         self, directory: str, dimension: str, sampled_chunks: set, sample_positions: set
     ) -> None:
         """Save the current sample progress to a file"""
+        data_dir = self._get_data_directory(directory)
+        os.makedirs(data_dir, exist_ok=True)
+
         dimension = dimension.replace(":", "_")
-        temp_file_path = os.path.join(
-            directory, f"{dimension}_sample_progress_temp.pkl"
-        )
-        final_file_path = os.path.join(directory, f"{dimension}_sample_progress.pkl")
+        temp_file_path = os.path.join(data_dir, f"{dimension}_sample_progress_temp.pkl")
+        final_file_path = os.path.join(data_dir, f"{dimension}_sample_progress.pkl")
 
         # Add retry logic with a small delay
         max_retries = 3
@@ -269,8 +293,9 @@ class WorldSampler:
 
     def _load_sample_progress(self, directory: str, dimension: str) -> tuple:
         """Load the current sample progress from a file"""
+        data_dir = self._get_data_directory(directory)
         dimension = dimension.replace(":", "_")
-        path = os.path.join(directory, f"{dimension}_sample_progress.pkl")
+        path = os.path.join(data_dir, f"{dimension}_sample_progress.pkl")
         if os.path.exists(path):
             with open(path, "rb") as file:
                 data = pickle.load(file)
@@ -342,6 +367,10 @@ class WorldSampler:
         title: str,
         colorbar: str = None,
     ) -> None:
+        data_dir = self._get_data_directory(directory)
+        os.makedirs(data_dir, exist_ok=True)
+
+        # Use Agg backend for headless operation
         matplotlib.use("Agg")
 
         # Set the background for dark mode
@@ -372,7 +401,7 @@ class WorldSampler:
 
         # Save the plot as an image
         dimension = dimension.replace(":", "_")
-        plt.savefig(os.path.join(directory, f"{dimension}_{title}.png"))
+        plt.savefig(os.path.join(data_dir, f"{dimension}_{title}.png"))
         plt.close()
 
     def _visualize_marked_chunks(
@@ -1068,11 +1097,7 @@ class WorldSampler:
         """Samples a world"""
         print(f"Sampling {directory}")
         self.load_interested_blocks(directory)
-        for dimension in [
-            "minecraft:overworld",
-            "minecraft:the_nether",
-            "minecraft:the_end",
-        ]:
+        for dimension in self.DIMENSIONS:
             print(f"Sampling dimension: {dimension}")
             relevant_chunks = self._mark_chunks(root_directory, directory, dimension)
             if len(relevant_chunks) == 0:
@@ -1115,24 +1140,7 @@ class WorldSampler:
     def clear_world(self, directory: str) -> None:
         """Clears all progress and samples from a world"""
         print(f"Clearing {directory}")
-        for dimension in [
-            "minecraft:overworld",
-            "minecraft:the_nether",
-            "minecraft:the_end",
-        ]:
-            dimension = dimension.replace(":", "_")
-            chunk_progress_path = os.path.join(
-                directory, f"{dimension}_chunk_progress.pkl"
-            )
-            sample_progress_path = os.path.join(
-                directory, f"{dimension}_sample_progress.pkl"
-            )
-            if os.path.exists(chunk_progress_path):
-                os.remove(chunk_progress_path)
-            if os.path.exists(sample_progress_path):
-                os.remove(sample_progress_path)
-        shutil.rmtree(
-            os.path.join(self.schematic_directory, os.path.basename(directory)),
-            ignore_errors=True,
-        )
+        data_dir = self._get_data_directory(directory)
+        if os.path.exists(data_dir):
+            shutil.rmtree(data_dir)
         print(f"Done clearing {directory}")
