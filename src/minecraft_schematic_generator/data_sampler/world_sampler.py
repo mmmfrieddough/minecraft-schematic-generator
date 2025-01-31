@@ -80,8 +80,6 @@ class WorldSampler:
         self.sample_search_limit = sample_search_limit
         self.sample_limit = sample_limit
 
-        self._block_cache = {}
-
     def _get_data_directory(self, directory: str) -> str:
         """Returns the path to the data directory for a world"""
         return os.path.join(directory, ".minecraft_schematic_generator")
@@ -194,12 +192,16 @@ class WorldSampler:
                     break
 
     def _check_block(
-        self, block: Block, target_blocks: set, translator: BlockTranslator
+        self,
+        block: Block,
+        target_blocks: set,
+        translator: BlockTranslator,
+        block_cache: dict,
     ) -> bool:
         """Returns True if the block is one of the target blocks"""
         cache_key = block.namespaced_name
-        if cache_key in self._block_cache:
-            return self._block_cache[cache_key]
+        if cache_key in block_cache:
+            return block_cache[cache_key]
 
         block, _, _ = translator.from_universal(block)
         if "universal" in block.namespaced_name:
@@ -209,7 +211,7 @@ class WorldSampler:
             name = block.namespaced_name + "|"
             result = any(target_block in name for target_block in target_blocks)
 
-        self._block_cache[cache_key] = result
+        block_cache[cache_key] = result
         return result
 
     def _save_progress(
@@ -289,11 +291,15 @@ class WorldSampler:
         return None
 
     def _chunk_contains_target_blocks(
-        self, chunk: Chunk, target_blocks: set, translator: BlockTranslator
+        self,
+        chunk: Chunk,
+        target_blocks: set,
+        translator: BlockTranslator,
+        block_cache: dict,
     ) -> bool:
         """Returns True if the chunk contains any of the target blocks"""
         for block in chunk.block_palette:
-            if self._check_block(block, target_blocks, translator):
+            if self._check_block(block, target_blocks, translator, block_cache):
                 return True
         return False
 
@@ -381,6 +387,9 @@ class WorldSampler:
     ) -> None:
         """Worker function for marking chunks"""
         try:
+            # Create a new block cache for this worker
+            block_cache = {}
+
             # Load the world data from the directory
             world = amulet.load_level(directory)
 
@@ -398,7 +407,7 @@ class WorldSampler:
                 try:
                     chunk = world.level_wrapper.load_chunk(*chunk_coords, dimension)
                     if self._chunk_contains_target_blocks(
-                        chunk, target_blocks, translator
+                        chunk, target_blocks, translator, block_cache
                     ):
                         # Add this chunk and its neighbors
                         for dx in range(
@@ -648,11 +657,12 @@ class WorldSampler:
         translator: BlockTranslator,
         target_blocks: set,
         chunk: Chunk,
+        block_cache: dict,
     ) -> set:
         """Returns a set of indices of blocks from the chunk palette that we are targeting"""
         target_indices = set()
         for i, block in enumerate(chunk.block_palette):
-            if self._check_block(block, target_blocks, translator):
+            if self._check_block(block, target_blocks, translator, block_cache):
                 target_indices.add(i)
         return target_indices
 
@@ -676,6 +686,7 @@ class WorldSampler:
         translator: BlockTranslator,
         target_blocks: set,
         chunk_coords: tuple,
+        block_cache: dict,
     ) -> set:
         """Identifies samples from a chunk"""
         sample_positions = set()
@@ -706,7 +717,7 @@ class WorldSampler:
                     chunk = world.get_chunk(*inner_chunk_coords, dimension)
                     blocks = np.asarray(chunk.blocks[:, min_height:max_height, :])
                     target_indices = self._get_target_palette_indices(
-                        translator, target_blocks, chunk
+                        translator, target_blocks, chunk, block_cache
                     )
                 else:
                     blocks = np.zeros((16, max_height - min_height, 16), dtype=np.int32)
@@ -827,6 +838,9 @@ class WorldSampler:
         """Worker function for identifying samples"""
 
         try:
+            # Create a new block cache for this worker
+            block_cache = {}
+
             # Load the world data from the directory
             world = amulet.load_level(directory)
 
@@ -844,7 +858,12 @@ class WorldSampler:
                 try:
                     if world.has_chunk(*chunk_coords, dimension):
                         samples = self._identify_samples_in_chunk(
-                            world, dimension, translator, target_blocks, chunk_coords
+                            world,
+                            dimension,
+                            translator,
+                            target_blocks,
+                            chunk_coords,
+                            block_cache,
                         )
                         sample_positions_queue.put(samples)
                     successful = True
