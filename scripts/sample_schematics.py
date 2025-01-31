@@ -3,6 +3,8 @@ import random
 import shutil
 from pathlib import Path
 
+from tqdm import tqdm
+
 
 def sample_directory(source_dir, target_dir, max_files_per_dir=5):
     """
@@ -24,7 +26,7 @@ def sample_directory(source_dir, target_dir, max_files_per_dir=5):
     print(f"Sampling files from {source_path} to {target_path}")
 
     # Walk through all directories and files
-    for root, _, files in os.walk(source_path):
+    for root, _, files in tqdm(os.walk(source_path), desc="Walking directory"):
         # Convert current directory path to Path object
         current_path = Path(root)
 
@@ -48,7 +50,7 @@ def sample_directory(source_dir, target_dir, max_files_per_dir=5):
 
 
 def main():
-    source_directory = "data/schematics/trixyblox"
+    source_directory = "data/schematics"
     target_directory = "data/schematics_sampled"
     max_files = 100
 
