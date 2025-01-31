@@ -18,7 +18,7 @@ from minecraft_schematic_generator.constants import (
 )
 
 logging.getLogger("amulet").setLevel(logging.WARNING)
-logging.getLogger("PyMCTranslate").setLevel(logging.WARNING)
+logging.getLogger("PyMCTranslate").setLevel(logging.CRITICAL)
 
 import amulet  # noqa: E402
 import matplotlib  # noqa: E402
@@ -919,13 +919,20 @@ class WorldSampler:
         filename = world_name + dimension + str(position)
         return hashlib.sha256(filename.encode()).hexdigest()
 
+    def _get_dimension_directory(self, world_name: str, dimension: str) -> str:
+        """Returns the directory path for a given dimension"""
+        dimension_name = dimension.replace(
+            "minecraft:", ""
+        )  # Convert minecraft:overworld to overworld
+        return os.path.join(self.schematic_directory, world_name, dimension_name)
+
     def _get_schematic_path(
         self, world_name: str, dimension: str, position: tuple
     ) -> str:
         """Returns the path to the schematic file for the given position"""
         file_hash = self._get_schematic_hash(world_name, dimension, position)
-        path = os.path.join(self.schematic_directory, world_name, file_hash + ".schem")
-        return path
+        dimension_dir = self._get_dimension_directory(world_name, dimension)
+        return os.path.join(dimension_dir, file_hash + ".schem")
 
     def _collect_samples_worker(
         self,
@@ -1004,7 +1011,7 @@ class WorldSampler:
 
         # Filter out positions that already have a schematic
         world_name = os.path.relpath(directory, root_directory)
-        schematic_directory = os.path.join(self.schematic_directory, world_name)
+        schematic_directory = self._get_dimension_directory(world_name, dimension)
 
         # Check if the schematic directory exists
         if not os.path.exists(schematic_directory):
@@ -1012,20 +1019,36 @@ class WorldSampler:
             sample_positions = all_sample_positions
         else:
             # Get set of existing schematic hashes
-            existing_schematics = {
-                f.split(".")[0]
-                for f in os.listdir(schematic_directory)
-                if f.endswith(".schem")
-            }
+            existing_hashes = set(
+                {
+                    f.split(".")[0]
+                    for f in os.listdir(schematic_directory)
+                    if f.endswith(".schem")
+                }
+            )
 
-            # Go through all sample positions and check if a schematic already exists
-            sample_positions = set()
-            for position in all_sample_positions:
-                if (
-                    self._get_schematic_hash(world_name, dimension, position)
-                    not in existing_schematics
-                ):
-                    sample_positions.add(position)
+            # Map positions to their schematic hashes
+            desired_hash_map = {
+                self._get_schematic_hash(world_name, dimension, position): position
+                for position in all_sample_positions
+            }
+            desired_hashes = set(desired_hash_map.keys())
+
+            # Get the difference between the desired and existing schematics
+            sample_hashes = desired_hashes - existing_hashes
+
+            # Get the positions for the remaining hashes
+            sample_positions = {desired_hash_map[hash] for hash in sample_hashes}
+
+            # Remove any schematics that are not desired
+            unwanted_hashes = existing_hashes - desired_hashes
+            if unwanted_hashes:
+                print(f"Removing {len(unwanted_hashes)} unwanted schematics")
+            for hash in unwanted_hashes:
+                try:
+                    os.remove(os.path.join(schematic_directory, hash + ".schem"))
+                except OSError as e:
+                    print(f"Error deleting schematic {hash}.schem: {e}")
 
         if len(sample_positions) == 0:
             print(
