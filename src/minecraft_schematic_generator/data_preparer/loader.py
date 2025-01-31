@@ -150,68 +150,72 @@ class SchematicLoader:
 
         print(f"Loading schematics from {schematics_dir} into {hdf5_path}")
 
-        total_files = sum([len(files) for _, _, files in os.walk(schematics_dir)])
+        # Count total schematic files for progress bar
+        total_files = sum(
+            len([f for f in files if f.endswith(".schem")])
+            for _, _, files in os.walk(schematics_dir)
+        )
         pbar_overral = tqdm(total=total_files, desc="Processing schematic files")
 
         # Create process pool outside the loop
         with Pool(num_workers) as pool:
-            for root, dirs, files in os.walk(schematics_dir):
-                for dataset in dirs:
-                    if dataset_names and dataset not in dataset_names:
-                        continue
+            for root, _, files in os.walk(schematics_dir):
+                # Skip if no schematic files in this directory
+                if not any(f.endswith(".schem") for f in files):
+                    continue
 
-                    dataset_path = os.path.join(root, dataset)
+                # Get relative path from schematics_dir to create dataset name
+                rel_path = os.path.relpath(root, schematics_dir)
+                if rel_path == ".":  # Skip root directory
+                    continue
 
-                    # Check if the directory contains any schematic files, break as soon as one is found
-                    has_schematic = False
-                    for file in os.listdir(dataset_path):
-                        if file.endswith(".schem"):
-                            has_schematic = True
-                            break
+                dataset = rel_path  # Use full relative path as dataset name
 
-                    if not has_schematic:
-                        continue  # Skip this directory if no schematic files are found
+                if dataset_names and dataset not in dataset_names:
+                    continue
 
-                    # Split the data
-                    if dataset in validation_only_datasets:
-                        splits = {"validation": set()}
-                        for file_name in os.listdir(dataset_path):
-                            splits["validation"].add(file_name)
-                    else:
-                        splits = SchematicLoader.split_data(dataset_path, split_ratios)
+                # Check if the directory contains any schematic files
+                schematic_files = [f for f in files if f.endswith(".schem")]
+                if not schematic_files:
+                    continue
 
-                    for set_type, files in splits.items():
-                        # Prepare arguments for parallel processing
-                        process_args = [
-                            (file, dataset_path, os.path.splitext(file)[0])
-                            for file in files
-                        ]
+                # Split the data
+                if dataset in validation_only_datasets:
+                    splits = {"validation": set(schematic_files)}
+                else:
+                    splits = SchematicLoader.split_data(root, split_ratios)
 
-                        # Process files in parallel
-                        results = list(
-                            tqdm(
-                                pool.imap(
-                                    SchematicLoader.process_schematic_file, process_args
-                                ),
-                                total=len(process_args),
-                                desc=f"Processing {dataset} {set_type}",
-                                leave=False,
-                            )
+                for set_type, files in splits.items():
+                    # Prepare arguments for parallel processing
+                    process_args = [
+                        (file, root, os.path.splitext(file)[0]) for file in files
+                    ]
+
+                    # Process files in parallel
+                    results = list(
+                        tqdm(
+                            pool.imap(
+                                SchematicLoader.process_schematic_file, process_args
+                            ),
+                            total=len(process_args),
+                            desc=f"Processing {dataset} {set_type}",
+                            leave=False,
                         )
+                    )
 
-                        # Filter out None results and separate names and structures
-                        valid_results = [r for r in results if r is not None]
-                        names, structures = (
-                            zip(*valid_results) if valid_results else ([], [])
+                    # Filter out None results and separate names and structures
+                    valid_results = [r for r in results if r is not None]
+                    names, structures = (
+                        zip(*valid_results) if valid_results else ([], [])
+                    )
+
+                    with h5py.File(hdf5_path, "a") as hdf5_file:
+                        set_group = hdf5_file.require_group(set_type).require_group(
+                            dataset
                         )
+                        set_group.create_dataset("names", data=names)
+                        set_group.create_dataset("structures", data=structures)
 
-                        with h5py.File(hdf5_path, "a") as hdf5_file:
-                            set_group = hdf5_file.require_group(set_type).require_group(
-                                dataset
-                            )
-                            set_group.create_dataset("names", data=names)
-                            set_group.create_dataset("structures", data=structures)
-
-                        pbar_overral.update(len(files))
+                    pbar_overral.update(len(files))
 
             print("Finished updating HDF5 file.")
