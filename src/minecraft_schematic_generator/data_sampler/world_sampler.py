@@ -84,39 +84,91 @@ class WorldSampler:
         """Returns the path to the data directory for a world"""
         return os.path.join(directory, ".minecraft_schematic_generator")
 
+    def _get_world_version(self, directory: str) -> tuple:
+        """Gets the version of the Minecraft world"""
+        world = amulet.load_level(directory)
+        try:
+            version = world.translation_manager._get_version_number(
+                world.level_wrapper.platform, world.level_wrapper.version
+            )
+            return version
+        finally:
+            world.close()
+
+    def _get_available_target_block_versions(self) -> dict:
+        """Returns a list of available target block versions"""
+        dir = os.path.join(os.path.dirname(__file__), "target_blocks")
+
+        # Get all available version directories
+        version_dirs = {}
+        for item in os.listdir(dir):
+            version_path = os.path.join(dir, item)
+            if os.path.isdir(version_path):
+                try:
+                    # Split version string and pad with zeros
+                    version_parts = item.split(".")
+                    version = tuple(int(x) for x in version_parts) + (0,) * (
+                        3 - len(version_parts)
+                    )
+                    version_dirs[version] = version_path
+                except ValueError:
+                    continue
+
+        return version_dirs
+
+    def _get_version_specific_target_block_path(self, directory: str) -> tuple:
+        """Gets the path to the version-specific file that's closest to but not older than the world version"""
+        world_version = self._get_world_version(directory)
+        versions = self._get_available_target_block_versions()
+
+        # Find the oldest version that's not older than the world version
+        valid_versions = [v for v in versions if v >= world_version]
+        if not valid_versions:
+            raise ValueError("No compatible target block files found")
+        closest_version = min(valid_versions)
+
+        # Return path
+        return versions[closest_version], closest_version
+
     def load_target_blocks(self, directory: str) -> tuple[dict, dict]:
         """Loads the target blocks from the files and returns them"""
         # Initialize dictionaries
         chunk_target_blocks = {}
         sample_target_blocks = {}
 
+        version_path = None
         data_dir = self._get_data_directory(directory)
 
         # Load each dimension's blocks from separate files
-        for dimension, prefix in self.DIMENSIONS.items():
-            # Check for chunk blocks file
-            chunk_filename = f"{prefix}_chunk_blocks.json"
-            if os.path.exists(os.path.join(data_dir, chunk_filename)):
-                config_path = os.path.join(data_dir, chunk_filename)
-                print(f"Using custom chunk blocks file for {prefix}: {config_path}")
-            else:
-                config_path = os.path.join(os.path.dirname(__file__), chunk_filename)
+        for block_type in ["chunk", "sample"]:
+            for dimension in self.DIMENSIONS:
+                prefix = self.DIMENSIONS[dimension]
+                filename = f"{prefix}_{block_type}_blocks.json"
 
-            # Load chunk blocks
-            with open(config_path, "r") as file:
-                chunk_target_blocks[dimension] = json.load(file)
+                # Check if custom files exist first
+                custom_path = os.path.join(data_dir, filename)
+                if os.path.exists(custom_path):
+                    config_path = custom_path
+                    print(f"Using custom {block_type} target blocks for {dimension}")
+                else:
+                    if version_path is None:
+                        version_path, version = (
+                            self._get_version_specific_target_block_path(directory)
+                        )
+                        print(
+                            f"Using target blocks from {'.'.join(str(x) for x in version)}"
+                        )
+                    config_path = os.path.join(version_path, filename)
 
-            # Check for sample blocks file
-            sample_filename = f"{prefix}_sample_blocks.json"
-            if os.path.exists(os.path.join(data_dir, sample_filename)):
-                config_path = os.path.join(data_dir, sample_filename)
-                print(f"Using custom sample blocks file for {prefix}: {config_path}")
-            else:
-                config_path = os.path.join(os.path.dirname(__file__), sample_filename)
+                # Load the block file
+                with open(config_path, "r") as file:
+                    target_blocks = json.load(file)
 
-            # Load sample blocks
-            with open(config_path, "r") as file:
-                sample_target_blocks[dimension] = json.load(file)
+                # Store the target blocks
+                if block_type == "chunk":
+                    chunk_target_blocks[dimension] = target_blocks
+                else:
+                    sample_target_blocks[dimension] = target_blocks
 
         return chunk_target_blocks, sample_target_blocks
 
@@ -1225,6 +1277,7 @@ class WorldSampler:
             schematic_count = sum(
                 len(files) for _, _, files in os.walk(self.schematic_directory)
             )
+            print("--------------------")
             print(f"Total schematics: {schematic_count}")
             print("Done sampling directory")
         except KeyboardInterrupt:
