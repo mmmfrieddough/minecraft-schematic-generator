@@ -664,20 +664,8 @@ class WorldSampler:
             root_directory, directory, self.num_mark_chunks_workers
         )
 
-        # Create a queue and add all chunk coordinates to it
+        # Create queues
         all_chunks_queue = Queue()
-        if (
-            self.chunk_search_limit
-            and len(remaining_chunk_coords) > self.chunk_search_limit
-        ):
-            remaining_chunk_coords = set(
-                random.sample(list(remaining_chunk_coords), self.chunk_search_limit)
-            )
-        for chunk_coords in remaining_chunk_coords:
-            all_chunks_queue.put(chunk_coords)
-        all_chunks_queue.put(None)
-
-        # Create output queues
         visited_chunks_queue = Queue()
         relevant_chunks_queue = Queue()
 
@@ -702,6 +690,18 @@ class WorldSampler:
                 )
                 process.start()
                 processes.append(process)
+
+            # Add data to the queue after all workers are started
+            if (
+                self.chunk_search_limit
+                and len(remaining_chunk_coords) > self.chunk_search_limit
+            ):
+                remaining_chunk_coords = set(
+                    random.sample(list(remaining_chunk_coords), self.chunk_search_limit)
+                )
+            for chunk_coords in remaining_chunk_coords:
+                all_chunks_queue.put(chunk_coords)
+            all_chunks_queue.put(None)
 
             # Create a tqdm progress bar
             pbar = tqdm(
@@ -1004,20 +1004,8 @@ class WorldSampler:
             root_directory, directory, self.num_identify_samples_workers
         )
 
-        # Create a queue and add all chunk coordinates to it
+        # Create queues
         relevant_chunks_queue = Queue()
-        if (
-            self.sample_search_limit
-            and len(remaining_relevant_chunks) > self.sample_search_limit
-        ):
-            remaining_relevant_chunks = set(
-                random.sample(list(remaining_relevant_chunks), self.sample_search_limit)
-            )
-        for chunk_coords in remaining_relevant_chunks:
-            relevant_chunks_queue.put(chunk_coords)
-        relevant_chunks_queue.put(None)
-
-        # Create a progress queue
         sampled_chunks_queue = Queue()
         sample_positions_queue = Queue()
 
@@ -1042,6 +1030,20 @@ class WorldSampler:
                 )
                 process.start()
                 processes.append(process)
+
+            # Add data to the queue after all workers are started
+            if (
+                self.sample_search_limit
+                and len(remaining_relevant_chunks) > self.sample_search_limit
+            ):
+                remaining_relevant_chunks = set(
+                    random.sample(
+                        list(remaining_relevant_chunks), self.sample_search_limit
+                    )
+                )
+            for chunk_coords in remaining_relevant_chunks:
+                relevant_chunks_queue.put(chunk_coords)
+            relevant_chunks_queue.put(None)
 
             # Create a tqdm progress bar
             pbar = tqdm(
@@ -1248,17 +1250,8 @@ class WorldSampler:
             root_directory, directory, self.num_collect_samples_workers
         )
 
-        # Create a queue and add all positions to it
-        if self.sample_limit and len(sample_positions) > self.sample_limit:
-            sample_positions = set(
-                random.sample(list(sample_positions), self.sample_limit)
-            )
+        # Create queues
         sample_positions_queue = Queue()
-        for position in sample_positions:
-            sample_positions_queue.put(position)
-        sample_positions_queue.put(None)
-
-        # Create a progress queue
         sampled_positions_queue = Queue()
 
         processes = []
@@ -1281,6 +1274,15 @@ class WorldSampler:
                 )
                 process.start()
                 processes.append(process)
+
+            # Add data to the queue after all workers are started
+            if self.sample_limit and len(sample_positions) > self.sample_limit:
+                sample_positions = set(
+                    random.sample(list(sample_positions), self.sample_limit)
+                )
+            for position in sample_positions:
+                sample_positions_queue.put(position)
+            sample_positions_queue.put(None)
 
             # Create a tqdm progress bar
             pbar = tqdm(
