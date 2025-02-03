@@ -102,7 +102,6 @@
           "red_sandstone",
           "nether_brick",
           "quartz",
-          "purpur",
           "prismarine",
           "prismarine_brick",
           "dark_prismarine",
@@ -176,7 +175,6 @@
           "red_sandstone",
           "nether_brick",
           "quartz",
-          "purpur",
           "prismarine",
           "prismarine_brick",
           "dark_prismarine",
@@ -226,6 +224,17 @@
         "type": [
           "bottom",
           "top",
+          "double"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:slab",
+      "properties": {
+        "material": [
+          "purpur"
+        ],
+        "type": [
           "double"
         ]
       }
@@ -448,9 +457,6 @@
       "name": "universal_minecraft:stone"
     },
     {
-      "name": "universal_minecraft:cobblestone"
-    },
-    {
       "name": "universal_minecraft:wall",
       "properties": {
         "east": [
@@ -650,9 +656,6 @@
       "name": "universal_minecraft:dark_prismarine"
     },
     {
-      "name": "universal_minecraft:netherrack"
-    },
-    {
       "name": "universal_minecraft:nether_bricks"
     },
     {
@@ -706,47 +709,10 @@
       "name": "universal_minecraft:cracked_polished_blackstone_bricks"
     },
     {
-      "name": "universal_minecraft:end_stone_bricks"
-    },
-    {
-      "name": "universal_minecraft:purpur_block"
-    },
-    {
-      "name": "universal_minecraft:purpur_pillar",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:coal_block"
     },
     {
       "name": "universal_minecraft:iron_block"
-    },
-    {
-      "name": "universal_minecraft:iron_bars",
-      "properties": {
-        "east": [
-          "true",
-          "false"
-        ],
-        "north": [
-          "true",
-          "false"
-        ],
-        "south": [
-          "true",
-          "false"
-        ],
-        "west": [
-          "true",
-          "false"
-        ]
-      }
     },
     {
       "name": "universal_minecraft:chain",
@@ -1137,7 +1103,6 @@
           "light_blue",
           "blue",
           "purple",
-          "magenta",
           "pink"
         ]
       }
@@ -1352,7 +1317,6 @@
         "color": [
           "white",
           "orange",
-          "magenta",
           "light_blue",
           "yellow",
           "lime",
@@ -1404,9 +1368,6 @@
     },
     {
       "name": "universal_minecraft:grass_path"
-    },
-    {
-      "name": "universal_minecraft:dirt"
     },
     {
       "name": "universal_minecraft:coarse_dirt"
@@ -2465,20 +2426,7 @@
       "name": "universal_minecraft:bedrock",
       "properties": {
         "infiniburn": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:torch",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
+          "true"
         ]
       }
     },
@@ -2525,19 +2473,6 @@
         "hanging": [
           "true",
           "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:end_rod",
-      "properties": {
-        "facing": [
-          "down",
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
         ]
       }
     },
@@ -2785,23 +2720,6 @@
       "name": "universal_minecraft:enchanting_table"
     },
     {
-      "name": "universal_minecraft:brewing_stand",
-      "properties": {
-        "has_bottle_0": [
-          "true",
-          "false"
-        ],
-        "has_bottle_1": [
-          "true",
-          "false"
-        ],
-        "has_bottle_2": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:cauldron",
       "properties": {
         "cauldron_liquid": [
@@ -2889,17 +2807,6 @@
     },
     {
       "name": "universal_minecraft:lodestone"
-    },
-    {
-      "name": "universal_minecraft:ladder",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ]
-      }
     },
     {
       "name": "universal_minecraft:scaffolding"
@@ -3186,7 +3093,6 @@
       "name": "universal_minecraft:chest",
       "properties": {
         "connection": [
-          "none",
           "left",
           "right"
         ],
@@ -3210,17 +3116,6 @@
         "open": [
           "true",
           "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:ender_chest",
-      "properties": {
-        "facing": [
-          "north",
-          "east",
-          "south",
-          "west"
         ]
       }
     },

@@ -50,6 +50,23 @@
           "pale_oak"
         ],
         "stripped": [
+          "true"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:log",
+      "properties": {
+        "axis": [
+          "x",
+          "y",
+          "z"
+        ],
+        "material": [
+          "crimson",
+          "warped"
+        ],
+        "stripped": [
           "true",
           "false"
         ]
@@ -448,9 +465,6 @@
       "name": "universal_minecraft:stone"
     },
     {
-      "name": "universal_minecraft:cobblestone"
-    },
-    {
       "name": "universal_minecraft:wall",
       "properties": {
         "east": [
@@ -650,12 +664,6 @@
       "name": "universal_minecraft:dark_prismarine"
     },
     {
-      "name": "universal_minecraft:netherrack"
-    },
-    {
-      "name": "universal_minecraft:nether_bricks"
-    },
-    {
       "name": "universal_minecraft:cracked_nether_bricks"
     },
     {
@@ -669,7 +677,6 @@
       "properties": {
         "axis": [
           "x",
-          "y",
           "z"
         ]
       }
@@ -704,6 +711,9 @@
     },
     {
       "name": "universal_minecraft:cracked_polished_blackstone_bricks"
+    },
+    {
+      "name": "universal_minecraft:end_stone"
     },
     {
       "name": "universal_minecraft:end_stone_bricks"
@@ -1406,9 +1416,6 @@
       "name": "universal_minecraft:grass_path"
     },
     {
-      "name": "universal_minecraft:dirt"
-    },
-    {
       "name": "universal_minecraft:coarse_dirt"
     },
     {
@@ -1434,9 +1441,6 @@
     },
     {
       "name": "universal_minecraft:clay"
-    },
-    {
-      "name": "universal_minecraft:gravel"
     },
     {
       "name": "universal_minecraft:sand"
@@ -1540,25 +1544,10 @@
       }
     },
     {
-      "name": "universal_minecraft:magma_block"
+      "name": "universal_minecraft:obsidian"
     },
     {
       "name": "universal_minecraft:crying_obsidian"
-    },
-    {
-      "name": "universal_minecraft:crimson_nylium"
-    },
-    {
-      "name": "universal_minecraft:warped_nylium"
-    },
-    {
-      "name": "universal_minecraft:soul_sand"
-    },
-    {
-      "name": "universal_minecraft:soul_soil"
-    },
-    {
-      "name": "universal_minecraft:soul_fire"
     },
     {
       "name": "universal_minecraft:bone_block",
@@ -1619,15 +1608,6 @@
       "name": "universal_minecraft:deepslate_diamond_ore"
     },
     {
-      "name": "universal_minecraft:nether_gold_ore"
-    },
-    {
-      "name": "universal_minecraft:nether_quartz_ore"
-    },
-    {
-      "name": "universal_minecraft:ancient_debris"
-    },
-    {
       "name": "universal_minecraft:raw_iron_block"
     },
     {
@@ -1635,9 +1615,6 @@
     },
     {
       "name": "universal_minecraft:raw_gold_block"
-    },
-    {
-      "name": "universal_minecraft:glowstone"
     },
     {
       "name": "universal_minecraft:budding_amethyst"
@@ -1791,15 +1768,6 @@
       }
     },
     {
-      "name": "universal_minecraft:nether_wart_block"
-    },
-    {
-      "name": "universal_minecraft:warped_wart_block"
-    },
-    {
-      "name": "universal_minecraft:shroomlight"
-    },
-    {
       "name": "universal_minecraft:sapling",
       "properties": {
         "material": [
@@ -1822,18 +1790,6 @@
     },
     {
       "name": "universal_minecraft:flowering_azalea"
-    },
-    {
-      "name": "universal_minecraft:brown_mushroom"
-    },
-    {
-      "name": "universal_minecraft:red_mushroom"
-    },
-    {
-      "name": "universal_minecraft:crimson_fungus"
-    },
-    {
-      "name": "universal_minecraft:warped_fungus"
     },
     {
       "name": "universal_minecraft:plant",
@@ -1912,21 +1868,6 @@
     },
     {
       "name": "universal_minecraft:cactus"
-    },
-    {
-      "name": "universal_minecraft:crimson_roots"
-    },
-    {
-      "name": "universal_minecraft:warped_roots"
-    },
-    {
-      "name": "universal_minecraft:nether_sprouts"
-    },
-    {
-      "name": "universal_minecraft:weeping_vines"
-    },
-    {
-      "name": "universal_minecraft:twisting_vines"
     },
     {
       "name": "universal_minecraft:vine",
@@ -2027,6 +1968,38 @@
           "lower"
         ]
       }
+    },
+    {
+      "name": "universal_minecraft:chorus_plant",
+      "properties": {
+        "down": [
+          "true",
+          "false"
+        ],
+        "east": [
+          "true",
+          "false"
+        ],
+        "north": [
+          "true",
+          "false"
+        ],
+        "south": [
+          "true",
+          "false"
+        ],
+        "up": [
+          "true",
+          "false"
+        ],
+        "west": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:chorus_flower"
     },
     {
       "name": "universal_minecraft:glow_lichen",
@@ -2462,27 +2435,6 @@
       "name": "universal_minecraft:cobweb"
     },
     {
-      "name": "universal_minecraft:bedrock",
-      "properties": {
-        "infiniburn": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:torch",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:soul_torch",
       "properties": {
         "facing": [
@@ -2842,28 +2794,6 @@
     },
     {
       "name": "universal_minecraft:water",
-      "properties": {
-        "level": [
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7"
-        ],
-        "falling": [
-          "true",
-          "false"
-        ],
-        "flowing": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:lava",
       "properties": {
         "level": [
           "1",

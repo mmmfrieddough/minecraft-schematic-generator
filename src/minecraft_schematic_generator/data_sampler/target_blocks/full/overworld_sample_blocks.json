@@ -62,7 +62,6 @@
           "z"
         ],
         "material": [
-          "oak",
           "spruce",
           "birch",
           "jungle",
@@ -1594,6 +1593,89 @@
       "name": "universal_minecraft:chorus_flower"
     },
     {
+      "name": "universal_minecraft:wheat",
+      "properties": {
+        "age": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:pumpkin_stem",
+      "properties": {
+        "facing": [
+          "north",
+          "east",
+          "south",
+          "west"
+        ],
+        "age": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:melon_stem",
+      "properties": {
+        "facing": [
+          "north",
+          "east",
+          "south",
+          "west"
+        ],
+        "age": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:beetroots",
+      "properties": {
+        "age": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:nether_wart",
+      "properties": {
+        "age": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ]
+      }
+    },
+    {
       "name": "universal_minecraft:dried_kelp_block"
     },
     {
@@ -2934,6 +3016,36 @@
         "unstable": [
           "true",
           "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:carrots",
+      "properties": {
+        "age": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:potatoes",
+      "properties": {
+        "age": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
         ]
       }
     },

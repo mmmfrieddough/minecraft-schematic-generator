@@ -102,7 +102,6 @@
           "red_sandstone",
           "nether_brick",
           "quartz",
-          "purpur",
           "prismarine",
           "prismarine_brick",
           "dark_prismarine",
@@ -448,9 +447,6 @@
       "name": "universal_minecraft:stone"
     },
     {
-      "name": "universal_minecraft:cobblestone"
-    },
-    {
       "name": "universal_minecraft:wall",
       "properties": {
         "east": [
@@ -650,9 +646,6 @@
       "name": "universal_minecraft:dark_prismarine"
     },
     {
-      "name": "universal_minecraft:netherrack"
-    },
-    {
       "name": "universal_minecraft:nether_bricks"
     },
     {
@@ -704,22 +697,6 @@
     },
     {
       "name": "universal_minecraft:cracked_polished_blackstone_bricks"
-    },
-    {
-      "name": "universal_minecraft:end_stone_bricks"
-    },
-    {
-      "name": "universal_minecraft:purpur_block"
-    },
-    {
-      "name": "universal_minecraft:purpur_pillar",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ]
-      }
     },
     {
       "name": "universal_minecraft:coal_block"
@@ -1137,7 +1114,6 @@
           "light_blue",
           "blue",
           "purple",
-          "magenta",
           "pink"
         ]
       }
@@ -1404,9 +1380,6 @@
     },
     {
       "name": "universal_minecraft:grass_path"
-    },
-    {
-      "name": "universal_minecraft:dirt"
     },
     {
       "name": "universal_minecraft:coarse_dirt"
@@ -2471,18 +2444,6 @@
       }
     },
     {
-      "name": "universal_minecraft:torch",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:soul_torch",
       "properties": {
         "facing": [
@@ -2525,19 +2486,6 @@
         "hanging": [
           "true",
           "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:end_rod",
-      "properties": {
-        "facing": [
-          "down",
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
         ]
       }
     },
