@@ -81,7 +81,7 @@ class WorldSampler:
         """Returns the path to the data directory for a world"""
         return os.path.join(directory, ".minecraft_schematic_generator")
 
-    def _get_world_version(self, directory: str) -> tuple:
+    def _get_world_version(self, directory: str) -> tuple[int, int, int]:
         """Gets the version of the Minecraft world"""
         world = amulet.load_level(directory)
         try:
@@ -113,7 +113,9 @@ class WorldSampler:
 
         return version_dirs
 
-    def _get_version_specific_target_block_path(self, directory: str) -> tuple:
+    def _get_version_specific_target_block_path(
+        self, directory: str
+    ) -> tuple[str, tuple[int, int, int], tuple[int, int, int]]:
         """Gets the path to the version-specific file that's closest to but not older than the world version"""
         world_version = self._get_world_version(directory)
         versions = self._get_available_target_block_versions()
@@ -435,7 +437,7 @@ class WorldSampler:
 
     def _load_chunk_progress(
         self, directory: str, dimension: str, target_blocks: list
-    ) -> tuple:
+    ) -> tuple[set, set]:
         """Load the current chunk progress from a file"""
         current_config = self._get_chunk_config(target_blocks)
         data = self._load_progress(directory, dimension, "chunk", current_config)
@@ -473,7 +475,7 @@ class WorldSampler:
 
     def _load_sample_progress(
         self, directory: str, dimension: str, target_blocks: list
-    ) -> tuple:
+    ) -> tuple[set, set]:
         """Load the current sample progress from a file"""
         current_config = self._get_sample_config(target_blocks)
         data = self._load_progress(directory, dimension, "sample", current_config)
@@ -804,7 +806,9 @@ class WorldSampler:
                 target_indices.add(i)
         return target_indices
 
-    def _get_deterministic_random_offsets(self, chunk_coords: tuple) -> tuple:
+    def _get_deterministic_random_offsets(
+        self, chunk_coords: tuple[int, int]
+    ) -> tuple[int, int, int]:
         # Convert the chunk coordinates to a string
         coord_str = f"{chunk_coords[0]}_{chunk_coords[1]}"
         # Use a hash function, e.g., SHA-256
@@ -822,7 +826,7 @@ class WorldSampler:
         world: World,
         dimension: str,
         target_blocks: list,
-        chunk_coords: tuple,
+        chunk_coords: tuple[int, int],
         block_cache: dict,
     ) -> set:
         """Identifies samples from a chunk"""
@@ -1177,7 +1181,7 @@ class WorldSampler:
         return sample_positions
 
     def _get_schematic_hash(
-        self, world_name: str, dimension: str, position: tuple
+        self, world_name: str, dimension: str, position: tuple[str, int, int]
     ) -> str:
         """Returns the hash of the schematic file for the given position"""
         filename = world_name + dimension + str(position)
@@ -1191,7 +1195,7 @@ class WorldSampler:
         return os.path.join(self.schematic_directory, world_name, dimension_name)
 
     def _get_schematic_path(
-        self, world_name: str, dimension: str, position: tuple
+        self, world_name: str, dimension: str, position: tuple[int, int, int]
     ) -> str:
         """Returns the path to the schematic file for the given position"""
         file_hash = self._get_schematic_hash(world_name, dimension, position)
