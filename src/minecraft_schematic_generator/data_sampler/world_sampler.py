@@ -667,6 +667,15 @@ class WorldSampler:
 
         # Remove visited chunks from the list
         remaining_chunk_coords = all_chunk_coords - visited_chunks
+
+        # Limit the number of chunks to check
+        if self.chunk_search_limit and len(all_chunk_coords) > self.chunk_search_limit:
+            remaining_chunks = max(self.chunk_search_limit - len(visited_chunks), 0)
+            remaining_chunk_coords = set(
+                random.sample(list(remaining_chunk_coords), remaining_chunks)
+            )
+
+        # Check if all chunks have already been visited
         if len(remaining_chunk_coords) == 0:
             print(f"All {len(all_chunk_coords)} world chunks have already been visited")
             return relevant_chunks
@@ -706,20 +715,13 @@ class WorldSampler:
                 processes.append(process)
 
             # Add data to the queue after all workers are started
-            if (
-                self.chunk_search_limit
-                and len(remaining_chunk_coords) > self.chunk_search_limit
-            ):
-                remaining_chunk_coords = set(
-                    random.sample(list(remaining_chunk_coords), self.chunk_search_limit)
-                )
             for chunk_coords in remaining_chunk_coords:
                 all_chunks_queue.put(chunk_coords)
             all_chunks_queue.put(None)
 
             # Create the progress bar
             pbar = tqdm(
-                total=len(all_chunk_coords),
+                total=len(visited_chunks) + len(remaining_chunk_coords),
                 initial=len(visited_chunks),
                 desc="Marking chunks",
             )
@@ -1045,8 +1047,21 @@ class WorldSampler:
         )
 
         # Get all relevant chunks that have not been sampled
-        remaining_relevant_chunks = relevant_chunks - sampled_chunks
-        if len(remaining_relevant_chunks) == 0:
+        remaining_relevant_chunk_positions = relevant_chunks - sampled_chunks
+
+        # Limit the number of chunks to search
+        if self.sample_search_limit and len(relevant_chunks) > self.sample_search_limit:
+            remaining_relevant_chunks = max(
+                self.sample_search_limit - len(sampled_chunks), 0
+            )
+            remaining_relevant_chunk_positions = set(
+                random.sample(
+                    list(remaining_relevant_chunk_positions), remaining_relevant_chunks
+                )
+            )
+
+        # Check if all relevant chunks have already been sampled
+        if len(remaining_relevant_chunk_positions) == 0:
             print(
                 f"All {len(relevant_chunks)} relevant chunks have already been sampled"
             )
@@ -1087,22 +1102,13 @@ class WorldSampler:
                 processes.append(process)
 
             # Add data to the queue after all workers are started
-            if (
-                self.sample_search_limit
-                and len(remaining_relevant_chunks) > self.sample_search_limit
-            ):
-                remaining_relevant_chunks = set(
-                    random.sample(
-                        list(remaining_relevant_chunks), self.sample_search_limit
-                    )
-                )
-            for chunk_coords in remaining_relevant_chunks:
+            for chunk_coords in remaining_relevant_chunk_positions:
                 relevant_chunks_queue.put(chunk_coords)
             relevant_chunks_queue.put(None)
 
             # Create the progress bar
             pbar = tqdm(
-                total=len(relevant_chunks),
+                total=len(sampled_chunks) + len(remaining_relevant_chunk_positions),
                 initial=len(sampled_chunks),
                 desc="Identifying samples from chunks",
             )
@@ -1300,7 +1306,7 @@ class WorldSampler:
         # Check if the schematic directory exists
         if not os.path.exists(schematic_directory):
             os.makedirs(schematic_directory)
-            sample_positions = all_sample_positions
+            remaining_sample_positions = all_sample_positions
         else:
             # Get set of existing schematic hashes
             existing_hashes = set(
@@ -1318,26 +1324,36 @@ class WorldSampler:
             }
             desired_hashes = set(desired_hash_map.keys())
 
-            # Get the difference between the desired and existing schematics
-            sample_hashes = desired_hashes - existing_hashes
-
-            # Get the positions for the remaining hashes
-            sample_positions = {desired_hash_map[hash] for hash in sample_hashes}
+            # Get the difference between the existing and desired schematics
+            unwanted_hashes = existing_hashes - desired_hashes
 
             # Remove any schematics that are not desired
-            unwanted_hashes = existing_hashes - desired_hashes
             if unwanted_hashes:
                 print(f"Removing {len(unwanted_hashes)} unwanted schematics")
-            for hash in unwanted_hashes:
-                try:
-                    os.remove(os.path.join(schematic_directory, hash + ".schem"))
-                except OSError as e:
-                    print(f"Error deleting schematic {hash}.schem: {e}")
+                for hash in unwanted_hashes:
+                    try:
+                        os.remove(os.path.join(schematic_directory, hash + ".schem"))
+                    except OSError as e:
+                        print(f"Error deleting schematic {hash}.schem: {e}")
 
-        if len(sample_positions) == 0:
-            print(
-                f"All {len(all_sample_positions)} samples have already been collected"
+            # Get the difference between the desired and existing schematics
+            remaining_hashes = desired_hashes - existing_hashes
+
+            # Get the positions for the remaining hashes
+            remaining_sample_positions = {
+                desired_hash_map[hash] for hash in remaining_hashes
+            }
+
+        # Limit the number of samples to collect
+        if self.sample_limit and len(all_sample_positions) > self.sample_limit:
+            remaining_samples = max(self.sample_limit - len(existing_hashes), 0)
+            remaining_sample_positions = set(
+                random.sample(list(remaining_sample_positions), remaining_samples)
             )
+
+        # Check if there are any samples to collect
+        if len(remaining_sample_positions) == 0:
+            print(f"All {len(existing_hashes)} samples have already been collected")
             return
 
         # Create the schematic directory if it doesn't exist
@@ -1375,18 +1391,14 @@ class WorldSampler:
                 processes.append(process)
 
             # Add data to the queue after all workers are started
-            if self.sample_limit and len(sample_positions) > self.sample_limit:
-                sample_positions = set(
-                    random.sample(list(sample_positions), self.sample_limit)
-                )
-            for position in sample_positions:
+            for position in remaining_sample_positions:
                 sample_positions_queue.put(position)
             sample_positions_queue.put(None)
 
             # Create the progress bar
             pbar = tqdm(
-                total=len(all_sample_positions),
-                initial=(len(all_sample_positions) - len(sample_positions)),
+                total=len(existing_hashes) + len(remaining_sample_positions),
+                initial=len(existing_hashes),
                 desc="Collecting samples",
             )
 
