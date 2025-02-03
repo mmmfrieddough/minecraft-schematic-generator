@@ -1,3 +1,4 @@
+import fnmatch
 import hashlib
 import json
 import logging
@@ -31,7 +32,6 @@ from amulet.api.level import World  # noqa: E402
 from amulet.api.selection import SelectionBox, SelectionGroup  # noqa: E402
 from amulet.level.formats.sponge_schem import SpongeSchemFormatWrapper  # noqa: E402
 from amulet.utils.world_utils import chunk_coords_to_block_coords  # noqa: E402
-from PyMCTranslate.py3.api.version.translators import BlockTranslator  # noqa: E402
 
 
 class WorldSampler:
@@ -128,7 +128,7 @@ class WorldSampler:
         closest_version = min(valid_versions)
 
         # Return path
-        return versions[closest_version], closest_version
+        return versions[closest_version], closest_version, world_version
 
     def load_target_blocks(self, directory: str) -> tuple[dict, dict]:
         """Loads the target blocks from the files and returns them"""
@@ -152,17 +152,20 @@ class WorldSampler:
                     print(f"Using custom {block_type} target blocks for {dimension}")
                 else:
                     if version_path is None:
-                        version_path, version = (
+                        version_path, selected_version, world_version = (
                             self._get_version_specific_target_block_path(directory)
                         )
                         print(
-                            f"Using target blocks from {'.'.join(str(x) for x in version)}"
+                            f"Using target blocks from {'.'.join(str(x) for x in selected_version)} (closest to {'.'.join(str(x) for x in world_version)})"
                         )
                     config_path = os.path.join(version_path, filename)
 
                 # Load the block file
-                with open(config_path, "r") as file:
-                    target_blocks = json.load(file)
+                try:
+                    with open(config_path, "r") as file:
+                        target_blocks = json.load(file).get("blocks", [])
+                except AttributeError:
+                    raise ValueError(f"Error loading target blocks from {config_path}")
 
                 # Store the target blocks
                 if block_type == "chunk":
@@ -243,28 +246,84 @@ class WorldSampler:
                 else:
                     break
 
-    def _check_block(
-        self,
-        block: Block,
-        target_blocks: set,
-        translator: BlockTranslator,
-        block_cache: dict,
+    def _check_block_property(
+        self, prop_key: str, accepted_values: list, block_props: dict
     ) -> bool:
-        """Returns True if the block is one of the target blocks"""
-        cache_key = block.namespaced_name
-        if cache_key in block_cache:
-            return block_cache[cache_key]
+        """Returns True if the block property matches the accepted values"""
+        # If the block doesn't have this property at all, fail the rule
+        if prop_key not in block_props:
+            return False
 
-        block, _, _ = translator.from_universal(block)
-        if "universal" in block.namespaced_name:
-            print(f"Conversion failed for {block.namespaced_name}")
-            result = False
-        else:
-            name = block.namespaced_name + "|"
-            result = any(target_block in name for target_block in target_blocks)
+        value = str(block_props[prop_key])
+        # If "any" is in the list of accepted values, it means "any value is OK"
+        if "any" not in accepted_values and value not in accepted_values:
+            return False
 
-        block_cache[cache_key] = result
-        return result
+        return True
+
+    def _check_block_rule(self, rule: dict, block_name: str, block_props: dict) -> bool:
+        """Returns True if the block matches the rule"""
+        # Check name
+        rule_name = rule.get("name", "*")
+        if not fnmatch.fnmatch(block_name, rule_name):
+            return False
+
+        # Check properties
+        required_props = rule.get("properties", {})
+        for prop_name, accepted_values in required_props.items():
+            if not self._check_block_property(prop_name, accepted_values, block_props):
+                return False
+
+        return True
+
+    def _check_block_rules(
+        self,
+        filters: list,
+        block: Block,
+    ) -> bool:
+        """
+        Checks whether a 'block' (with 'namespaced_name' and 'properties' dict) matches
+        ANY of the provided block_filters (a list of rule dicts).
+
+        :param block: Amulet universal block or a custom block object with:
+                        - block.namespaced_name (str)
+                        - block.properties (dict)
+        :param block_filters: List of filter rules, e.g.:
+            [
+                {
+                    "name": "universal_minecraft:trapdoor",  # wildcard supported
+                    "properties": {
+                        "material": ["oak", "birch"],
+                        "open": ["true"]
+                    }
+                },
+                {
+                    "name": "*"
+                    "properties": {
+                        "material": ["oak"]
+                    }
+                }
+            ]
+        :return: True if 'block' matches at least one rule, otherwise False.
+        """
+        block_props = getattr(block, "properties", {})
+
+        # Try each rule
+        for rule in filters:
+            if self._check_block_rule(rule, block.namespaced_name, block_props):
+                # print("Match")
+                # print(block.full_blockstate)
+                # print(rule)
+                return True
+
+        return False
+
+    def _check_block(self, filters: list, block: Block, cache: dict) -> bool:
+        """Returns True if the block matches the filters"""
+        cache_key = block.blockstate
+        if cache_key not in cache:
+            cache[cache_key] = self._check_block_rules(filters, block)
+        return cache[cache_key]
 
     def _save_progress(
         self, directory: str, dimension: str, name: str, config: dict, data: dict
@@ -344,14 +403,13 @@ class WorldSampler:
 
     def _chunk_contains_target_blocks(
         self,
+        target_blocks: list,
         chunk: Chunk,
-        target_blocks: set,
-        translator: BlockTranslator,
         block_cache: dict,
     ) -> bool:
         """Returns True if the chunk contains any of the target blocks"""
         for block in chunk.block_palette:
-            if self._check_block(block, target_blocks, translator, block_cache):
+            if self._check_block(target_blocks, block, block_cache):
                 return True
         return False
 
@@ -432,7 +490,7 @@ class WorldSampler:
         self,
         directory: str,
         dimension: str,
-        target_blocks: set,
+        target_blocks: list,
         all_chunks_queue: Queue,
         visited_chunks_queue: Queue,
         relevant_chunks_queue: Queue,
@@ -445,11 +503,6 @@ class WorldSampler:
             # Load the world data from the directory
             world = amulet.load_level(directory)
 
-            # Use the translator for the project level Minecraft version which target blocks are defined for
-            translator = world.translation_manager.get_version(
-                MINECRAFT_PLATFORM, MINECRAFT_VERSION
-            ).block
-
             while True:
                 chunk_coords = all_chunks_queue.get()
                 if chunk_coords is None:
@@ -459,7 +512,7 @@ class WorldSampler:
                 try:
                     chunk = world.level_wrapper.load_chunk(*chunk_coords, dimension)
                     if self._chunk_contains_target_blocks(
-                        chunk, target_blocks, translator, block_cache
+                        target_blocks, chunk, block_cache
                     ):
                         # Add this chunk and its neighbors
                         for dx in range(
@@ -629,7 +682,6 @@ class WorldSampler:
         relevant_chunks_queue = Queue()
 
         processes = []
-        target_blocks_set = set(target_blocks)
         try:
             # Create and start worker processes
             for i in tqdm(
@@ -642,7 +694,7 @@ class WorldSampler:
                     args=(
                         self.get_worker_directory(root_directory, directory, i),
                         dimension,
-                        target_blocks_set,
+                        target_blocks,
                         all_chunks_queue,
                         visited_chunks_queue,
                         relevant_chunks_queue,
@@ -706,15 +758,14 @@ class WorldSampler:
 
     def _get_target_palette_indices(
         self,
-        translator: BlockTranslator,
-        target_blocks: set,
+        target_blocks: list,
         chunk: Chunk,
         block_cache: dict,
     ) -> set:
         """Returns a set of indices of blocks from the chunk palette that we are targeting"""
         target_indices = set()
         for i, block in enumerate(chunk.block_palette):
-            if self._check_block(block, target_blocks, translator, block_cache):
+            if self._check_block(target_blocks, block, block_cache):
                 target_indices.add(i)
         return target_indices
 
@@ -735,8 +786,7 @@ class WorldSampler:
         self,
         world: World,
         dimension: str,
-        translator: BlockTranslator,
-        target_blocks: set,
+        target_blocks: list,
         chunk_coords: tuple,
         block_cache: dict,
     ) -> set:
@@ -769,7 +819,7 @@ class WorldSampler:
                     chunk = world.get_chunk(*inner_chunk_coords, dimension)
                     blocks = np.asarray(chunk.blocks[:, min_height:max_height, :])
                     target_indices = self._get_target_palette_indices(
-                        translator, target_blocks, chunk, block_cache
+                        target_blocks, chunk, block_cache
                     )
                 else:
                     blocks = np.zeros((16, max_height - min_height, 16), dtype=np.int32)
@@ -882,7 +932,7 @@ class WorldSampler:
         self,
         directory: str,
         dimension: str,
-        target_blocks: set,
+        target_blocks: list,
         relevant_chunks_queue: Queue,
         sampled_chunks_queue: Queue,
         sample_positions_queue: Queue,
@@ -896,11 +946,6 @@ class WorldSampler:
             # Load the world data from the directory
             world = amulet.load_level(directory)
 
-            # Use the translator for the project level Minecraft version which target blocks are defined for
-            translator = world.translation_manager.get_version(
-                MINECRAFT_PLATFORM, MINECRAFT_VERSION
-            ).block
-
             while True:
                 chunk_coords = relevant_chunks_queue.get()
                 if chunk_coords is None:
@@ -912,7 +957,6 @@ class WorldSampler:
                         samples = self._identify_samples_in_chunk(
                             world,
                             dimension,
-                            translator,
                             target_blocks,
                             chunk_coords,
                             block_cache,
@@ -937,7 +981,7 @@ class WorldSampler:
         root_directory: str,
         directory: str,
         dimension: str,
-        target_blocks: list,
+        target_blocks: set,
         relevant_chunks: set,
     ) -> set:
         """Identifies samples from the marked chunks"""
@@ -978,7 +1022,6 @@ class WorldSampler:
         sample_positions_queue = Queue()
 
         processes = []
-        target_blocks_set = set(target_blocks)
         try:
             # Create and start worker processes
             for i in tqdm(
@@ -991,7 +1034,7 @@ class WorldSampler:
                     args=(
                         self.get_worker_directory(root_directory, directory, i),
                         dimension,
-                        target_blocks_set,
+                        target_blocks,
                         relevant_chunks_queue,
                         sampled_chunks_queue,
                         sample_positions_queue,
