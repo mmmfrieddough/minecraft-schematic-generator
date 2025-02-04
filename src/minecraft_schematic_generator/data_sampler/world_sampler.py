@@ -1416,6 +1416,8 @@ class WorldSampler:
                 desired_hash_map[hash] for hash in remaining_hashes
             }
 
+        existing_samples = len(all_sample_positions) - len(remaining_sample_positions)
+
         # Limit the number of samples to collect
         if self.sample_limit and len(all_sample_positions) > self.sample_limit:
             remaining_samples = max(
@@ -1462,8 +1464,8 @@ class WorldSampler:
         try:
             # Create the progress bar
             pbar = tqdm(
-                total=len(existing_hashes) + len(remaining_sample_positions),
-                initial=len(existing_hashes),
+                total=existing_samples + len(remaining_sample_positions),
+                initial=existing_samples,
                 desc="Collecting samples",
             )
 
