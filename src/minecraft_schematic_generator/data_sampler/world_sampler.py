@@ -2,6 +2,7 @@ import fnmatch
 import hashlib
 import json
 import logging
+import math
 import os
 import pickle
 import random
@@ -11,6 +12,7 @@ from collections import Counter
 from multiprocessing import Process, Queue
 from queue import Empty
 
+import psutil
 from tqdm import tqdm
 
 from minecraft_schematic_generator.constants import (
@@ -56,9 +58,10 @@ class WorldSampler:
         chunk_search_limit=None,
         sample_search_limit=None,
         sample_limit=None,
-        num_mark_chunks_workers=1,
-        num_identify_samples_workers=1,
-        num_collect_samples_workers=1,
+        worker_check_period=5,
+        resource_usage_limit=0.70,
+        progress_per_second_target=0.05,
+        worker_scaling_factor=0.75,
     ):
         self.schematic_directory = schematic_directory
         self.temp_directory = temp_directory
@@ -69,9 +72,10 @@ class WorldSampler:
         self.sample_target_block_threshold = sample_target_block_threshold
         self.sample_minimum_air_threshold = sample_minimum_air_threshold
         self.sampling_purge_interval = sampling_purge_interval
-        self.num_mark_chunks_workers = num_mark_chunks_workers
-        self.num_identify_samples_workers = num_identify_samples_workers
-        self.num_collect_samples_workers = num_collect_samples_workers
+        self.worker_check_period = worker_check_period
+        self.resource_usage_limit = resource_usage_limit
+        self.progress_per_second_target = progress_per_second_target
+        self.worker_scaling_factor = worker_scaling_factor
         self.clear_worker_directories = clear_worker_directories
         self.chunk_search_limit = chunk_search_limit
         self.sample_search_limit = sample_search_limit
@@ -184,9 +188,9 @@ class WorldSampler:
         worker_directory = os.path.join(copies_directory, worker_directory_name)
         return worker_directory
 
-    def setup_worker_directories(
-        self, root_directory: str, src_directory: str, num_workers: int
-    ) -> None:
+    def setup_worker_directory(
+        self, root_directory: str, src_directory: str, worker_num: int
+    ) -> str:
         """Sets up worker directories for a given source directory"""
         COPY_LIST = {
             "level.dat",  # Essential world data
@@ -195,34 +199,26 @@ class WorldSampler:
             "DIM1",  # End
         }
 
-        # Check if the worker directories have already been set up
-        for i in range(num_workers):
-            worker_directory = self.get_worker_directory(
-                root_directory, src_directory, i
-            )
-            if not os.path.exists(worker_directory):
-                break
-        else:
-            return
+        # Check if the worker directory has already been set up
+        worker_directory = self.get_worker_directory(
+            root_directory, src_directory, worker_num
+        )
+        if os.path.exists(worker_directory):
+            return worker_directory
 
-        # Create a copy of only the necessary files for each worker
-        pbar = tqdm(range(num_workers), desc="Setting up worker directories")
-        for i in pbar:
-            worker_directory = self.get_worker_directory(
-                root_directory, src_directory, i
-            )
-            if not os.path.exists(worker_directory):
-                os.makedirs(worker_directory)
+        os.makedirs(worker_directory)
 
-                # Copy only the files/directories we need
-                for item in os.listdir(src_directory):
-                    if item in COPY_LIST:
-                        src_path = os.path.join(src_directory, item)
-                        dst_path = os.path.join(worker_directory, item)
-                        if os.path.isfile(src_path):
-                            shutil.copy2(src_path, dst_path)
-                        elif os.path.isdir(src_path):
-                            shutil.copytree(src_path, dst_path)
+        # Copy only the files/directories we need
+        for item in os.listdir(src_directory):
+            if item in COPY_LIST:
+                src_path = os.path.join(src_directory, item)
+                dst_path = os.path.join(worker_directory, item)
+                if os.path.isfile(src_path):
+                    shutil.copy2(src_path, dst_path)
+                elif os.path.isdir(src_path):
+                    shutil.copytree(src_path, dst_path)
+
+        return worker_directory
 
     def _clear_worker_directories(
         self, root_directory: str, src_directory: str
@@ -642,6 +638,39 @@ class WorldSampler:
             "Sample Count",
         )
 
+    def calculate_workers_to_start(
+        self,
+        current_progress: int,
+        last_progress: int,
+        total: int,
+        last_time: float,
+    ) -> int:
+        # Get CPU and memory usage
+        cpu_usage = psutil.cpu_percent()
+        memory_usage = psutil.virtual_memory().percent
+        resource_usage = max(cpu_usage, memory_usage) * 0.01
+
+        # Calculate progress
+        progress = current_progress - last_progress
+        percentage_remaining_progress = progress / (total - current_progress)
+        progress_per_second = percentage_remaining_progress / (time.time() - last_time)
+
+        # Calculate the number of workers to start
+        resource_scaling = (
+            max(0, self.resource_usage_limit - resource_usage)
+            / self.resource_usage_limit
+        )
+        progress_scaling = (
+            max(0, self.progress_per_second_target - progress_per_second)
+            / self.progress_per_second_target
+        )
+        return math.ceil(
+            self.worker_scaling_factor
+            * psutil.cpu_count()
+            * resource_scaling
+            * progress_scaling
+        )
+
     def _mark_chunks(
         self,
         root_directory: str,
@@ -680,45 +709,29 @@ class WorldSampler:
             print(f"All {len(all_chunk_coords)} world chunks have already been visited")
             return relevant_chunks
 
-        # Set up worker directories
-        self.setup_worker_directories(
-            root_directory, directory, self.num_mark_chunks_workers
-        )
-
         # Create queues
         all_chunks_queue = Queue()
         visited_chunks_queue = Queue()
 
         processes: list[Process] = []
+
+        def start_worker(i: int) -> None:
+            worker_directory = self.setup_worker_directory(root_directory, directory, i)
+            process = Process(
+                target=self._mark_chunks_worker,
+                args=(
+                    worker_directory,
+                    dimension,
+                    target_blocks,
+                    all_chunks_queue,
+                    visited_chunks_queue,
+                ),
+            )
+            process.start()
+            processes.append(process)
+
         pbar = None
         try:
-            # Create and start worker processes
-            for i in tqdm(
-                range(self.num_mark_chunks_workers),
-                desc="Starting worker processes",
-                leave=False,
-            ):
-                worker_directory = self.get_worker_directory(
-                    root_directory, directory, i
-                )
-                process = Process(
-                    target=self._mark_chunks_worker,
-                    args=(
-                        worker_directory,
-                        dimension,
-                        target_blocks,
-                        all_chunks_queue,
-                        visited_chunks_queue,
-                    ),
-                )
-                process.start()
-                processes.append(process)
-
-            # Add data to the queue after all workers are started
-            for chunk_coords in remaining_chunk_coords:
-                all_chunks_queue.put(chunk_coords)
-            all_chunks_queue.put(None)
-
             # Create the progress bar
             pbar = tqdm(
                 total=len(visited_chunks) + len(remaining_chunk_coords),
@@ -726,9 +739,19 @@ class WorldSampler:
                 desc="Marking chunks",
             )
 
-            # Monitor the queues and update the progress
+            # Start the first worker
+            start_worker(0)
+
+            # Add data to the queue
+            for chunk_coords in remaining_chunk_coords:
+                all_chunks_queue.put(chunk_coords)
+            all_chunks_queue.put(None)
+
+            # Monitor the queue and update the progress
             unsuccessful_chunks_count = 0
             last_save_time = time.time()
+            last_worker_check_time = time.time()
+            last_progress = pbar.n
             while (
                 any(p.is_alive() for p in processes) or not visited_chunks_queue.empty()
             ):
@@ -737,6 +760,7 @@ class WorldSampler:
                     {
                         "relevant_chunks": len(relevant_chunks),
                         "unsuccessful_chunks": unsuccessful_chunks_count,
+                        "workers": len(processes),
                     }
                 )
 
@@ -750,6 +774,26 @@ class WorldSampler:
                     if not successful:
                         unsuccessful_chunks_count += 1
                     pbar.update(1)
+
+                # Start new workers if needed
+                if time.time() - last_worker_check_time > self.worker_check_period:
+                    workers_to_start = self.calculate_workers_to_start(
+                        pbar.n, last_progress, pbar.total, last_worker_check_time
+                    )
+
+                    # Start workers
+                    for _ in tqdm(
+                        range(workers_to_start),
+                        desc="Starting worker processes",
+                        leave=False,
+                    ):
+                        start_worker(len(processes))
+
+                    last_worker_check_time = time.time()
+                    last_progress = pbar.n
+
+                    # Restart the CPU usage counter
+                    psutil.cpu_percent()
 
                 # Save progress
                 if time.time() - last_save_time > self.progress_save_period:
@@ -1067,45 +1111,29 @@ class WorldSampler:
             )
             return sample_positions
 
-        # Set up worker directories
-        self.setup_worker_directories(
-            root_directory, directory, self.num_identify_samples_workers
-        )
-
         # Create queues
         relevant_chunks_queue = Queue()
         sampled_chunks_queue = Queue()
 
         processes: list[Process] = []
+
+        def start_worker(i: int) -> None:
+            worker_directory = self.setup_worker_directory(root_directory, directory, i)
+            process = Process(
+                target=self._identify_samples_worker,
+                args=(
+                    worker_directory,
+                    dimension,
+                    target_blocks,
+                    relevant_chunks_queue,
+                    sampled_chunks_queue,
+                ),
+            )
+            process.start()
+            processes.append(process)
+
         pbar = None
         try:
-            # Create and start worker processes
-            for i in tqdm(
-                range(self.num_identify_samples_workers),
-                desc="Starting worker processes",
-                leave=False,
-            ):
-                worker_directory = self.get_worker_directory(
-                    root_directory, directory, i
-                )
-                process = Process(
-                    target=self._identify_samples_worker,
-                    args=(
-                        worker_directory,
-                        dimension,
-                        target_blocks,
-                        relevant_chunks_queue,
-                        sampled_chunks_queue,
-                    ),
-                )
-                process.start()
-                processes.append(process)
-
-            # Add data to the queue after all workers are started
-            for chunk_coords in remaining_relevant_chunk_positions:
-                relevant_chunks_queue.put(chunk_coords)
-            relevant_chunks_queue.put(None)
-
             # Create the progress bar
             pbar = tqdm(
                 total=len(sampled_chunks) + len(remaining_relevant_chunk_positions),
@@ -1113,9 +1141,19 @@ class WorldSampler:
                 desc="Identifying samples from chunks",
             )
 
-            # Monitor the queues and update the progress
+            # Start the first worker
+            start_worker(0)
+
+            # Add data to the
+            for chunk_coords in remaining_relevant_chunk_positions:
+                relevant_chunks_queue.put(chunk_coords)
+            relevant_chunks_queue.put(None)
+
+            # Monitor the queue and update the progress
             unsuccessful_chunks_count = 0
             last_save_time = time.time()
+            last_worker_check_time = time.time()
+            last_progress = pbar.n
             while (
                 any(p.is_alive() for p in processes) or not sampled_chunks_queue.empty()
             ):
@@ -1124,6 +1162,7 @@ class WorldSampler:
                     {
                         "sample_positions": len(sample_positions),
                         "unsuccessful_chunks": unsuccessful_chunks_count,
+                        "workers": len(processes),
                     }
                 )
 
@@ -1137,6 +1176,26 @@ class WorldSampler:
                     if not successful:
                         unsuccessful_chunks_count += 1
                     pbar.update(1)
+
+                # Start new workers if needed
+                if time.time() - last_worker_check_time > self.worker_check_period:
+                    workers_to_start = self.calculate_workers_to_start(
+                        pbar.n, last_progress, pbar.total, last_worker_check_time
+                    )
+
+                    # Start workers
+                    for _ in tqdm(
+                        range(workers_to_start),
+                        desc="Starting worker processes",
+                        leave=False,
+                    ):
+                        start_worker(len(processes))
+
+                    last_worker_check_time = time.time()
+                    last_progress = pbar.n
+
+                    # Restart the CPU usage counter
+                    psutil.cpu_percent()
 
                 # Save progress
                 if time.time() - last_save_time > self.progress_save_period:
@@ -1299,7 +1358,6 @@ class WorldSampler:
     ) -> None:
         """Collects samples from the world at the identified positions"""
 
-        # Filter out positions that already have a schematic
         world_name = os.path.relpath(directory, root_directory)
         schematic_directory = self._get_dimension_directory(world_name, dimension)
 
@@ -1346,55 +1404,48 @@ class WorldSampler:
 
         # Limit the number of samples to collect
         if self.sample_limit and len(all_sample_positions) > self.sample_limit:
-            remaining_samples = max(self.sample_limit - len(existing_hashes), 0)
+            remaining_samples = max(
+                self.sample_limit
+                - (len(all_sample_positions) - len(remaining_sample_positions)),
+                0,
+            )
             remaining_sample_positions = set(
                 random.sample(list(remaining_sample_positions), remaining_samples)
             )
 
         # Check if there are any samples to collect
         if len(remaining_sample_positions) == 0:
-            print(f"All {len(existing_hashes)} samples have already been collected")
+            print(
+                f"All {len(all_sample_positions)} samples have already been collected"
+            )
             return
 
         # Create the schematic directory if it doesn't exist
         os.makedirs(os.path.join(self.schematic_directory, world_name), exist_ok=True)
-
-        # Set up worker directories
-        self.setup_worker_directories(
-            root_directory, directory, self.num_collect_samples_workers
-        )
 
         # Create queues
         sample_positions_queue = Queue()
         sampled_positions_queue = Queue()
 
         processes: list[Process] = []
+
+        def start_worker(i: int) -> None:
+            worker_directory = self.setup_worker_directory(root_directory, directory, i)
+            process = Process(
+                target=self._collect_samples_worker,
+                args=(
+                    worker_directory,
+                    dimension,
+                    world_name,
+                    sample_positions_queue,
+                    sampled_positions_queue,
+                ),
+            )
+            process.start()
+            processes.append(process)
+
         pbar = None
         try:
-            # Create and start worker processes
-            for i in tqdm(
-                range(self.num_collect_samples_workers),
-                desc="Starting worker processes",
-                leave=False,
-            ):
-                process = Process(
-                    target=self._collect_samples_worker,
-                    args=(
-                        self.get_worker_directory(root_directory, directory, i),
-                        dimension,
-                        world_name,
-                        sample_positions_queue,
-                        sampled_positions_queue,
-                    ),
-                )
-                process.start()
-                processes.append(process)
-
-            # Add data to the queue after all workers are started
-            for position in remaining_sample_positions:
-                sample_positions_queue.put(position)
-            sample_positions_queue.put(None)
-
             # Create the progress bar
             pbar = tqdm(
                 total=len(existing_hashes) + len(remaining_sample_positions),
@@ -1402,14 +1453,50 @@ class WorldSampler:
                 desc="Collecting samples",
             )
 
-            # Monitor the queues and update the progress
+            # Start the first worker
+            start_worker(0)
+
+            # Add data to the queue
+            for position in remaining_sample_positions:
+                sample_positions_queue.put(position)
+            sample_positions_queue.put(None)
+
+            # Monitor the queue and update the progress
+            last_worker_check_time = time.time()
+            last_progress = pbar.n
             while (
                 any(p.is_alive() for p in processes)
                 or not sampled_positions_queue.empty()
             ):
+                # Update the progress bar
+                pbar.set_postfix({"workers": len(processes)})
+
+                # Process all results currently in the queue
                 while not sampled_positions_queue.empty():
                     sampled_positions_queue.get()
                     pbar.update(1)
+
+                # Start new workers if needed
+                if time.time() - last_worker_check_time > self.worker_check_period:
+                    workers_to_start = self.calculate_workers_to_start(
+                        pbar.n, last_progress, pbar.total, last_worker_check_time
+                    )
+
+                    # Start workers
+                    for _ in tqdm(
+                        range(workers_to_start),
+                        desc="Starting worker processes",
+                        leave=False,
+                    ):
+                        start_worker(len(processes))
+
+                    last_worker_check_time = time.time()
+                    last_progress = pbar.n
+
+                    # Restart the CPU usage counter
+                    psutil.cpu_percent()
+
+                # Sleep for a short time to avoid busy waiting
                 time.sleep(0.1)
         except KeyboardInterrupt:
             if pbar:
