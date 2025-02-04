@@ -484,9 +484,6 @@
       }
     },
     {
-      "name": "universal_minecraft:cobblestone"
-    },
-    {
       "name": "universal_minecraft:wall",
       "properties": {
         "east": [
