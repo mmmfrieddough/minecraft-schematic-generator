@@ -68,7 +68,6 @@
         "material": [
           "birch",
           "jungle",
-          "acacia",
           "dark_oak",
           "mangrove",
           "crimson",
@@ -247,7 +246,6 @@
         ],
         "material": [
           "sandstone",
-          "smooth_sandstone",
           "granite"
         ],
         "shape": [
@@ -425,7 +423,6 @@
         ],
         "material": [
           "birch",
-          "acacia",
           "mangrove",
           "crimson",
           "warped",
@@ -804,9 +801,6 @@
       "name": "universal_minecraft:emerald_block"
     },
     {
-      "name": "universal_minecraft:diamond_block"
-    },
-    {
       "name": "universal_minecraft:netherite_block"
     },
     {
@@ -1013,14 +1007,6 @@
       }
     },
     {
-      "name": "universal_minecraft:carpet",
-      "properties": {
-        "color": [
-          "orange"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:stained_terracotta",
       "properties": {
         "color": [
@@ -1144,8 +1130,6 @@
           "gray",
           "black",
           "brown",
-          "red",
-          "orange",
           "lime",
           "green",
           "cyan",
@@ -1318,7 +1302,6 @@
           "yellow",
           "lime",
           "pink",
-          "light_gray",
           "cyan",
           "purple",
           "blue",

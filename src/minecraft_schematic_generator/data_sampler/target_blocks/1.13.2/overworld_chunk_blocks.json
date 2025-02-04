@@ -809,9 +809,6 @@
       "name": "universal_minecraft:emerald_block"
     },
     {
-      "name": "universal_minecraft:diamond_block"
-    },
-    {
       "name": "universal_minecraft:netherite_block"
     },
     {
@@ -1338,7 +1335,6 @@
           "yellow",
           "lime",
           "pink",
-          "light_gray",
           "cyan",
           "purple",
           "blue",
