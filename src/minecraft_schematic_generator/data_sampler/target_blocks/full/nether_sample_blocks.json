@@ -50,7 +50,8 @@
           "pale_oak"
         ],
         "stripped": [
-          "true"
+          "true",
+          "false"
         ]
       }
     },
@@ -67,8 +68,7 @@
           "warped"
         ],
         "stripped": [
-          "true",
-          "false"
+          "true"
         ]
       }
     },

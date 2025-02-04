@@ -50,6 +50,31 @@
           "pale_oak"
         ],
         "stripped": [
+          "true"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:log",
+      "properties": {
+        "axis": [
+          "x",
+          "z"
+        ],
+        "material": [
+          "spruce",
+          "birch",
+          "jungle",
+          "acacia",
+          "dark_oak",
+          "mangrove",
+          "crimson",
+          "warped",
+          "bamboo",
+          "cherry",
+          "pale_oak"
+        ],
+        "stripped": [
           "true",
           "false"
         ]
@@ -68,7 +93,8 @@
           "warped"
         ],
         "stripped": [
-          "true"
+          "true",
+          "false"
         ]
       }
     },
@@ -76,12 +102,9 @@
       "name": "universal_minecraft:planks",
       "properties": {
         "material": [
-          "oak",
-          "spruce",
           "birch",
           "jungle",
           "acacia",
-          "dark_oak",
           "mangrove",
           "crimson",
           "warped",
@@ -117,6 +140,7 @@
           "stone_brick",
           "sandstone",
           "red_sandstone",
+          "nether_brick",
           "quartz",
           "purpur",
           "prismarine",
@@ -162,30 +186,6 @@
           "polished_tuff",
           "pale_oak",
           "resin_brick"
-        ],
-        "shape": [
-          "straight",
-          "inner_left",
-          "inner_right",
-          "outer_left",
-          "outer_right"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:stairs",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ],
-        "half": [
-          "top"
-        ],
-        "material": [
-          "nether_brick"
         ],
         "shape": [
           "straight",
@@ -278,7 +278,6 @@
           "false"
         ],
         "material": [
-          "oak",
           "spruce",
           "birch",
           "jungle",
@@ -485,9 +484,6 @@
       }
     },
     {
-      "name": "universal_minecraft:stone"
-    },
-    {
       "name": "universal_minecraft:wall",
       "properties": {
         "east": [
@@ -545,9 +541,6 @@
       }
     },
     {
-      "name": "universal_minecraft:mossy_cobblestone"
-    },
-    {
       "name": "universal_minecraft:smooth_stone"
     },
     {
@@ -565,8 +558,7 @@
       "name": "universal_minecraft:granite",
       "properties": {
         "polished": [
-          "true",
-          "false"
+          "true"
         ]
       }
     },
@@ -574,8 +566,7 @@
       "name": "universal_minecraft:diorite",
       "properties": {
         "polished": [
-          "true",
-          "false"
+          "true"
         ]
       }
     },
@@ -583,18 +574,7 @@
       "name": "universal_minecraft:andesite",
       "properties": {
         "polished": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:deepslate",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
+          "true"
         ]
       }
     },
@@ -621,9 +601,6 @@
     },
     {
       "name": "universal_minecraft:reinforced_deepslate"
-    },
-    {
-      "name": "universal_minecraft:tuff"
     },
     {
       "name": "universal_minecraft:chiseled_tuff"
@@ -656,7 +633,6 @@
       "name": "universal_minecraft:sandstone",
       "properties": {
         "variant": [
-          "normal",
           "chiseled",
           "smooth",
           "cut"
@@ -667,7 +643,6 @@
       "name": "universal_minecraft:red_sandstone",
       "properties": {
         "variant": [
-          "normal",
           "chiseled",
           "smooth",
           "cut"
@@ -687,6 +662,12 @@
       "name": "universal_minecraft:dark_prismarine"
     },
     {
+      "name": "universal_minecraft:netherrack"
+    },
+    {
+      "name": "universal_minecraft:nether_bricks"
+    },
+    {
       "name": "universal_minecraft:cracked_nether_bricks"
     },
     {
@@ -700,6 +681,7 @@
       "properties": {
         "axis": [
           "x",
+          "y",
           "z"
         ]
       }
@@ -1049,20 +1031,11 @@
       }
     },
     {
-      "name": "universal_minecraft:terracotta"
-    },
-    {
       "name": "universal_minecraft:stained_terracotta",
       "properties": {
         "color": [
-          "white",
-          "light_gray",
           "gray",
           "black",
-          "brown",
-          "red",
-          "orange",
-          "yellow",
           "lime",
           "green",
           "cyan",
@@ -1412,40 +1385,7 @@
       }
     },
     {
-      "name": "universal_minecraft:grass_block",
-      "properties": {
-        "snowy": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:podzol",
-      "properties": {
-        "snowy": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:mycelium",
-      "properties": {
-        "snowy": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:grass_path"
-    },
-    {
-      "name": "universal_minecraft:coarse_dirt"
-    },
-    {
-      "name": "universal_minecraft:rooted_dirt"
     },
     {
       "name": "universal_minecraft:farmland",
@@ -1463,175 +1403,31 @@
       }
     },
     {
-      "name": "universal_minecraft:mud"
-    },
-    {
-      "name": "universal_minecraft:clay"
-    },
-    {
-      "name": "universal_minecraft:sand"
-    },
-    {
-      "name": "universal_minecraft:red_sand"
-    },
-    {
-      "name": "universal_minecraft:ice"
-    },
-    {
-      "name": "universal_minecraft:packed_ice"
-    },
-    {
-      "name": "universal_minecraft:blue_ice"
-    },
-    {
-      "name": "universal_minecraft:snow_block"
-    },
-    {
-      "name": "universal_minecraft:snow",
-      "properties": {
-        "layers": [
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7",
-          "8"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:moss_block"
-    },
-    {
-      "name": "universal_minecraft:moss_carpet"
-    },
-    {
-      "name": "universal_minecraft:pale_moss_block"
-    },
-    {
-      "name": "universal_minecraft:pale_moss_carpet",
-      "properties": {
-        "bottom": [
-          "true",
-          "false"
-        ],
-        "east": [
-          "none",
-          "low",
-          "tall"
-        ],
-        "north": [
-          "none",
-          "low",
-          "tall"
-        ],
-        "south": [
-          "none",
-          "low",
-          "tall"
-        ],
-        "west": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:pale_hanging_moss",
-      "properties": {
-        "tip": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:calcite"
-    },
-    {
-      "name": "universal_minecraft:dripstone_block"
-    },
-    {
-      "name": "universal_minecraft:dripstone",
-      "properties": {
-        "thickness": [
-          "tip_merge",
-          "tip",
-          "frustum",
-          "middle",
-          "base"
-        ],
-        "vertical_direction": [
-          "up",
-          "down"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:obsidian"
-    },
-    {
       "name": "universal_minecraft:crying_obsidian"
     },
     {
-      "name": "universal_minecraft:bone_block",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ]
-      }
+      "name": "universal_minecraft:crimson_nylium"
     },
     {
-      "name": "universal_minecraft:coal_ore"
+      "name": "universal_minecraft:warped_nylium"
     },
     {
-      "name": "universal_minecraft:deepslate_coal_ore"
+      "name": "universal_minecraft:soul_sand"
     },
     {
-      "name": "universal_minecraft:iron_ore"
+      "name": "universal_minecraft:soul_soil"
     },
     {
-      "name": "universal_minecraft:deepslate_iron_ore"
+      "name": "universal_minecraft:soul_fire"
     },
     {
-      "name": "universal_minecraft:copper_ore"
+      "name": "universal_minecraft:nether_gold_ore"
     },
     {
-      "name": "universal_minecraft:deepslate_copper_ore"
+      "name": "universal_minecraft:nether_quartz_ore"
     },
     {
-      "name": "universal_minecraft:gold_ore"
-    },
-    {
-      "name": "universal_minecraft:deepslate_gold_ore"
-    },
-    {
-      "name": "universal_minecraft:redstone_ore"
-    },
-    {
-      "name": "universal_minecraft:deepslate_redstone_ore"
-    },
-    {
-      "name": "universal_minecraft:emerald_ore"
-    },
-    {
-      "name": "universal_minecraft:deepslate_emerald_ore"
-    },
-    {
-      "name": "universal_minecraft:lapis_ore"
-    },
-    {
-      "name": "universal_minecraft:deepslate_lapis_ore"
-    },
-    {
-      "name": "universal_minecraft:diamond_ore"
-    },
-    {
-      "name": "universal_minecraft:deepslate_diamond_ore"
+      "name": "universal_minecraft:ancient_debris"
     },
     {
       "name": "universal_minecraft:raw_iron_block"
@@ -1641,6 +1437,9 @@
     },
     {
       "name": "universal_minecraft:raw_gold_block"
+    },
+    {
+      "name": "universal_minecraft:glowstone"
     },
     {
       "name": "universal_minecraft:budding_amethyst"
@@ -1698,302 +1497,42 @@
       }
     },
     {
-      "name": "universal_minecraft:mangrove_roots"
+      "name": "universal_minecraft:nether_wart_block"
     },
     {
-      "name": "universal_minecraft:muddy_mangrove_roots",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ]
-      }
+      "name": "universal_minecraft:warped_wart_block"
     },
     {
-      "name": "universal_minecraft:mushroom_stem"
+      "name": "universal_minecraft:shroomlight"
     },
     {
-      "name": "universal_minecraft:leaves",
-      "properties": {
-        "material": [
-          "oak",
-          "spruce",
-          "birch",
-          "jungle",
-          "acacia",
-          "dark_oak",
-          "mangrove",
-          "azalea",
-          "flowering_azalea",
-          "cherry",
-          "pale_oak"
-        ],
-        "persistent": [
-          "true",
-          "false"
-        ]
-      }
+      "name": "universal_minecraft:crimson_fungus"
     },
     {
-      "name": "universal_minecraft:red_mushroom_block",
-      "properties": {
-        "down": [
-          "true",
-          "false"
-        ],
-        "east": [
-          "true",
-          "false"
-        ],
-        "north": [
-          "true",
-          "false"
-        ],
-        "south": [
-          "true",
-          "false"
-        ],
-        "up": [
-          "true",
-          "false"
-        ],
-        "west": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:brown_mushroom_block",
-      "properties": {
-        "down": [
-          "true",
-          "false"
-        ],
-        "east": [
-          "true",
-          "false"
-        ],
-        "north": [
-          "true",
-          "false"
-        ],
-        "south": [
-          "true",
-          "false"
-        ],
-        "up": [
-          "true",
-          "false"
-        ],
-        "west": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:sapling",
-      "properties": {
-        "material": [
-          "oak",
-          "spruce",
-          "birch",
-          "jungle",
-          "acacia",
-          "dark_oak",
-          "cherry",
-          "pale_oak"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:mangrove_propagule"
-    },
-    {
-      "name": "universal_minecraft:azalea"
-    },
-    {
-      "name": "universal_minecraft:flowering_azalea"
+      "name": "universal_minecraft:warped_fungus"
     },
     {
       "name": "universal_minecraft:plant",
       "properties": {
         "plant_type": [
-          "dandelion",
-          "poppy",
-          "blue_orchid",
-          "allium",
-          "azure_bluet",
-          "red_tulip",
-          "orange_tulip",
-          "white_tulip",
-          "pink_tulip",
-          "oxeye_daisy",
-          "grass",
-          "fern",
-          "dead_bush",
-          "cornflower",
-          "wither_rose",
-          "lily_of_the_valley",
-          "closed_eyeblossom",
-          "open_eyeblossom"
+          "wither_rose"
         ]
       }
     },
     {
-      "name": "universal_minecraft:pink_petals",
-      "properties": {
-        "facing": [
-          "north",
-          "south",
-          "west",
-          "east"
-        ],
-        "flower_amount": [
-          "1",
-          "2",
-          "3",
-          "4"
-        ]
-      }
+      "name": "universal_minecraft:crimson_roots"
     },
     {
-      "name": "universal_minecraft:spore_blossom"
+      "name": "universal_minecraft:warped_roots"
     },
     {
-      "name": "universal_minecraft:bamboo_sapling",
-      "properties": {
-        "stage": [
-          "0",
-          "1"
-        ]
-      }
+      "name": "universal_minecraft:nether_sprouts"
     },
     {
-      "name": "universal_minecraft:bamboo",
-      "properties": {
-        "thickness": [
-          "thin",
-          "thick"
-        ],
-        "leaves": [
-          "none",
-          "small",
-          "large"
-        ],
-        "stage": [
-          "0",
-          "1"
-        ]
-      }
+      "name": "universal_minecraft:weeping_vines"
     },
     {
-      "name": "universal_minecraft:sugar_cane"
-    },
-    {
-      "name": "universal_minecraft:cactus"
-    },
-    {
-      "name": "universal_minecraft:vine",
-      "properties": {
-        "east": [
-          "true",
-          "false"
-        ],
-        "north": [
-          "true",
-          "false"
-        ],
-        "south": [
-          "true",
-          "false"
-        ],
-        "up": [
-          "true",
-          "false"
-        ],
-        "west": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:double_plant",
-      "properties": {
-        "plant_type": [
-          "sunflower",
-          "lilac",
-          "rose_bush",
-          "peony",
-          "tall_grass",
-          "large_fern"
-        ],
-        "half": [
-          "upper",
-          "lower"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:pitcher_plant",
-      "properties": {
-        "half": [
-          "upper",
-          "lower"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:big_dripleaf",
-      "properties": {
-        "facing": [
-          "north",
-          "east",
-          "south",
-          "west"
-        ],
-        "tilt": [
-          "none",
-          "unstable",
-          "partial",
-          "full"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:big_dripleaf_stem",
-      "properties": {
-        "facing": [
-          "north",
-          "east",
-          "south",
-          "west"
-        ],
-        "tilt": [
-          "none",
-          "unstable",
-          "partial",
-          "full"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:small_dripleaf",
-      "properties": {
-        "facing": [
-          "north",
-          "east",
-          "south",
-          "west"
-        ],
-        "half": [
-          "upper",
-          "lower"
-        ]
-      }
+      "name": "universal_minecraft:twisting_vines"
     },
     {
       "name": "universal_minecraft:chorus_plant",
@@ -2026,198 +1565,6 @@
     },
     {
       "name": "universal_minecraft:chorus_flower"
-    },
-    {
-      "name": "universal_minecraft:glow_lichen",
-      "properties": {
-        "north": [
-          "true",
-          "false"
-        ],
-        "east": [
-          "true",
-          "false"
-        ],
-        "south": [
-          "true",
-          "false"
-        ],
-        "west": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:hanging_roots"
-    },
-    {
-      "name": "universal_minecraft:turtle_egg",
-      "properties": {
-        "eggs": [
-          "1",
-          "2",
-          "3",
-          "4"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:wheat",
-      "properties": {
-        "age": [
-          "0",
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:cocoa",
-      "properties": {
-        "age": [
-          "0",
-          "1",
-          "2"
-        ],
-        "facing": [
-          "north",
-          "east",
-          "south",
-          "west"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:pumpkin_stem",
-      "properties": {
-        "facing": [
-          "north",
-          "east",
-          "south",
-          "west"
-        ],
-        "age": [
-          "0",
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:melon_stem",
-      "properties": {
-        "facing": [
-          "north",
-          "east",
-          "south",
-          "west"
-        ],
-        "age": [
-          "0",
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:beetroots",
-      "properties": {
-        "age": [
-          "0",
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:torchflower"
-    },
-    {
-      "name": "universal_minecraft:torchflower_crop"
-    },
-    {
-      "name": "universal_minecraft:pitcher_crop",
-      "properties": {
-        "half": [
-          "upper",
-          "lower"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:cave_vines",
-      "properties": {
-        "berries": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:cave_vines_plant",
-      "properties": {
-        "berries": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:sweet_berry_bush"
-    },
-    {
-      "name": "universal_minecraft:lily_pad"
-    },
-    {
-      "name": "universal_minecraft:seagrass"
-    },
-    {
-      "name": "universal_minecraft:tall_seagrass",
-      "properties": {
-        "half": [
-          "upper",
-          "lower"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:sea_pickle",
-      "properties": {
-        "dead": [
-          "true",
-          "false"
-        ],
-        "pickles": [
-          "1",
-          "2",
-          "3",
-          "4"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:kelp"
     },
     {
       "name": "universal_minecraft:dried_kelp_block"
@@ -2296,31 +1643,6 @@
       }
     },
     {
-      "name": "universal_minecraft:melon"
-    },
-    {
-      "name": "universal_minecraft:pumpkin",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:carved_pumpkin",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:jack_o_lantern",
       "properties": {
         "facing": [
@@ -2338,25 +1660,6 @@
           "x",
           "y",
           "z"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:bee_nest",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ],
-        "honey_level": [
-          "0",
-          "1",
-          "2",
-          "3",
-          "4",
-          "5"
         ]
       }
     },
@@ -2398,56 +1701,6 @@
           "z"
         ]
       }
-    },
-    {
-      "name": "universal_minecraft:sculk"
-    },
-    {
-      "name": "universal_minecraft:sculk_vein",
-      "properties": {
-        "down": [
-          "true",
-          "false"
-        ],
-        "east": [
-          "true",
-          "false"
-        ],
-        "north": [
-          "true",
-          "false"
-        ],
-        "south": [
-          "true",
-          "false"
-        ],
-        "up": [
-          "true",
-          "false"
-        ],
-        "west": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:sculk_catalyst",
-      "properties": {
-        "bloom": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:sculk_shrieker"
-    },
-    {
-      "name": "universal_minecraft:sculk_sensor"
-    },
-    {
-      "name": "universal_minecraft:cobweb"
     },
     {
       "name": "universal_minecraft:soul_torch",
@@ -2808,28 +2061,6 @@
       "name": "universal_minecraft:beacon"
     },
     {
-      "name": "universal_minecraft:water",
-      "properties": {
-        "level": [
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7"
-        ],
-        "falling": [
-          "true",
-          "false"
-        ],
-        "flowing": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:conduit"
     },
     {
@@ -2867,12 +2098,6 @@
           "5"
         ]
       }
-    },
-    {
-      "name": "universal_minecraft:suspicious_sand"
-    },
-    {
-      "name": "universal_minecraft:suspicious_gravel"
     },
     {
       "name": "universal_minecraft:lightning_rod",
@@ -3131,6 +2356,7 @@
       "name": "universal_minecraft:chest",
       "properties": {
         "connection": [
+          "none",
           "left",
           "right"
         ],
@@ -3673,36 +2899,6 @@
       }
     },
     {
-      "name": "universal_minecraft:carrots",
-      "properties": {
-        "age": [
-          "0",
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:potatoes",
-      "properties": {
-        "age": [
-          "0",
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:cake",
       "properties": {
         "bites": [
@@ -3715,6 +2911,9 @@
           "6"
         ]
       }
+    },
+    {
+      "name": "universal_minecraft:spawner"
     },
     {
       "name": "universal_minecraft:trial_spawner"

@@ -43,8 +43,6 @@
           "acacia",
           "dark_oak",
           "mangrove",
-          "crimson",
-          "warped",
           "bamboo",
           "cherry",
           "pale_oak"
@@ -138,8 +136,6 @@
           "stone",
           "crimson",
           "warped",
-          "blackstone",
-          "polished_blackstone_brick",
           "polished_blackstone",
           "oxidized_cut_copper",
           "weathered_cut_copper",
@@ -185,7 +181,8 @@
           "top"
         ],
         "material": [
-          "nether_brick"
+          "nether_brick",
+          "blackstone"
         ],
         "shape": [
           "straight",
@@ -232,15 +229,11 @@
           "polished_diorite",
           "polished_granite",
           "red_nether_brick",
-          "smooth_quartz",
           "smooth_red_sandstone",
           "smooth_sandstone",
           "smooth_stone",
           "crimson",
           "warped",
-          "blackstone",
-          "polished_blackstone_brick",
-          "polished_blackstone",
           "oxidized_cut_copper",
           "weathered_cut_copper",
           "exposed_cut_copper",
@@ -510,9 +503,6 @@
           "red_sandstone",
           "sandstone",
           "stone_brick",
-          "blackstone",
-          "polished_blackstone_brick",
-          "polished_blackstone",
           "cobbled_deepslate",
           "polished_deepslate",
           "deepslate_tile",
@@ -696,15 +686,6 @@
       "name": "universal_minecraft:red_nether_bricks"
     },
     {
-      "name": "universal_minecraft:basalt",
-      "properties": {
-        "axis": [
-          "x",
-          "z"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:smooth_basalt"
     },
     {
@@ -712,28 +693,9 @@
       "properties": {
         "axis": [
           "x",
-          "y",
           "z"
         ]
       }
-    },
-    {
-      "name": "universal_minecraft:blackstone"
-    },
-    {
-      "name": "universal_minecraft:gilded_blackstone"
-    },
-    {
-      "name": "universal_minecraft:chiseled_polished_blackstone"
-    },
-    {
-      "name": "universal_minecraft:polished_blackstone"
-    },
-    {
-      "name": "universal_minecraft:polished_blackstone_bricks"
-    },
-    {
-      "name": "universal_minecraft:cracked_polished_blackstone_bricks"
     },
     {
       "name": "universal_minecraft:end_stone"
@@ -786,13 +748,9 @@
       "properties": {
         "axis": [
           "x",
-          "y",
           "z"
         ]
       }
-    },
-    {
-      "name": "universal_minecraft:gold_block"
     },
     {
       "name": "universal_minecraft:redstone_block"
@@ -810,7 +768,13 @@
       "name": "universal_minecraft:netherite_block"
     },
     {
-      "name": "universal_minecraft:quartz_block"
+      "name": "universal_minecraft:quartz_block",
+      "properties": {
+        "axis": [
+          "x",
+          "z"
+        ]
+      }
     },
     {
       "name": "universal_minecraft:chiseled_quartz_block"
@@ -829,7 +793,13 @@
       }
     },
     {
-      "name": "universal_minecraft:smooth_quartz"
+      "name": "universal_minecraft:smooth_quartz",
+      "properties": {
+        "axis": [
+          "x",
+          "z"
+        ]
+      }
     },
     {
       "name": "universal_minecraft:amethyst_block"
@@ -1566,22 +1536,6 @@
         "vertical_direction": [
           "up",
           "down"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:obsidian"
-    },
-    {
-      "name": "universal_minecraft:crying_obsidian"
-    },
-    {
-      "name": "universal_minecraft:bone_block",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
         ]
       }
     },
@@ -2478,15 +2432,6 @@
       }
     },
     {
-      "name": "universal_minecraft:lantern",
-      "properties": {
-        "hanging": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:soul_lantern",
       "properties": {
         "hanging": [
@@ -3124,21 +3069,6 @@
           "bamboo",
           "cherry",
           "pale_oak"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:chest",
-      "properties": {
-        "connection": [
-          "left",
-          "right"
-        ],
-        "facing": [
-          "north",
-          "east",
-          "south",
-          "west"
         ]
       }
     },

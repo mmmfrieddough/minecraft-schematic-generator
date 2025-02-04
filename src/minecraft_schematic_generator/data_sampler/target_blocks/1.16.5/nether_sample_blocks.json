@@ -43,8 +43,6 @@
           "acacia",
           "dark_oak",
           "mangrove",
-          "crimson",
-          "warped",
           "bamboo",
           "cherry",
           "pale_oak"
@@ -117,6 +115,7 @@
           "stone_brick",
           "sandstone",
           "red_sandstone",
+          "nether_brick",
           "quartz",
           "purpur",
           "prismarine",
@@ -162,30 +161,6 @@
           "polished_tuff",
           "pale_oak",
           "resin_brick"
-        ],
-        "shape": [
-          "straight",
-          "inner_left",
-          "inner_right",
-          "outer_left",
-          "outer_right"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:stairs",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ],
-        "half": [
-          "top"
-        ],
-        "material": [
-          "nether_brick"
         ],
         "shape": [
           "straight",
@@ -716,9 +691,6 @@
           "z"
         ]
       }
-    },
-    {
-      "name": "universal_minecraft:blackstone"
     },
     {
       "name": "universal_minecraft:gilded_blackstone"
@@ -2187,6 +2159,17 @@
       "name": "universal_minecraft:sweet_berry_bush"
     },
     {
+      "name": "universal_minecraft:nether_wart",
+      "properties": {
+        "age": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ]
+      }
+    },
+    {
       "name": "universal_minecraft:lily_pad"
     },
     {
@@ -3131,6 +3114,7 @@
       "name": "universal_minecraft:chest",
       "properties": {
         "connection": [
+          "none",
           "left",
           "right"
         ],
@@ -3715,6 +3699,9 @@
           "6"
         ]
       }
+    },
+    {
+      "name": "universal_minecraft:spawner"
     },
     {
       "name": "universal_minecraft:trial_spawner"

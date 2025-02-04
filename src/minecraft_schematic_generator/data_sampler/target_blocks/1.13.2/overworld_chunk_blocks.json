@@ -2331,14 +2331,6 @@
       }
     },
     {
-      "name": "universal_minecraft:infested_block",
-      "properties": {
-        "material": [
-          "cobblestone"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:infested_deepslate",
       "properties": {
         "axis": [
@@ -2567,17 +2559,6 @@
           "down",
           "east",
           "north",
-          "south",
-          "west"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:trapped_chest",
-      "properties": {
-        "facing": [
-          "north",
-          "east",
           "south",
           "west"
         ]
