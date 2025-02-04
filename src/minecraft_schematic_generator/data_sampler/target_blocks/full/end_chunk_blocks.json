@@ -1016,7 +1016,10 @@
       }
     },
     {
-      "name": "universal_minecraft:terracotta",
+      "name": "universal_minecraft:terracotta"
+    },
+    {
+      "name": "universal_minecraft:stained_terracotta",
       "properties": {
         "color": [
           "white",

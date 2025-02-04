@@ -973,22 +973,15 @@
       }
     },
     {
-      "name": "universal_minecraft:terracotta",
+      "name": "universal_minecraft:stained_terracotta",
       "properties": {
         "color": [
-          "white",
-          "light_gray",
           "gray",
           "black",
-          "brown",
-          "red",
-          "orange",
-          "yellow",
           "lime",
           "green",
           "cyan",
           "light_blue",
-          "blue",
           "purple",
           "magenta",
           "pink"
