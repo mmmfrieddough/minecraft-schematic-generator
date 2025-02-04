@@ -189,7 +189,7 @@ class WorldSampler:
         return worker_directory
 
     def setup_worker_directory(
-        self, root_directory: str, src_directory: str, worker_num: int
+        self, root_directory: str, src_directory: str, timestamp: str, worker_num: int
     ) -> str:
         """Sets up worker directories for a given source directory"""
         COPY_LIST = {
@@ -204,7 +204,11 @@ class WorldSampler:
             root_directory, src_directory, worker_num
         )
         if os.path.exists(worker_directory):
-            return worker_directory
+            # Make sure the directory is up to date
+            if self._get_world_timestamp(worker_directory) == timestamp:
+                return worker_directory
+            else:
+                shutil.rmtree(worker_directory)
 
         os.makedirs(worker_directory)
 
@@ -320,15 +324,24 @@ class WorldSampler:
             cache[cache_key] = self._check_block_rules(filters, block)
         return cache[cache_key]
 
+    def _get_world_timestamp(self, directory: str) -> int:
+        """Gets the last played timestamp of the Minecraft world"""
+        world = amulet.load_level(directory)
+        try:
+            return world.level_wrapper.last_played
+        finally:
+            world.close()
+
     def _save_progress(
         self, directory: str, dimension: str, name: str, config: dict, data: dict
     ) -> None:
         data_dir = self._get_data_directory(directory)
         os.makedirs(data_dir, exist_ok=True)
-
         dimension = dimension.replace(":", "_")
         temp_file_path = os.path.join(data_dir, f"{dimension}_{name}_progress_temp.pkl")
         final_file_path = os.path.join(data_dir, f"{dimension}_{name}_progress.pkl")
+
+        timestamp = self._get_world_timestamp(directory)
 
         # Try to save multiple times with a delay in case the file is locked
         max_retries = 3
@@ -346,6 +359,7 @@ class WorldSampler:
                     pickle.dump(
                         {
                             "config": config,
+                            "timestamp": timestamp,
                             "data": data,
                         },
                         file,
@@ -370,6 +384,8 @@ class WorldSampler:
         dimension = dimension.replace(":", "_")
         path = os.path.join(data_dir, f"{dimension}_{name}_progress.pkl")
 
+        timestamp = self._get_world_timestamp(directory)
+
         if os.path.exists(path):
             try:
                 with open(path, "rb") as file:
@@ -388,6 +404,9 @@ class WorldSampler:
 
                 if progress["config"] != current_config:
                     print(f"Configuration has changed, resetting {name} progress")
+                    return None
+                if progress["timestamp"] != timestamp:
+                    print(f"World has been modified, resetting {name} progress")
                     return None
 
                 return progress["data"]
@@ -582,7 +601,6 @@ class WorldSampler:
             s=10,
             zorder=2,
         )
-        plt.legend()
 
         plt.colorbar(label=colorbar)
         plt.xlabel("X Coordinate")
@@ -723,6 +741,8 @@ class WorldSampler:
             print(f"All {len(all_chunk_coords)} world chunks have already been visited")
             return relevant_chunks
 
+        timestamp = self._get_world_timestamp(directory)
+
         # Create queues
         all_chunks_queue = Queue()
         visited_chunks_queue = Queue()
@@ -730,7 +750,9 @@ class WorldSampler:
         processes: list[Process] = []
 
         def start_worker(i: int) -> None:
-            worker_directory = self.setup_worker_directory(root_directory, directory, i)
+            worker_directory = self.setup_worker_directory(
+                root_directory, directory, timestamp, i
+            )
             process = Process(
                 target=self._mark_chunks_worker,
                 args=(
@@ -1125,6 +1147,8 @@ class WorldSampler:
             )
             return sample_positions
 
+        timestamp = self._get_world_timestamp(directory)
+
         # Create queues
         relevant_chunks_queue = Queue()
         sampled_chunks_queue = Queue()
@@ -1132,7 +1156,9 @@ class WorldSampler:
         processes: list[Process] = []
 
         def start_worker(i: int) -> None:
-            worker_directory = self.setup_worker_directory(root_directory, directory, i)
+            worker_directory = self.setup_worker_directory(
+                root_directory, directory, timestamp, i
+            )
             process = Process(
                 target=self._identify_samples_worker,
                 args=(
@@ -1260,10 +1286,14 @@ class WorldSampler:
         return sample_positions
 
     def _get_schematic_hash(
-        self, world_name: str, dimension: str, position: tuple[str, int, int]
+        self,
+        world_name: str,
+        dimension: str,
+        position: tuple[int, int, int],
+        timestamp: int,
     ) -> str:
         """Returns the hash of the schematic file for the given position"""
-        filename = world_name + dimension + str(position)
+        filename = world_name + dimension + str(position) + str(timestamp)
         return hashlib.sha256(filename.encode()).hexdigest()
 
     def _get_dimension_directory(self, world_name: str, dimension: str) -> str:
@@ -1274,10 +1304,14 @@ class WorldSampler:
         return os.path.join(self.schematic_directory, world_name, dimension_name)
 
     def _get_schematic_path(
-        self, world_name: str, dimension: str, position: tuple[int, int, int]
+        self,
+        world_name: str,
+        dimension: str,
+        position: tuple[int, int, int],
+        timestamp: int,
     ) -> str:
         """Returns the path to the schematic file for the given position"""
-        file_hash = self._get_schematic_hash(world_name, dimension, position)
+        file_hash = self._get_schematic_hash(world_name, dimension, position, timestamp)
         dimension_dir = self._get_dimension_directory(world_name, dimension)
         return os.path.join(dimension_dir, file_hash + ".schem")
 
@@ -1288,6 +1322,7 @@ class WorldSampler:
         world_name: str,
         sample_positions_queue: Queue,
         sampled_positions_queue: Queue,
+        timestamp: int,
     ) -> None:
         """Worker function for collecting samples"""
 
@@ -1311,7 +1346,12 @@ class WorldSampler:
                     break
 
                 # Get inputs ready
-                path = self._get_schematic_path(world_name, dimension, position)
+                path = self._get_schematic_path(
+                    world_name,
+                    dimension,
+                    position,
+                    timestamp,
+                )
                 x, y, z = position
                 selection = SelectionBox(
                     (x, y, z),
@@ -1371,9 +1411,11 @@ class WorldSampler:
         all_sample_positions: set,
     ) -> None:
         """Collects samples from the world at the identified positions"""
-
         world_name = os.path.relpath(directory, root_directory)
         schematic_directory = self._get_dimension_directory(world_name, dimension)
+
+        # Get world timestamp for schematic validation
+        timestamp = self._get_world_timestamp(directory)
 
         # Check if the schematic directory exists
         if not os.path.exists(schematic_directory):
@@ -1391,7 +1433,9 @@ class WorldSampler:
 
             # Map positions to their schematic hashes
             desired_hash_map = {
-                self._get_schematic_hash(world_name, dimension, position): position
+                self._get_schematic_hash(
+                    world_name, dimension, position, timestamp
+                ): position
                 for position in all_sample_positions
             }
             desired_hashes = set(desired_hash_map.keys())
@@ -1446,7 +1490,9 @@ class WorldSampler:
         processes: list[Process] = []
 
         def start_worker(i: int) -> None:
-            worker_directory = self.setup_worker_directory(root_directory, directory, i)
+            worker_directory = self.setup_worker_directory(
+                root_directory, directory, timestamp, i
+            )
             process = Process(
                 target=self._collect_samples_worker,
                 args=(
@@ -1455,6 +1501,7 @@ class WorldSampler:
                     world_name,
                     sample_positions_queue,
                     sampled_positions_queue,
+                    timestamp,
                 ),
             )
             process.start()
@@ -1543,6 +1590,10 @@ class WorldSampler:
         try:
             print(f"Sampling directory: {directory}")
             for root, dirs, files in os.walk(directory):
+                # Skip if we're at the root directory
+                if root == directory:
+                    continue
+
                 if "level.dat" in files:
                     print("--------------------")
                     self.sample_world(directory, root)
