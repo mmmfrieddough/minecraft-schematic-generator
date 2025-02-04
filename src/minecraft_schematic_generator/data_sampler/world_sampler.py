@@ -570,10 +570,20 @@ class WorldSampler:
 
         # Plotting
         plt.figure(figsize=(10, 10))
-        # s is the size of the point
+        # Add origin point in red
+        plt.scatter([0], [0], c="red", s=100, zorder=1)
+        # Plot the data points
         plt.scatter(
-            x_coords, z_coords, c=intensities, cmap="cool", edgecolor="none", s=10
+            x_coords,
+            z_coords,
+            c=intensities,
+            cmap="cool",
+            edgecolor="none",
+            s=10,
+            zorder=2,
         )
+        plt.legend()
+
         plt.colorbar(label=colorbar)
         plt.xlabel("X Coordinate")
         plt.ylabel("Z Coordinate")
@@ -582,12 +592,11 @@ class WorldSampler:
         # Adjust axes limits to have the same range for a square aspect ratio
         x_min, x_max = min(x_coords), max(x_coords)
         y_min, y_max = min(z_coords), max(z_coords)
-        xy_min = min(x_min, y_min)
-        xy_max = max(x_max, y_max)
+        # Include 0,0 in the plot range
+        xy_min = min(x_min, y_min, 0)
+        xy_max = max(x_max, y_max, 0)
         plt.xlim(xy_min, xy_max)
         plt.ylim(xy_min, xy_max)
-
-        plt.gca().invert_yaxis()
 
         plt.gca().set_aspect("equal", adjustable="box")
 
