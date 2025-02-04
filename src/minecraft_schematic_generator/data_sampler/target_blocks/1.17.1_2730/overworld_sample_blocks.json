@@ -687,9 +687,6 @@
       }
     },
     {
-      "name": "universal_minecraft:smooth_basalt"
-    },
-    {
       "name": "universal_minecraft:polished_basalt",
       "properties": {
         "axis": [
@@ -811,9 +808,6 @@
     },
     {
       "name": "universal_minecraft:smooth_quartz"
-    },
-    {
-      "name": "universal_minecraft:amethyst_block"
     },
     {
       "name": "universal_minecraft:copper_block"

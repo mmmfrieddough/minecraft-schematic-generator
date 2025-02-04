@@ -300,7 +300,6 @@
           "andesite",
           "cut_red_sandstone",
           "cut_sandstone",
-          "diorite",
           "end_stone_brick",
           "granite",
           "polished_andesite",
@@ -340,6 +339,18 @@
           "bottom",
           "top",
           "double"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:slab",
+      "properties": {
+        "material": [
+          "diorite"
+        ],
+        "type": [
+          "bottom",
+          "top"
         ]
       }
     },
@@ -546,7 +557,6 @@
       "name": "universal_minecraft:pressure_plate",
       "properties": {
         "material": [
-          "spruce",
           "birch",
           "jungle",
           "dark_oak",
