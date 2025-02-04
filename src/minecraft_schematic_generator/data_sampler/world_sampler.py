@@ -1126,6 +1126,34 @@ class WorldSampler:
             directory, dimension, target_blocks
         )
 
+        # Store original size of sampled chunks
+        original_sampled_chunks_size = len(sampled_chunks)
+
+        # Remove any sampled chunks that are no longer relevant
+        sampled_chunks = sampled_chunks & relevant_chunks
+
+        # If any chunks were removed (size decreased after intersection)
+        if len(sampled_chunks) < original_sampled_chunks_size:
+            # Convert sample positions to chunk coordinates
+            position_chunk_map = {
+                (x, y, z): (x // 16, z // 16) for x, y, z in sample_positions
+            }
+            # Keep only samples from chunks that are still relevant
+            sample_positions = {
+                pos
+                for pos, chunk in position_chunk_map.items()
+                if chunk in sampled_chunks
+            }
+
+            # Save the updated sample positions
+            self._save_sample_progress(
+                directory,
+                dimension,
+                target_blocks,
+                sampled_chunks,
+                sample_positions,
+            )
+
         # Get all relevant chunks that have not been sampled
         remaining_relevant_chunk_positions = relevant_chunks - sampled_chunks
 
