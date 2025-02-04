@@ -1142,9 +1142,12 @@ class WorldSampler:
 
         # Check if all relevant chunks have already been sampled
         if len(remaining_relevant_chunk_positions) == 0:
-            print(
-                f"All {len(relevant_chunks)} relevant chunks have already been sampled"
-            )
+            if len(relevant_chunks) > 0:
+                print(
+                    f"All {len(relevant_chunks)} relevant chunks have already been sampled"
+                )
+            else:
+                print("No relevant chunks found")
             return sample_positions
 
         timestamp = self._get_world_timestamp(directory)
@@ -1419,7 +1422,6 @@ class WorldSampler:
 
         # Check if the schematic directory exists
         if not os.path.exists(schematic_directory):
-            os.makedirs(schematic_directory)
             remaining_sample_positions = all_sample_positions
         else:
             # Get set of existing schematic hashes
@@ -1475,13 +1477,18 @@ class WorldSampler:
 
         # Check if there are any samples to collect
         if len(remaining_sample_positions) == 0:
-            print(
-                f"All {len(all_sample_positions)} samples have already been collected"
-            )
+            if len(all_sample_positions) > 0:
+                print(
+                    f"All {len(all_sample_positions)} samples have already been collected"
+                )
+            else:
+                print("No samples to collect")
+            if existing_samples == 0 and os.path.exists(schematic_directory):
+                os.rmdir(schematic_directory)
             return
 
         # Create the schematic directory if it doesn't exist
-        os.makedirs(os.path.join(self.schematic_directory, world_name), exist_ok=True)
+        os.makedirs(schematic_directory, exist_ok=True)
 
         # Create queues
         sample_positions_queue = Queue()
@@ -1617,9 +1624,6 @@ class WorldSampler:
             relevant_chunks = self._mark_chunks(
                 root_directory, directory, dimension, chunk_target_blocks[dimension]
             )
-            if len(relevant_chunks) == 0:
-                print("No relevant chunks found")
-                continue
             try:
                 self._visualize_marked_chunks(directory, dimension, relevant_chunks)
             except Exception as e:
@@ -1631,9 +1635,6 @@ class WorldSampler:
                 sample_target_blocks[dimension],
                 relevant_chunks,
             )
-            if len(sample_positions) == 0:
-                print("No sample positions found")
-                continue
             try:
                 self._visualize_sample_positions(directory, dimension, sample_positions)
             except Exception as e:
