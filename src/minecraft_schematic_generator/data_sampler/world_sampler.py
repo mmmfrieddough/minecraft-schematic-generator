@@ -85,14 +85,15 @@ class WorldSampler:
         """Returns the path to the data directory for a world"""
         return os.path.join(directory, ".minecraft_schematic_generator")
 
-    def _get_world_version(self, directory: str) -> tuple[int, int, int]:
+    def _get_world_version(self, directory: str) -> tuple[tuple[int, int, int], int]:
         """Gets the version of the Minecraft world"""
         world = amulet.load_level(directory)
         try:
+            data_version = world.level_wrapper.version
             version = world.translation_manager._get_version_number(
-                world.level_wrapper.platform, world.level_wrapper.version
+                world.level_wrapper.platform, data_version
             )
-            return version
+            return version, data_version
         finally:
             world.close()
 
@@ -106,12 +107,15 @@ class WorldSampler:
             version_path = os.path.join(dir, item)
             if os.path.isdir(version_path):
                 try:
+                    # Split
+                    version_string, data_version = item.split("_")
+                    data_version = int(data_version)
                     # Split version string and pad with zeros
-                    version_parts = item.split(".")
+                    version_parts = version_string.split(".")
                     version = tuple(int(x) for x in version_parts) + (0,) * (
                         3 - len(version_parts)
                     )
-                    version_dirs[version] = version_path
+                    version_dirs[data_version] = version, version_path
                 except ValueError:
                     continue
 
@@ -121,17 +125,30 @@ class WorldSampler:
         self, directory: str
     ) -> tuple[str, tuple[int, int, int], tuple[int, int, int]]:
         """Gets the path to the version-specific file that's closest to but not older than the world version"""
-        world_version = self._get_world_version(directory)
-        versions = self._get_available_target_block_versions()
+        world_version, world_data_version = self._get_world_version(directory)
+        available_versions = self._get_available_target_block_versions()
 
         # Find the oldest version that's not older than the world version
-        valid_versions = [v for v in versions if v >= world_version]
+        valid_versions = [
+            data_version
+            for data_version in available_versions
+            if data_version >= world_data_version
+        ]
         if not valid_versions:
-            raise ValueError("No compatible target block files found")
-        closest_version = min(valid_versions)
+            raise ValueError(
+                f"No compatible target block files found for {world_version} {world_data_version}"
+            )
+        closest_data_version = min(valid_versions)
+        closest_version, closest_path = available_versions[closest_data_version]
 
-        # Return path
-        return versions[closest_version], closest_version, world_version
+        # Return path and version
+        return (
+            closest_path,
+            closest_version,
+            closest_data_version,
+            world_version,
+            world_data_version,
+        )
 
     def load_target_blocks(self, directory: str) -> tuple[dict, dict]:
         """Loads the target blocks from the files and returns them"""
@@ -155,11 +172,24 @@ class WorldSampler:
                     print(f"Using custom {block_type} target blocks for {dimension}")
                 else:
                     if version_path is None:
-                        version_path, selected_version, world_version = (
-                            self._get_version_specific_target_block_path(directory)
+                        (
+                            version_path,
+                            selected_version,
+                            selected_data_version,
+                            world_version,
+                            world_data_version,
+                        ) = self._get_version_specific_target_block_path(directory)
+                        selected_version_str = ".".join(
+                            str(x) for x in selected_version
                         )
+                        world_version_str = ".".join(str(x) for x in world_version)
                         print(
-                            f"Using target blocks from {'.'.join(str(x) for x in selected_version)} (closest to {'.'.join(str(x) for x in world_version)})"
+                            f"Using target blocks from {selected_data_version} ({selected_version_str})"
+                            + (
+                                f" (closest to {world_data_version} ({world_version_str}))"
+                                if selected_data_version != world_data_version
+                                else ""
+                            )
                         )
                     config_path = os.path.join(version_path, filename)
 
@@ -254,8 +284,7 @@ class WorldSampler:
             return False
 
         value = str(block_props[prop_key])
-        # If "any" is in the list of accepted values, it means "any value is OK"
-        if "any" not in accepted_values and value not in accepted_values:
+        if value not in accepted_values:
             return False
 
         return True
@@ -422,6 +451,7 @@ class WorldSampler:
         block_cache: dict,
     ) -> bool:
         """Returns True if the chunk contains any of the target blocks"""
+        # return random.random() < 0.01
         for block in chunk.block_palette:
             if self._check_block(target_blocks, block, block_cache):
                 return True
@@ -579,6 +609,16 @@ class WorldSampler:
         colorbar: str = None,
     ) -> None:
         data_dir = self._get_data_directory(directory)
+        dimension = dimension.replace(":", "_")
+        path = os.path.join(data_dir, f"{dimension}_{title}.png")
+
+        # Check if there are no coordinates to plot
+        if not x_coords or not z_coords:
+            # Clear any existing visualization
+            if os.path.exists(path):
+                os.remove(path)
+            return
+
         os.makedirs(data_dir, exist_ok=True)
 
         # Use Agg backend for headless operation
@@ -619,14 +659,22 @@ class WorldSampler:
         plt.gca().set_aspect("equal", adjustable="box")
 
         # Save the plot as an image
-        dimension = dimension.replace(":", "_")
-        plt.savefig(os.path.join(data_dir, f"{dimension}_{title}.png"))
+        plt.savefig(path)
         plt.close()
 
     def _visualize_marked_chunks(
         self, directory: str, dimension: str, relevant_chunks: set
     ) -> None:
         if len(relevant_chunks) == 0:
+            self._create_visualization(
+                directory,
+                dimension,
+                [],
+                [],
+                [],
+                "selected_chunks",
+                "Sample Count",
+            )
             return
 
         # Extract x and z coordinates
@@ -644,6 +692,15 @@ class WorldSampler:
         self, directory: str, dimension: str, sample_positions: set
     ) -> None:
         if len(sample_positions) == 0:
+            self._create_visualization(
+                directory,
+                dimension,
+                [],
+                [],
+                [],
+                "sample_positions",
+                "Sample Count",
+            )
             return
 
         # Function to convert world coordinates to chunk coordinates
@@ -677,6 +734,9 @@ class WorldSampler:
         total: int,
         last_time: float,
     ) -> int:
+        if current_progress == total:
+            return 0
+
         # Get CPU and memory usage
         cpu_usage = psutil.cpu_percent()
         memory_usage = psutil.virtual_memory().percent
@@ -1134,6 +1194,8 @@ class WorldSampler:
 
         # If any chunks were removed (size decreased after intersection)
         if len(sampled_chunks) < original_sampled_chunks_size:
+            original_sample_positions_size = len(sample_positions)
+
             # Convert sample positions to chunk coordinates
             position_chunk_map = {
                 (x, y, z): (x // 16, z // 16) for x, y, z in sample_positions
@@ -1144,6 +1206,10 @@ class WorldSampler:
                 for pos, chunk in position_chunk_map.items()
                 if chunk in sampled_chunks
             }
+
+            print(
+                f"Removing {original_sample_positions_size - len(sample_positions)} unwanted sample positions"
+            )
 
             # Save the updated sample positions
             self._save_sample_progress(
@@ -1175,7 +1241,7 @@ class WorldSampler:
                     f"All {len(relevant_chunks)} relevant chunks have already been sampled"
                 )
             else:
-                print("No relevant chunks found")
+                print("No relevant chunks to sample")
             return sample_positions
 
         timestamp = self._get_world_timestamp(directory)
