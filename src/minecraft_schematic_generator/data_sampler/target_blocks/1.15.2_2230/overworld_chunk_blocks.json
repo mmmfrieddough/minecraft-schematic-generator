@@ -159,6 +159,7 @@
           "dark_prismarine",
           "andesite",
           "end_stone_brick",
+          "mossy_stone_brick",
           "polished_andesite",
           "polished_diorite",
           "polished_granite",
@@ -290,6 +291,7 @@
           "mangrove",
           "petrified_oak",
           "brick",
+          "stone",
           "red_sandstone",
           "nether_brick",
           "quartz",
@@ -303,7 +305,7 @@
           "diorite",
           "end_stone_brick",
           "granite",
-          "mossy_cobblestone",
+          "mossy_stone_brick",
           "polished_andesite",
           "polished_diorite",
           "polished_granite",
@@ -365,8 +367,7 @@
       "name": "universal_minecraft:slab",
       "properties": {
         "material": [
-          "mossy_stone_brick",
-          "stone"
+          "stone_brick"
         ],
         "type": [
           "top"
@@ -603,10 +604,12 @@
           "andesite",
           "brick",
           "end_stone_brick",
+          "mossy_stone_brick",
           "nether_brick",
           "prismarine",
           "red_nether_brick",
           "red_sandstone",
+          "stone_brick",
           "blackstone",
           "polished_blackstone_brick",
           "polished_blackstone",
@@ -700,6 +703,9 @@
       }
     },
     {
+      "name": "universal_minecraft:netherrack"
+    },
+    {
       "name": "universal_minecraft:nether_bricks"
     },
     {
@@ -720,6 +726,9 @@
           "z"
         ]
       }
+    },
+    {
+      "name": "universal_minecraft:smooth_basalt"
     },
     {
       "name": "universal_minecraft:polished_basalt",
@@ -779,6 +788,7 @@
       "properties": {
         "axis": [
           "x",
+          "y",
           "z"
         ]
       }
@@ -813,6 +823,9 @@
     },
     {
       "name": "universal_minecraft:smooth_quartz"
+    },
+    {
+      "name": "universal_minecraft:amethyst_block"
     },
     {
       "name": "universal_minecraft:copper_block"
@@ -1061,12 +1074,8 @@
           "black",
           "brown",
           "red",
-          "orange",
-          "yellow",
-          "lime",
           "green",
           "cyan",
-          "light_blue",
           "blue",
           "magenta",
           "pink"
@@ -1303,6 +1312,9 @@
       }
     },
     {
+      "name": "universal_minecraft:crying_obsidian"
+    },
+    {
       "name": "universal_minecraft:crimson_nylium"
     },
     {
@@ -1337,6 +1349,61 @@
     },
     {
       "name": "universal_minecraft:glowstone"
+    },
+    {
+      "name": "universal_minecraft:budding_amethyst"
+    },
+    {
+      "name": "universal_minecraft:small_amethyst_bud",
+      "properties": {
+        "facing": [
+          "down",
+          "east",
+          "north",
+          "south",
+          "up",
+          "west"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:medium_amethyst_bud",
+      "properties": {
+        "facing": [
+          "down",
+          "east",
+          "north",
+          "south",
+          "up",
+          "west"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:large_amethyst_bud",
+      "properties": {
+        "facing": [
+          "down",
+          "east",
+          "north",
+          "south",
+          "up",
+          "west"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:amethyst_cluster",
+      "properties": {
+        "facing": [
+          "down",
+          "east",
+          "north",
+          "south",
+          "up",
+          "west"
+        ]
+      }
     },
     {
       "name": "universal_minecraft:nether_wart_block"
@@ -2097,6 +2164,7 @@
       "properties": {
         "axis": [
           "x",
+          "y",
           "z"
         ]
       }

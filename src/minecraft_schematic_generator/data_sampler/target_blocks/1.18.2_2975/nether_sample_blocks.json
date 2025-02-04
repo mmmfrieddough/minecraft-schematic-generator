@@ -9,8 +9,11 @@
           "z"
         ],
         "material": [
+          "oak",
+          "spruce",
           "birch",
           "jungle",
+          "acacia",
           "dark_oak",
           "mangrove",
           "crimson",
@@ -25,23 +28,7 @@
       }
     },
     {
-      "name": "universal_minecraft:wood",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ],
-        "material": [
-          "acacia"
-        ],
-        "stripped": [
-          "true"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:wood",
+      "name": "universal_minecraft:log",
       "properties": {
         "axis": [
           "x",
@@ -50,49 +37,12 @@
         ],
         "material": [
           "oak",
-          "spruce"
-        ],
-        "stripped": [
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:log",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ],
-        "material": [
+          "spruce",
           "birch",
           "jungle",
+          "acacia",
           "dark_oak",
           "mangrove",
-          "crimson",
-          "warped",
-          "bamboo",
-          "cherry",
-          "pale_oak"
-        ],
-        "stripped": [
-          "true"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:log",
-      "properties": {
-        "axis": [
-          "x",
-          "z"
-        ],
-        "material": [
-          "birch",
-          "mangrove",
-          "crimson",
-          "warped",
           "bamboo",
           "cherry",
           "pale_oak"
@@ -116,8 +66,7 @@
           "warped"
         ],
         "stripped": [
-          "true",
-          "false"
+          "true"
         ]
       }
     },
@@ -125,6 +74,12 @@
       "name": "universal_minecraft:planks",
       "properties": {
         "material": [
+          "oak",
+          "spruce",
+          "birch",
+          "jungle",
+          "acacia",
+          "dark_oak",
           "mangrove",
           "crimson",
           "warped",
@@ -148,8 +103,17 @@
           "top"
         ],
         "material": [
+          "oak",
+          "spruce",
+          "birch",
+          "jungle",
+          "acacia",
+          "dark_oak",
           "mangrove",
           "brick",
+          "cobblestone",
+          "stone_brick",
+          "sandstone",
           "red_sandstone",
           "nether_brick",
           "quartz",
@@ -158,7 +122,10 @@
           "prismarine_brick",
           "dark_prismarine",
           "andesite",
+          "diorite",
           "end_stone_brick",
+          "granite",
+          "mossy_cobblestone",
           "mossy_stone_brick",
           "polished_andesite",
           "polished_diorite",
@@ -166,6 +133,7 @@
           "red_nether_brick",
           "smooth_quartz",
           "smooth_red_sandstone",
+          "smooth_sandstone",
           "stone",
           "crimson",
           "warped",
@@ -204,94 +172,22 @@
       }
     },
     {
-      "name": "universal_minecraft:stairs",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ],
-        "half": [
-          "bottom",
-          "top"
-        ],
-        "material": [
-          "jungle",
-          "diorite"
-        ],
-        "shape": [
-          "straight",
-          "inner_left",
-          "inner_right",
-          "outer_left",
-          "outer_right"
-        ],
-        "waterlogged": [
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:stairs",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ],
-        "half": [
-          "top"
-        ],
-        "material": [
-          "sandstone",
-          "granite"
-        ],
-        "shape": [
-          "straight",
-          "inner_left",
-          "inner_right",
-          "outer_left",
-          "outer_right"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:stairs",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ],
-        "half": [
-          "top"
-        ],
-        "material": [
-          "stone_brick"
-        ],
-        "shape": [
-          "straight",
-          "inner_left",
-          "inner_right",
-          "outer_left",
-          "outer_right"
-        ],
-        "waterlogged": [
-          "false"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:slab",
       "properties": {
         "material": [
+          "oak",
+          "spruce",
+          "birch",
+          "jungle",
+          "acacia",
+          "dark_oak",
           "mangrove",
           "petrified_oak",
           "brick",
           "stone",
+          "cobblestone",
+          "stone_brick",
+          "sandstone",
           "red_sandstone",
           "nether_brick",
           "quartz",
@@ -313,6 +209,8 @@
           "red_nether_brick",
           "smooth_quartz",
           "smooth_red_sandstone",
+          "smooth_sandstone",
+          "smooth_stone",
           "crimson",
           "warped",
           "blackstone",
@@ -348,34 +246,6 @@
       }
     },
     {
-      "name": "universal_minecraft:slab",
-      "properties": {
-        "material": [
-          "jungle",
-          "dark_oak"
-        ],
-        "type": [
-          "bottom",
-          "top",
-          "double"
-        ],
-        "waterlogged": [
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:slab",
-      "properties": {
-        "material": [
-          "stone_brick"
-        ],
-        "type": [
-          "top"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:fence",
       "properties": {
         "east": [
@@ -383,9 +253,12 @@
           "false"
         ],
         "material": [
+          "oak",
           "spruce",
           "birch",
           "jungle",
+          "acacia",
+          "dark_oak",
           "mangrove",
           "nether_brick",
           "crimson",
@@ -422,7 +295,12 @@
           "west"
         ],
         "material": [
+          "oak",
+          "spruce",
           "birch",
+          "jungle",
+          "acacia",
+          "dark_oak",
           "mangrove",
           "crimson",
           "warped",
@@ -458,44 +336,12 @@
           "right"
         ],
         "material": [
+          "oak",
+          "spruce",
           "birch",
-          "mangrove",
-          "crimson",
-          "warped",
-          "bamboo",
-          "cherry",
-          "copper",
-          "exposed_copper",
-          "oxidized_copper",
-          "waxed_copper",
-          "waxed_exposed_copper",
-          "waxed_oxidized_copper",
-          "waxed_weathered_copper",
-          "weathered_copper",
-          "pale_oak"
-        ],
-        "open": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:trapdoor",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ],
-        "half": [
-          "bottom",
-          "top"
-        ],
-        "material": [
-          "birch",
+          "jungle",
           "acacia",
+          "dark_oak",
           "mangrove",
           "iron",
           "crimson",
@@ -532,15 +378,30 @@
           "top"
         ],
         "material": [
-          "dark_oak",
+          "oak",
           "spruce",
-          "jungle"
+          "birch",
+          "jungle",
+          "acacia",
+          "dark_oak",
+          "mangrove",
+          "iron",
+          "crimson",
+          "warped",
+          "bamboo",
+          "cherry",
+          "copper",
+          "exposed_copper",
+          "oxidized_copper",
+          "waxed_copper",
+          "waxed_exposed_copper",
+          "waxed_oxidized_copper",
+          "waxed_weathered_copper",
+          "weathered_copper",
+          "pale_oak"
         ],
         "open": [
           "true",
-          "false"
-        ],
-        "waterlogged": [
           "false"
         ]
       }
@@ -549,11 +410,14 @@
       "name": "universal_minecraft:pressure_plate",
       "properties": {
         "material": [
+          "oak",
           "spruce",
           "birch",
           "jungle",
+          "acacia",
           "dark_oak",
           "mangrove",
+          "stone",
           "crimson",
           "warped",
           "polished_blackstone",
@@ -581,9 +445,11 @@
           "oak",
           "spruce",
           "birch",
+          "jungle",
           "acacia",
           "dark_oak",
           "mangrove",
+          "stone",
           "crimson",
           "warped",
           "polished_blackstone",
@@ -594,6 +460,9 @@
       }
     },
     {
+      "name": "universal_minecraft:stone"
+    },
+    {
       "name": "universal_minecraft:wall",
       "properties": {
         "east": [
@@ -602,14 +471,19 @@
           "tall"
         ],
         "material": [
+          "cobblestone",
+          "mossy_cobblestone",
           "andesite",
           "brick",
+          "diorite",
           "end_stone_brick",
+          "granite",
           "mossy_stone_brick",
           "nether_brick",
           "prismarine",
           "red_nether_brick",
           "red_sandstone",
+          "sandstone",
           "stone_brick",
           "blackstone",
           "polished_blackstone_brick",
@@ -646,6 +520,60 @@
       }
     },
     {
+      "name": "universal_minecraft:mossy_cobblestone"
+    },
+    {
+      "name": "universal_minecraft:smooth_stone"
+    },
+    {
+      "name": "universal_minecraft:stone_bricks",
+      "properties": {
+        "variant": [
+          "normal",
+          "cracked",
+          "mossy",
+          "chiseled"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:granite",
+      "properties": {
+        "polished": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:diorite",
+      "properties": {
+        "polished": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:andesite",
+      "properties": {
+        "polished": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:deepslate",
+      "properties": {
+        "axis": [
+          "x",
+          "y",
+          "z"
+        ]
+      }
+    },
+    {
       "name": "universal_minecraft:cobbled_deepslate"
     },
     {
@@ -670,6 +598,9 @@
       "name": "universal_minecraft:reinforced_deepslate"
     },
     {
+      "name": "universal_minecraft:tuff"
+    },
+    {
       "name": "universal_minecraft:chiseled_tuff"
     },
     {
@@ -680,6 +611,9 @@
     },
     {
       "name": "universal_minecraft:chiseled_tuff_bricks"
+    },
+    {
+      "name": "universal_minecraft:brick_block"
     },
     {
       "name": "universal_minecraft:mud_bricks"
@@ -694,9 +628,10 @@
       "name": "universal_minecraft:resin_bricks"
     },
     {
-      "name": "universal_minecraft:red_sandstone",
+      "name": "universal_minecraft:sandstone",
       "properties": {
         "variant": [
+          "normal",
           "chiseled",
           "smooth",
           "cut"
@@ -704,10 +639,27 @@
       }
     },
     {
-      "name": "universal_minecraft:netherrack"
+      "name": "universal_minecraft:red_sandstone",
+      "properties": {
+        "variant": [
+          "normal",
+          "chiseled",
+          "smooth",
+          "cut"
+        ]
+      }
     },
     {
-      "name": "universal_minecraft:nether_bricks"
+      "name": "universal_minecraft:sea_lantern"
+    },
+    {
+      "name": "universal_minecraft:prismarine"
+    },
+    {
+      "name": "universal_minecraft:prismarine_bricks"
+    },
+    {
+      "name": "universal_minecraft:dark_prismarine"
     },
     {
       "name": "universal_minecraft:cracked_nether_bricks"
@@ -723,7 +675,6 @@
       "properties": {
         "axis": [
           "x",
-          "y",
           "z"
         ]
       }
@@ -740,9 +691,6 @@
           "z"
         ]
       }
-    },
-    {
-      "name": "universal_minecraft:blackstone"
     },
     {
       "name": "universal_minecraft:gilded_blackstone"
@@ -785,6 +733,27 @@
       "name": "universal_minecraft:iron_block"
     },
     {
+      "name": "universal_minecraft:iron_bars",
+      "properties": {
+        "east": [
+          "true",
+          "false"
+        ],
+        "north": [
+          "true",
+          "false"
+        ],
+        "south": [
+          "true",
+          "false"
+        ],
+        "west": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
       "name": "universal_minecraft:chain",
       "properties": {
         "axis": [
@@ -795,10 +764,19 @@
       }
     },
     {
+      "name": "universal_minecraft:gold_block"
+    },
+    {
       "name": "universal_minecraft:redstone_block"
     },
     {
       "name": "universal_minecraft:emerald_block"
+    },
+    {
+      "name": "universal_minecraft:lapis_block"
+    },
+    {
+      "name": "universal_minecraft:diamond_block"
     },
     {
       "name": "universal_minecraft:netherite_block"
@@ -1000,6 +978,19 @@
       "name": "universal_minecraft:wool",
       "properties": {
         "color": [
+          "white",
+          "light_gray",
+          "gray",
+          "black",
+          "brown",
+          "red",
+          "orange",
+          "yellow",
+          "lime",
+          "green",
+          "cyan",
+          "light_blue",
+          "blue",
           "purple",
           "magenta",
           "pink"
@@ -1007,13 +998,48 @@
       }
     },
     {
+      "name": "universal_minecraft:carpet",
+      "properties": {
+        "color": [
+          "white",
+          "light_gray",
+          "gray",
+          "black",
+          "brown",
+          "red",
+          "orange",
+          "yellow",
+          "lime",
+          "green",
+          "cyan",
+          "light_blue",
+          "blue",
+          "purple",
+          "magenta",
+          "pink"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:terracotta"
+    },
+    {
       "name": "universal_minecraft:stained_terracotta",
       "properties": {
         "color": [
+          "white",
+          "light_gray",
           "gray",
           "black",
+          "brown",
+          "red",
+          "orange",
+          "yellow",
+          "lime",
           "green",
           "cyan",
+          "light_blue",
+          "blue",
           "purple",
           "magenta",
           "pink"
@@ -1070,6 +1096,7 @@
       "name": "universal_minecraft:glazed_terracotta",
       "properties": {
         "color": [
+          "white",
           "light_gray",
           "gray",
           "black",
@@ -1082,6 +1109,7 @@
           "cyan",
           "light_blue",
           "blue",
+          "purple",
           "magenta",
           "pink"
         ],
@@ -1123,13 +1151,38 @@
       }
     },
     {
+      "name": "universal_minecraft:glass_pane",
+      "properties": {
+        "east": [
+          "true",
+          "false"
+        ],
+        "north": [
+          "true",
+          "false"
+        ],
+        "south": [
+          "true",
+          "false"
+        ],
+        "west": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
       "name": "universal_minecraft:stained_glass_pane",
       "properties": {
         "color": [
+          "white",
           "light_gray",
           "gray",
           "black",
           "brown",
+          "red",
+          "orange",
+          "yellow",
           "lime",
           "green",
           "cyan",
@@ -1193,12 +1246,21 @@
       "name": "universal_minecraft:bed",
       "properties": {
         "color": [
+          "white",
+          "orange",
           "magenta",
           "light_blue",
+          "yellow",
+          "lime",
           "pink",
           "gray",
           "light_gray",
+          "cyan",
+          "purple",
+          "blue",
           "brown",
+          "green",
+          "red",
           "black"
         ],
         "facing": [
@@ -1296,17 +1358,22 @@
       "name": "universal_minecraft:wall_banner",
       "properties": {
         "color": [
+          "white",
           "orange",
           "magenta",
           "light_blue",
           "yellow",
           "lime",
           "pink",
+          "gray",
+          "light_gray",
           "cyan",
           "purple",
           "blue",
+          "brown",
           "green",
-          "red"
+          "red",
+          "black"
         ],
         "facing": [
           "north",
@@ -1317,31 +1384,226 @@
       }
     },
     {
+      "name": "universal_minecraft:grass_block",
+      "properties": {
+        "snowy": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:podzol",
+      "properties": {
+        "snowy": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:mycelium",
+      "properties": {
+        "snowy": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:grass_path"
+    },
+    {
+      "name": "universal_minecraft:coarse_dirt"
+    },
+    {
+      "name": "universal_minecraft:rooted_dirt"
+    },
+    {
+      "name": "universal_minecraft:farmland",
+      "properties": {
+        "moisture": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:mud"
+    },
+    {
+      "name": "universal_minecraft:clay"
+    },
+    {
+      "name": "universal_minecraft:sand"
+    },
+    {
+      "name": "universal_minecraft:red_sand"
+    },
+    {
+      "name": "universal_minecraft:ice"
+    },
+    {
+      "name": "universal_minecraft:packed_ice"
+    },
+    {
+      "name": "universal_minecraft:blue_ice"
+    },
+    {
+      "name": "universal_minecraft:snow_block"
+    },
+    {
+      "name": "universal_minecraft:snow",
+      "properties": {
+        "layers": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:moss_block"
+    },
+    {
+      "name": "universal_minecraft:moss_carpet"
+    },
+    {
+      "name": "universal_minecraft:pale_moss_block"
+    },
+    {
+      "name": "universal_minecraft:pale_moss_carpet",
+      "properties": {
+        "bottom": [
+          "true",
+          "false"
+        ],
+        "east": [
+          "none",
+          "low",
+          "tall"
+        ],
+        "north": [
+          "none",
+          "low",
+          "tall"
+        ],
+        "south": [
+          "none",
+          "low",
+          "tall"
+        ],
+        "west": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:pale_hanging_moss",
+      "properties": {
+        "tip": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:calcite"
+    },
+    {
+      "name": "universal_minecraft:dripstone_block"
+    },
+    {
+      "name": "universal_minecraft:dripstone",
+      "properties": {
+        "thickness": [
+          "tip_merge",
+          "tip",
+          "frustum",
+          "middle",
+          "base"
+        ],
+        "vertical_direction": [
+          "up",
+          "down"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:obsidian"
+    },
+    {
       "name": "universal_minecraft:crying_obsidian"
     },
     {
-      "name": "universal_minecraft:crimson_nylium"
+      "name": "universal_minecraft:bone_block",
+      "properties": {
+        "axis": [
+          "x",
+          "y",
+          "z"
+        ]
+      }
     },
     {
-      "name": "universal_minecraft:warped_nylium"
+      "name": "universal_minecraft:coal_ore"
     },
     {
-      "name": "universal_minecraft:soul_sand"
+      "name": "universal_minecraft:deepslate_coal_ore"
     },
     {
-      "name": "universal_minecraft:soul_soil"
+      "name": "universal_minecraft:iron_ore"
     },
     {
-      "name": "universal_minecraft:soul_fire"
+      "name": "universal_minecraft:deepslate_iron_ore"
     },
     {
-      "name": "universal_minecraft:nether_gold_ore"
+      "name": "universal_minecraft:copper_ore"
     },
     {
-      "name": "universal_minecraft:nether_quartz_ore"
+      "name": "universal_minecraft:deepslate_copper_ore"
     },
     {
-      "name": "universal_minecraft:ancient_debris"
+      "name": "universal_minecraft:gold_ore"
+    },
+    {
+      "name": "universal_minecraft:deepslate_gold_ore"
+    },
+    {
+      "name": "universal_minecraft:redstone_ore"
+    },
+    {
+      "name": "universal_minecraft:deepslate_redstone_ore"
+    },
+    {
+      "name": "universal_minecraft:emerald_ore"
+    },
+    {
+      "name": "universal_minecraft:deepslate_emerald_ore"
+    },
+    {
+      "name": "universal_minecraft:lapis_ore"
+    },
+    {
+      "name": "universal_minecraft:deepslate_lapis_ore"
+    },
+    {
+      "name": "universal_minecraft:diamond_ore"
+    },
+    {
+      "name": "universal_minecraft:deepslate_diamond_ore"
     },
     {
       "name": "universal_minecraft:raw_iron_block"
@@ -1351,9 +1613,6 @@
     },
     {
       "name": "universal_minecraft:raw_gold_block"
-    },
-    {
-      "name": "universal_minecraft:glowstone"
     },
     {
       "name": "universal_minecraft:budding_amethyst"
@@ -1411,42 +1670,302 @@
       }
     },
     {
-      "name": "universal_minecraft:nether_wart_block"
+      "name": "universal_minecraft:mangrove_roots"
     },
     {
-      "name": "universal_minecraft:warped_wart_block"
+      "name": "universal_minecraft:muddy_mangrove_roots",
+      "properties": {
+        "axis": [
+          "x",
+          "y",
+          "z"
+        ]
+      }
     },
     {
-      "name": "universal_minecraft:shroomlight"
+      "name": "universal_minecraft:mushroom_stem"
     },
     {
-      "name": "universal_minecraft:crimson_fungus"
+      "name": "universal_minecraft:leaves",
+      "properties": {
+        "material": [
+          "oak",
+          "spruce",
+          "birch",
+          "jungle",
+          "acacia",
+          "dark_oak",
+          "mangrove",
+          "azalea",
+          "flowering_azalea",
+          "cherry",
+          "pale_oak"
+        ],
+        "persistent": [
+          "true",
+          "false"
+        ]
+      }
     },
     {
-      "name": "universal_minecraft:warped_fungus"
+      "name": "universal_minecraft:red_mushroom_block",
+      "properties": {
+        "down": [
+          "true",
+          "false"
+        ],
+        "east": [
+          "true",
+          "false"
+        ],
+        "north": [
+          "true",
+          "false"
+        ],
+        "south": [
+          "true",
+          "false"
+        ],
+        "up": [
+          "true",
+          "false"
+        ],
+        "west": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:brown_mushroom_block",
+      "properties": {
+        "down": [
+          "true",
+          "false"
+        ],
+        "east": [
+          "true",
+          "false"
+        ],
+        "north": [
+          "true",
+          "false"
+        ],
+        "south": [
+          "true",
+          "false"
+        ],
+        "up": [
+          "true",
+          "false"
+        ],
+        "west": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:sapling",
+      "properties": {
+        "material": [
+          "oak",
+          "spruce",
+          "birch",
+          "jungle",
+          "acacia",
+          "dark_oak",
+          "cherry",
+          "pale_oak"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:mangrove_propagule"
+    },
+    {
+      "name": "universal_minecraft:azalea"
+    },
+    {
+      "name": "universal_minecraft:flowering_azalea"
     },
     {
       "name": "universal_minecraft:plant",
       "properties": {
         "plant_type": [
-          "wither_rose"
+          "dandelion",
+          "poppy",
+          "blue_orchid",
+          "allium",
+          "azure_bluet",
+          "red_tulip",
+          "orange_tulip",
+          "white_tulip",
+          "pink_tulip",
+          "oxeye_daisy",
+          "grass",
+          "fern",
+          "dead_bush",
+          "cornflower",
+          "wither_rose",
+          "lily_of_the_valley",
+          "closed_eyeblossom",
+          "open_eyeblossom"
         ]
       }
     },
     {
-      "name": "universal_minecraft:crimson_roots"
+      "name": "universal_minecraft:pink_petals",
+      "properties": {
+        "facing": [
+          "north",
+          "south",
+          "west",
+          "east"
+        ],
+        "flower_amount": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ]
+      }
     },
     {
-      "name": "universal_minecraft:warped_roots"
+      "name": "universal_minecraft:spore_blossom"
     },
     {
-      "name": "universal_minecraft:nether_sprouts"
+      "name": "universal_minecraft:bamboo_sapling",
+      "properties": {
+        "stage": [
+          "0",
+          "1"
+        ]
+      }
     },
     {
-      "name": "universal_minecraft:weeping_vines"
+      "name": "universal_minecraft:bamboo",
+      "properties": {
+        "thickness": [
+          "thin",
+          "thick"
+        ],
+        "leaves": [
+          "none",
+          "small",
+          "large"
+        ],
+        "stage": [
+          "0",
+          "1"
+        ]
+      }
     },
     {
-      "name": "universal_minecraft:twisting_vines"
+      "name": "universal_minecraft:sugar_cane"
+    },
+    {
+      "name": "universal_minecraft:cactus"
+    },
+    {
+      "name": "universal_minecraft:vine",
+      "properties": {
+        "east": [
+          "true",
+          "false"
+        ],
+        "north": [
+          "true",
+          "false"
+        ],
+        "south": [
+          "true",
+          "false"
+        ],
+        "up": [
+          "true",
+          "false"
+        ],
+        "west": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:double_plant",
+      "properties": {
+        "plant_type": [
+          "sunflower",
+          "lilac",
+          "rose_bush",
+          "peony",
+          "tall_grass",
+          "large_fern"
+        ],
+        "half": [
+          "upper",
+          "lower"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:pitcher_plant",
+      "properties": {
+        "half": [
+          "upper",
+          "lower"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:big_dripleaf",
+      "properties": {
+        "facing": [
+          "north",
+          "east",
+          "south",
+          "west"
+        ],
+        "tilt": [
+          "none",
+          "unstable",
+          "partial",
+          "full"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:big_dripleaf_stem",
+      "properties": {
+        "facing": [
+          "north",
+          "east",
+          "south",
+          "west"
+        ],
+        "tilt": [
+          "none",
+          "unstable",
+          "partial",
+          "full"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:small_dripleaf",
+      "properties": {
+        "facing": [
+          "north",
+          "east",
+          "south",
+          "west"
+        ],
+        "half": [
+          "upper",
+          "lower"
+        ]
+      }
     },
     {
       "name": "universal_minecraft:chorus_plant",
@@ -1481,6 +2000,209 @@
       "name": "universal_minecraft:chorus_flower"
     },
     {
+      "name": "universal_minecraft:glow_lichen",
+      "properties": {
+        "north": [
+          "true",
+          "false"
+        ],
+        "east": [
+          "true",
+          "false"
+        ],
+        "south": [
+          "true",
+          "false"
+        ],
+        "west": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:hanging_roots"
+    },
+    {
+      "name": "universal_minecraft:turtle_egg",
+      "properties": {
+        "eggs": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:wheat",
+      "properties": {
+        "age": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:cocoa",
+      "properties": {
+        "age": [
+          "0",
+          "1",
+          "2"
+        ],
+        "facing": [
+          "north",
+          "east",
+          "south",
+          "west"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:pumpkin_stem",
+      "properties": {
+        "facing": [
+          "north",
+          "east",
+          "south",
+          "west"
+        ],
+        "age": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:melon_stem",
+      "properties": {
+        "facing": [
+          "north",
+          "east",
+          "south",
+          "west"
+        ],
+        "age": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:beetroots",
+      "properties": {
+        "age": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:torchflower"
+    },
+    {
+      "name": "universal_minecraft:torchflower_crop"
+    },
+    {
+      "name": "universal_minecraft:pitcher_crop",
+      "properties": {
+        "half": [
+          "upper",
+          "lower"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:cave_vines",
+      "properties": {
+        "berries": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:cave_vines_plant",
+      "properties": {
+        "berries": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:sweet_berry_bush"
+    },
+    {
+      "name": "universal_minecraft:nether_wart",
+      "properties": {
+        "age": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:lily_pad"
+    },
+    {
+      "name": "universal_minecraft:seagrass"
+    },
+    {
+      "name": "universal_minecraft:tall_seagrass",
+      "properties": {
+        "half": [
+          "upper",
+          "lower"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:sea_pickle",
+      "properties": {
+        "dead": [
+          "true",
+          "false"
+        ],
+        "pickles": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:kelp"
+    },
+    {
       "name": "universal_minecraft:dried_kelp_block"
     },
     {
@@ -1494,7 +2216,8 @@
           "horn"
         ],
         "dead": [
-          "true"
+          "true",
+          "false"
         ]
       }
     },
@@ -1550,7 +2273,73 @@
       "name": "universal_minecraft:sponge",
       "properties": {
         "wet": [
+          "true",
           "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:melon"
+    },
+    {
+      "name": "universal_minecraft:pumpkin",
+      "properties": {
+        "facing": [
+          "east",
+          "north",
+          "south",
+          "west"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:carved_pumpkin",
+      "properties": {
+        "facing": [
+          "east",
+          "north",
+          "south",
+          "west"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:jack_o_lantern",
+      "properties": {
+        "facing": [
+          "east",
+          "north",
+          "south",
+          "west"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:hay_block",
+      "properties": {
+        "axis": [
+          "x",
+          "y",
+          "z"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:bee_nest",
+      "properties": {
+        "facing": [
+          "east",
+          "north",
+          "south",
+          "west"
+        ],
+        "honey_level": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
         ]
       }
     },
@@ -1594,6 +2383,56 @@
       }
     },
     {
+      "name": "universal_minecraft:sculk"
+    },
+    {
+      "name": "universal_minecraft:sculk_vein",
+      "properties": {
+        "down": [
+          "true",
+          "false"
+        ],
+        "east": [
+          "true",
+          "false"
+        ],
+        "north": [
+          "true",
+          "false"
+        ],
+        "south": [
+          "true",
+          "false"
+        ],
+        "up": [
+          "true",
+          "false"
+        ],
+        "west": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:sculk_catalyst",
+      "properties": {
+        "bloom": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:sculk_shrieker"
+    },
+    {
+      "name": "universal_minecraft:sculk_sensor"
+    },
+    {
+      "name": "universal_minecraft:cobweb"
+    },
+    {
       "name": "universal_minecraft:soul_torch",
       "properties": {
         "facing": [
@@ -1612,9 +2451,19 @@
           "east",
           "north",
           "south",
+          "up",
           "west"
         ],
         "lit": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:lantern",
+      "properties": {
+        "hanging": [
           "true",
           "false"
         ]
@@ -1652,9 +2501,33 @@
       }
     },
     {
+      "name": "universal_minecraft:crafting_table"
+    },
+    {
+      "name": "universal_minecraft:stonecutter",
+      "properties": {
+        "facing": [
+          "east",
+          "north",
+          "south",
+          "west"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:cartography_table"
+    },
+    {
+      "name": "universal_minecraft:fletching_table"
+    },
+    {
+      "name": "universal_minecraft:smithing_table"
+    },
+    {
       "name": "universal_minecraft:grindstone",
       "properties": {
         "face": [
+          "floor",
           "wall",
           "ceiling"
         ],
@@ -1663,6 +2536,62 @@
           "north",
           "south",
           "west"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:loom",
+      "properties": {
+        "facing": [
+          "east",
+          "north",
+          "south",
+          "west"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:furnace",
+      "properties": {
+        "facing": [
+          "east",
+          "north",
+          "south",
+          "west"
+        ],
+        "lit": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:smoker",
+      "properties": {
+        "facing": [
+          "east",
+          "north",
+          "south",
+          "west"
+        ],
+        "lit": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:blast_furnace",
+      "properties": {
+        "facing": [
+          "east",
+          "north",
+          "south",
+          "west"
+        ],
+        "lit": [
+          "true",
+          "false"
         ]
       }
     },
@@ -1676,6 +2605,7 @@
           "west"
         ],
         "lit": [
+          "true",
           "false"
         ],
         "signal_fire": [
@@ -1704,9 +2634,26 @@
       }
     },
     {
+      "name": "universal_minecraft:anvil",
+      "properties": {
+        "damage": [
+          "normal",
+          "chipped",
+          "damaged"
+        ],
+        "facing": [
+          "east",
+          "north",
+          "south",
+          "west"
+        ]
+      }
+    },
+    {
       "name": "universal_minecraft:composter",
       "properties": {
         "level": [
+          "0",
           "1",
           "2",
           "3",
@@ -1788,12 +2735,31 @@
       "name": "universal_minecraft:enchanting_table"
     },
     {
+      "name": "universal_minecraft:brewing_stand",
+      "properties": {
+        "has_bottle_0": [
+          "true",
+          "false"
+        ],
+        "has_bottle_1": [
+          "true",
+          "false"
+        ],
+        "has_bottle_2": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
       "name": "universal_minecraft:cauldron",
       "properties": {
         "cauldron_liquid": [
+          "water",
           "lava"
         ],
         "level": [
+          "0",
           "1",
           "2",
           "3"
@@ -1804,7 +2770,9 @@
       "name": "universal_minecraft:bell",
       "properties": {
         "attachment": [
+          "ceiling",
           "double_wall",
+          "floor",
           "single_wall"
         ],
         "facing": [
@@ -1823,10 +2791,43 @@
       "name": "universal_minecraft:beacon"
     },
     {
+      "name": "universal_minecraft:water",
+      "properties": {
+        "level": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
+        ],
+        "falling": [
+          "true",
+          "false"
+        ],
+        "flowing": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
       "name": "universal_minecraft:conduit"
     },
     {
       "name": "universal_minecraft:lodestone"
+    },
+    {
+      "name": "universal_minecraft:ladder",
+      "properties": {
+        "facing": [
+          "east",
+          "north",
+          "south",
+          "west"
+        ]
+      }
     },
     {
       "name": "universal_minecraft:scaffolding"
@@ -1851,6 +2852,12 @@
       }
     },
     {
+      "name": "universal_minecraft:suspicious_sand"
+    },
+    {
+      "name": "universal_minecraft:suspicious_gravel"
+    },
+    {
       "name": "universal_minecraft:lightning_rod",
       "properties": {
         "facing": [
@@ -1867,12 +2874,27 @@
       "name": "universal_minecraft:flower_pot",
       "properties": {
         "plant": [
+          "dandelion",
+          "poppy",
+          "blue_orchid",
+          "allium",
+          "azure_bluet",
+          "red_tulip",
           "orange_tulip",
+          "white_tulip",
           "pink_tulip",
+          "oxeye_daisy",
+          "oak_sapling",
+          "spruce_sapling",
+          "birch_sapling",
           "jungle_sapling",
           "acacia_sapling",
+          "dark_oak_sapling",
+          "red_mushroom",
           "brown_mushroom",
           "fern",
+          "dead_bush",
+          "cactus",
           "cornflower",
           "wither_rose",
           "lily_of_the_valley",
@@ -1906,6 +2928,9 @@
           "west"
         ]
       }
+    },
+    {
+      "name": "universal_minecraft:bookshelf"
     },
     {
       "name": "universal_minecraft:chiseled_bookshelf",
@@ -1952,7 +2977,8 @@
           "west"
         ],
         "has_book": [
-          "true"
+          "true",
+          "false"
         ]
       }
     },
@@ -2003,6 +3029,8 @@
           "west"
         ],
         "material": [
+          "oak",
+          "spruce",
           "birch",
           "jungle",
           "acacia",
@@ -2083,6 +3111,37 @@
       }
     },
     {
+      "name": "universal_minecraft:chest",
+      "properties": {
+        "connection": [
+          "none",
+          "left",
+          "right"
+        ],
+        "facing": [
+          "north",
+          "east",
+          "south",
+          "west"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:barrel",
+      "properties": {
+        "facing": [
+          "north",
+          "east",
+          "south",
+          "west"
+        ],
+        "open": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
       "name": "universal_minecraft:ender_chest",
       "properties": {
         "facing": [
@@ -2145,6 +3204,24 @@
       "name": "universal_minecraft:dragon_egg"
     },
     {
+      "name": "universal_minecraft:end_portal_frame",
+      "properties": {
+        "eye": [
+          "true",
+          "false"
+        ],
+        "facing": [
+          "north",
+          "east",
+          "south",
+          "west"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:end_portal"
+    },
+    {
       "name": "universal_minecraft:nether_portal",
       "properties": {
         "axis": [
@@ -2161,6 +3238,19 @@
           "east",
           "south",
           "west"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:infested_block",
+      "properties": {
+        "material": [
+          "stone",
+          "cobblestone",
+          "stone_bricks",
+          "mossy_stone_bricks",
+          "cracked_stone_bricks",
+          "chiseled_stone_bricks"
         ]
       }
     },
@@ -2188,6 +3278,7 @@
           "up"
         ],
         "power": [
+          "0",
           "1",
           "2",
           "3",
@@ -2220,6 +3311,7 @@
       "name": "universal_minecraft:repeater",
       "properties": {
         "delay": [
+          "1",
           "2",
           "3",
           "4"
@@ -2266,7 +3358,8 @@
       "name": "universal_minecraft:lever",
       "properties": {
         "face": [
-          "floor"
+          "floor",
+          "wall"
         ],
         "facing": [
           "east",
@@ -2279,6 +3372,28 @@
           "false"
         ]
       }
+    },
+    {
+      "name": "universal_minecraft:tripwire_hook",
+      "properties": {
+        "attached": [
+          "true",
+          "false"
+        ],
+        "facing": [
+          "east",
+          "north",
+          "south",
+          "west"
+        ],
+        "powered": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:tripwire"
     },
     {
       "name": "universal_minecraft:daylight_detector",
@@ -2325,7 +3440,41 @@
       }
     },
     {
+      "name": "universal_minecraft:sticky_piston",
+      "properties": {
+        "extended": [
+          "true",
+          "false"
+        ],
+        "facing": [
+          "down",
+          "east",
+          "north",
+          "south",
+          "up",
+          "west"
+        ]
+      }
+    },
+    {
       "name": "universal_minecraft:piston_head",
+      "properties": {
+        "facing": [
+          "down",
+          "east",
+          "north",
+          "south",
+          "up",
+          "west"
+        ],
+        "short": [
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:sticky_piston_head",
       "properties": {
         "facing": [
           "down",
@@ -2346,7 +3495,11 @@
       "properties": {
         "facing": [
           "down",
-          "up"
+          "east",
+          "north",
+          "south",
+          "up",
+          "west"
         ]
       }
     },
@@ -2399,6 +3552,17 @@
       }
     },
     {
+      "name": "universal_minecraft:trapped_chest",
+      "properties": {
+        "facing": [
+          "north",
+          "east",
+          "south",
+          "west"
+        ]
+      }
+    },
+    {
       "name": "universal_minecraft:observer",
       "properties": {
         "facing": [
@@ -2408,6 +3572,23 @@
           "south",
           "up",
           "west"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:rail",
+      "properties": {
+        "shape": [
+          "north_south",
+          "east_west",
+          "ascending_east",
+          "ascending_west",
+          "ascending_north",
+          "ascending_south",
+          "south_east",
+          "south_west",
+          "north_west",
+          "north_east"
         ]
       }
     },
@@ -2470,7 +3651,38 @@
       "name": "universal_minecraft:tnt",
       "properties": {
         "unstable": [
-          "true"
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:carrots",
+      "properties": {
+        "age": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:potatoes",
+      "properties": {
+        "age": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
         ]
       }
     },
@@ -2487,6 +3699,9 @@
           "6"
         ]
       }
+    },
+    {
+      "name": "universal_minecraft:spawner"
     },
     {
       "name": "universal_minecraft:trial_spawner"

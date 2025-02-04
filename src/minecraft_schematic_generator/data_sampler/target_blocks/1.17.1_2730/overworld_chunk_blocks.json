@@ -303,7 +303,6 @@
           "diorite",
           "end_stone_brick",
           "granite",
-          "mossy_cobblestone",
           "polished_andesite",
           "polished_diorite",
           "polished_granite",
@@ -722,9 +721,6 @@
       }
     },
     {
-      "name": "universal_minecraft:smooth_basalt"
-    },
-    {
       "name": "universal_minecraft:polished_basalt",
       "properties": {
         "axis": [
@@ -782,7 +778,6 @@
       "properties": {
         "axis": [
           "x",
-          "y",
           "z"
         ]
       }
@@ -817,9 +812,6 @@
     },
     {
       "name": "universal_minecraft:smooth_quartz"
-    },
-    {
-      "name": "universal_minecraft:amethyst_block"
     },
     {
       "name": "universal_minecraft:copper_block"
@@ -1068,12 +1060,8 @@
           "black",
           "brown",
           "red",
-          "orange",
-          "yellow",
-          "lime",
           "green",
           "cyan",
-          "light_blue",
           "blue",
           "magenta",
           "pink"
@@ -1344,61 +1332,6 @@
     },
     {
       "name": "universal_minecraft:glowstone"
-    },
-    {
-      "name": "universal_minecraft:budding_amethyst"
-    },
-    {
-      "name": "universal_minecraft:small_amethyst_bud",
-      "properties": {
-        "facing": [
-          "down",
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:medium_amethyst_bud",
-      "properties": {
-        "facing": [
-          "down",
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:large_amethyst_bud",
-      "properties": {
-        "facing": [
-          "down",
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:amethyst_cluster",
-      "properties": {
-        "facing": [
-          "down",
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
-        ]
-      }
     },
     {
       "name": "universal_minecraft:nether_wart_block"
@@ -2159,7 +2092,6 @@
       "properties": {
         "axis": [
           "x",
-          "y",
           "z"
         ]
       }
