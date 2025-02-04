@@ -526,9 +526,14 @@ class WorldSampler:
                             for dz in range(
                                 -self.chunk_mark_radius, self.chunk_mark_radius + 1
                             ):
-                                relevant_chunks.add(
-                                    (chunk_coords[0] + dx, chunk_coords[1] + dz)
-                                )
+                                if world.has_chunk(
+                                    chunk_coords[0] + dx,
+                                    chunk_coords[1] + dz,
+                                    dimension,
+                                ):
+                                    relevant_chunks.add(
+                                        (chunk_coords[0] + dx, chunk_coords[1] + dz)
+                                    )
                     successful = True
                 except (ChunkDoesNotExist, ChunkLoadError):
                     pass
