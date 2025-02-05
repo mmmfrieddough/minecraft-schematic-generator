@@ -1365,24 +1365,6 @@
       }
     },
     {
-      "name": "universal_minecraft:cave_vines",
-      "properties": {
-        "berries": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:cave_vines_plant",
-      "properties": {
-        "berries": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:sweet_berry_bush"
     },
     {
