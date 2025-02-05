@@ -15,7 +15,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "crimson",
           "warped"
         ],
@@ -40,7 +39,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "crimson",
           "warped"
         ],
@@ -60,7 +58,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "crimson",
           "warped"
         ]
@@ -86,7 +83,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "brick",
           "cobblestone",
           "stone_brick",
@@ -127,8 +123,7 @@
           "cobbled_deepslate",
           "polished_deepslate",
           "deepslate_tile",
-          "deepslate_brick",
-          "mud_brick"
+          "deepslate_brick"
         ],
         "shape": [
           "straight",
@@ -149,7 +144,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "petrified_oak",
           "brick",
           "stone",
@@ -195,8 +189,7 @@
           "cobbled_deepslate",
           "polished_deepslate",
           "deepslate_tile",
-          "deepslate_brick",
-          "mud_brick"
+          "deepslate_brick"
         ],
         "type": [
           "bottom",
@@ -219,7 +212,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "nether_brick",
           "crimson",
           "warped"
@@ -258,7 +250,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "crimson",
           "warped"
         ],
@@ -296,7 +287,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "iron",
           "crimson",
           "warped"
@@ -327,7 +317,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "iron",
           "crimson",
           "warped"
@@ -348,7 +337,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "stone",
           "crimson",
           "warped",
@@ -377,7 +365,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "stone",
           "crimson",
           "warped",
@@ -417,8 +404,7 @@
           "cobbled_deepslate",
           "polished_deepslate",
           "deepslate_tile",
-          "deepslate_brick",
-          "mud_brick"
+          "deepslate_brick"
         ],
         "north": [
           "none",
@@ -517,16 +503,10 @@
       "name": "universal_minecraft:cracked_deepslate_tiles"
     },
     {
-      "name": "universal_minecraft:reinforced_deepslate"
-    },
-    {
       "name": "universal_minecraft:tuff"
     },
     {
       "name": "universal_minecraft:brick_block"
-    },
-    {
-      "name": "universal_minecraft:mud_bricks"
     },
     {
       "name": "universal_minecraft:sandstone",
@@ -1203,9 +1183,6 @@
       }
     },
     {
-      "name": "universal_minecraft:mud"
-    },
-    {
       "name": "universal_minecraft:clay"
     },
     {
@@ -1428,19 +1405,6 @@
       }
     },
     {
-      "name": "universal_minecraft:mangrove_roots"
-    },
-    {
-      "name": "universal_minecraft:muddy_mangrove_roots",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:mushroom_stem"
     },
     {
@@ -1453,7 +1417,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "azalea",
           "flowering_azalea"
         ],
@@ -1542,9 +1505,6 @@
           "dark_oak"
         ]
       }
-    },
-    {
-      "name": "universal_minecraft:mangrove_propagule"
     },
     {
       "name": "universal_minecraft:azalea"
@@ -2068,83 +2028,6 @@
       "name": "universal_minecraft:honey_block"
     },
     {
-      "name": "universal_minecraft:ochre_froglight",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:pearlescent_froglight",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:verdant_froglight",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:sculk"
-    },
-    {
-      "name": "universal_minecraft:sculk_vein",
-      "properties": {
-        "down": [
-          "true",
-          "false"
-        ],
-        "east": [
-          "true",
-          "false"
-        ],
-        "north": [
-          "true",
-          "false"
-        ],
-        "south": [
-          "true",
-          "false"
-        ],
-        "up": [
-          "true",
-          "false"
-        ],
-        "west": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:sculk_catalyst",
-      "properties": {
-        "bloom": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:sculk_shrieker"
-    },
-    {
-      "name": "universal_minecraft:sculk_sensor"
-    },
-    {
       "name": "universal_minecraft:cobweb"
     },
     {
@@ -2630,8 +2513,7 @@
           "crimson_roots",
           "warped_roots",
           "azalea_bush",
-          "flowering_azalea_bush",
-          "mangrove_propagule"
+          "flowering_azalea_bush"
         ]
       }
     },
@@ -2663,7 +2545,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "crimson",
           "warped"
         ],
@@ -2703,7 +2584,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "crimson",
           "warped"
         ]

@@ -12,7 +12,6 @@
           "birch",
           "jungle",
           "dark_oak",
-          "mangrove",
           "crimson",
           "warped"
         ],
@@ -67,7 +66,6 @@
           "birch",
           "jungle",
           "dark_oak",
-          "mangrove",
           "crimson",
           "warped"
         ],
@@ -85,7 +83,6 @@
         ],
         "material": [
           "birch",
-          "mangrove",
           "crimson",
           "warped"
         ],
@@ -117,7 +114,6 @@
       "name": "universal_minecraft:planks",
       "properties": {
         "material": [
-          "mangrove",
           "crimson",
           "warped"
         ]
@@ -137,7 +133,6 @@
           "top"
         ],
         "material": [
-          "mangrove",
           "brick",
           "red_sandstone",
           "nether_brick",
@@ -172,8 +167,7 @@
           "cobbled_deepslate",
           "polished_deepslate",
           "deepslate_tile",
-          "deepslate_brick",
-          "mud_brick"
+          "deepslate_brick"
         ],
         "shape": [
           "straight",
@@ -269,7 +263,6 @@
       "name": "universal_minecraft:slab",
       "properties": {
         "material": [
-          "mangrove",
           "petrified_oak",
           "brick",
           "stone",
@@ -308,8 +301,7 @@
           "cobbled_deepslate",
           "polished_deepslate",
           "deepslate_tile",
-          "deepslate_brick",
-          "mud_brick"
+          "deepslate_brick"
         ],
         "type": [
           "bottom",
@@ -369,7 +361,6 @@
           "spruce",
           "birch",
           "jungle",
-          "mangrove",
           "nether_brick",
           "crimson",
           "warped"
@@ -403,7 +394,6 @@
         ],
         "material": [
           "birch",
-          "mangrove",
           "crimson",
           "warped"
         ],
@@ -436,7 +426,6 @@
         ],
         "material": [
           "birch",
-          "mangrove",
           "crimson",
           "warped"
         ],
@@ -462,7 +451,6 @@
         "material": [
           "birch",
           "acacia",
-          "mangrove",
           "iron",
           "crimson",
           "warped"
@@ -507,7 +495,6 @@
           "birch",
           "jungle",
           "dark_oak",
-          "mangrove",
           "crimson",
           "warped",
           "polished_blackstone"
@@ -534,7 +521,6 @@
           "birch",
           "acacia",
           "dark_oak",
-          "mangrove",
           "crimson",
           "warped",
           "polished_blackstone"
@@ -565,8 +551,7 @@
           "cobbled_deepslate",
           "polished_deepslate",
           "deepslate_tile",
-          "deepslate_brick",
-          "mud_brick"
+          "deepslate_brick"
         ],
         "north": [
           "none",
@@ -609,12 +594,6 @@
     },
     {
       "name": "universal_minecraft:cracked_deepslate_tiles"
-    },
-    {
-      "name": "universal_minecraft:reinforced_deepslate"
-    },
-    {
-      "name": "universal_minecraft:mud_bricks"
     },
     {
       "name": "universal_minecraft:red_sandstone",
@@ -1363,36 +1342,6 @@
       "name": "universal_minecraft:honey_block"
     },
     {
-      "name": "universal_minecraft:ochre_froglight",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:pearlescent_froglight",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:verdant_froglight",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:soul_torch",
       "properties": {
         "facing": [
@@ -1680,8 +1629,7 @@
           "crimson_roots",
           "warped_roots",
           "azalea_bush",
-          "flowering_azalea_bush",
-          "mangrove_propagule"
+          "flowering_azalea_bush"
         ]
       }
     },
@@ -1709,7 +1657,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "crimson",
           "warped"
         ],
@@ -1747,7 +1694,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "mangrove",
           "crimson",
           "warped"
         ]
