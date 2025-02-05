@@ -755,7 +755,7 @@ class WorldSampler:
             "Sample Count",
         )
 
-    def calculate_workers_to_start(
+    def _calculate_workers_to_start(
         self,
         current_progress: int,
         last_progress: int,
@@ -900,17 +900,18 @@ class WorldSampler:
 
                 # Start new workers if needed
                 if time.time() - last_worker_check_time > self.worker_check_period:
-                    workers_to_start = self.calculate_workers_to_start(
+                    workers_to_start = self._calculate_workers_to_start(
                         pbar.n, last_progress, pbar.total, last_worker_check_time
                     )
 
                     # Start workers
-                    for _ in tqdm(
-                        range(workers_to_start),
-                        desc="Starting worker processes",
-                        leave=False,
-                    ):
-                        start_worker(len(processes))
+                    if workers_to_start > 0:
+                        for _ in tqdm(
+                            range(workers_to_start),
+                            desc="Starting worker processes",
+                            leave=False,
+                        ):
+                            start_worker(len(processes))
 
                     last_worker_check_time = time.time()
                     last_progress = pbar.n
@@ -1349,17 +1350,18 @@ class WorldSampler:
 
                 # Start new workers if needed
                 if time.time() - last_worker_check_time > self.worker_check_period:
-                    workers_to_start = self.calculate_workers_to_start(
+                    workers_to_start = self._calculate_workers_to_start(
                         pbar.n, last_progress, pbar.total, last_worker_check_time
                     )
 
                     # Start workers
-                    for _ in tqdm(
-                        range(workers_to_start),
-                        desc="Starting worker processes",
-                        leave=False,
-                    ):
-                        start_worker(len(processes))
+                    if workers_to_start > 0:
+                        for _ in tqdm(
+                            range(workers_to_start),
+                            desc="Starting worker processes",
+                            leave=False,
+                        ):
+                            start_worker(len(processes))
 
                     last_worker_check_time = time.time()
                     last_progress = pbar.n
@@ -1688,17 +1690,18 @@ class WorldSampler:
 
                 # Start new workers if needed
                 if time.time() - last_worker_check_time > self.worker_check_period:
-                    workers_to_start = self.calculate_workers_to_start(
+                    workers_to_start = self._calculate_workers_to_start(
                         pbar.n, last_progress, pbar.total, last_worker_check_time
                     )
 
                     # Start workers
-                    for _ in tqdm(
-                        range(workers_to_start),
-                        desc="Starting worker processes",
-                        leave=False,
-                    ):
-                        start_worker(len(processes))
+                    if workers_to_start > 0:
+                        for _ in tqdm(
+                            range(workers_to_start),
+                            desc="Starting worker processes",
+                            leave=False,
+                        ):
+                            start_worker(len(processes))
 
                     last_worker_check_time = time.time()
                     last_progress = pbar.n
