@@ -60,14 +60,13 @@ class WorldSampler:
         sample_target_block_threshold,
         sample_minimum_air_threshold,
         sampling_purge_interval,
-        clear_worker_directories=True,
         chunk_search_limit=None,
         sample_search_limit=None,
         sample_limit=None,
         worker_check_period=5,
         resource_usage_limit=0.70,
-        progress_per_second_target=0.05,
-        worker_scaling_factor=0.75,
+        progress_per_second_target=0.1,
+        worker_scaling_factor=0.5,
     ):
         self.schematic_directory = schematic_directory
         self.temp_directory = temp_directory
@@ -82,7 +81,6 @@ class WorldSampler:
         self.resource_usage_limit = resource_usage_limit
         self.progress_per_second_target = progress_per_second_target
         self.worker_scaling_factor = worker_scaling_factor
-        self.clear_worker_directories = clear_worker_directories
         self.chunk_search_limit = chunk_search_limit
         self.sample_search_limit = sample_search_limit
         self.sample_limit = sample_limit
@@ -237,28 +235,22 @@ class WorldSampler:
             "DIM1",  # End
         }
 
-        # Check if the worker directory has already been set up
+        # Get the target worker directory
         worker_directory = self.get_worker_directory(
             root_directory, src_directory, worker_num
         )
+
+        # Check if the worker directory has already been set up
         if os.path.exists(worker_directory):
-            # Make sure the directory is up to date
-            if self._get_world_timestamp(worker_directory) == timestamp:
-                return worker_directory
-            else:
-                shutil.rmtree(worker_directory)
+            return worker_directory
 
+        # Create the worker directory
         os.makedirs(worker_directory)
-
-        # Copy only the files/directories we need
         for item in os.listdir(src_directory):
             if item in COPY_LIST:
-                src_path = os.path.join(src_directory, item)
-                dst_path = os.path.join(worker_directory, item)
-                if os.path.isfile(src_path):
-                    shutil.copy2(src_path, dst_path)
-                elif os.path.isdir(src_path):
-                    shutil.copytree(src_path, dst_path)
+                src_path = os.path.abspath(os.path.join(src_directory, item))
+                dst_path = os.path.abspath(os.path.join(worker_directory, item))
+                os.symlink(src_path, dst_path)
 
         return worker_directory
 
@@ -757,6 +749,7 @@ class WorldSampler:
 
     def _calculate_workers_to_start(
         self,
+        current_workers: int,
         current_progress: int,
         last_progress: int,
         total: int,
@@ -784,12 +777,18 @@ class WorldSampler:
             max(0, self.progress_per_second_target - progress_per_second)
             / self.progress_per_second_target
         )
-        return math.ceil(
+        workers_to_start = math.ceil(
             self.worker_scaling_factor
             * psutil.cpu_count()
             * resource_scaling
             * progress_scaling
         )
+
+        # Limit to the cpu count
+        if workers_to_start + current_workers > psutil.cpu_count():
+            workers_to_start = psutil.cpu_count() - current_workers
+
+        return workers_to_start
 
     def _mark_chunks(
         self,
@@ -901,7 +900,11 @@ class WorldSampler:
                 # Start new workers if needed
                 if time.time() - last_worker_check_time > self.worker_check_period:
                     workers_to_start = self._calculate_workers_to_start(
-                        pbar.n, last_progress, pbar.total, last_worker_check_time
+                        len(processes),
+                        pbar.n,
+                        last_progress,
+                        pbar.total,
+                        last_worker_check_time,
                     )
 
                     # Start workers
@@ -1351,7 +1354,11 @@ class WorldSampler:
                 # Start new workers if needed
                 if time.time() - last_worker_check_time > self.worker_check_period:
                     workers_to_start = self._calculate_workers_to_start(
-                        pbar.n, last_progress, pbar.total, last_worker_check_time
+                        len(processes),
+                        pbar.n,
+                        last_progress,
+                        pbar.total,
+                        last_worker_check_time,
                     )
 
                     # Start workers
@@ -1691,7 +1698,11 @@ class WorldSampler:
                 # Start new workers if needed
                 if time.time() - last_worker_check_time > self.worker_check_period:
                     workers_to_start = self._calculate_workers_to_start(
-                        pbar.n, last_progress, pbar.total, last_worker_check_time
+                        len(processes),
+                        pbar.n,
+                        last_progress,
+                        pbar.total,
+                        last_worker_check_time,
                     )
 
                     # Start workers
@@ -1799,8 +1810,7 @@ class WorldSampler:
             self._collect_samples(
                 root_directory, directory, name, timestamp, dimension, sample_positions
             )
-        if self.clear_worker_directories:
-            self._clear_worker_directories(root_directory, directory)
+        self._clear_worker_directories(root_directory, directory)
         print(f"Done sampling {directory}")
 
     def clear_directory(self, directory: str) -> None:
