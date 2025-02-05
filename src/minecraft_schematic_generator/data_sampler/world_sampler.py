@@ -184,7 +184,7 @@ class WorldSampler:
                         )
                         world_version_str = ".".join(str(x) for x in world_version)
                         print(
-                            f"Using target blocks from {selected_data_version} ({selected_version_str})"
+                            f"Using target blocks from version {selected_data_version} ({selected_version_str})"
                             + (
                                 f" (closest to {world_data_version} ({world_version_str}))"
                                 if selected_data_version != world_data_version
@@ -348,7 +348,7 @@ class WorldSampler:
 
     def _check_block(self, filters: list, block: Block, cache: dict) -> bool:
         """Returns True if the block matches the filters"""
-        cache_key = block.blockstate
+        cache_key = block.full_blockstate
         if cache_key not in cache:
             cache[cache_key] = self._check_block_rules(filters, block)
         return cache[cache_key]
