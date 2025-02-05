@@ -18,8 +18,7 @@
           "mangrove",
           "crimson",
           "warped",
-          "cherry",
-          "pale_oak"
+          "cherry"
         ],
         "stripped": [
           "true",
@@ -45,8 +44,7 @@
           "crimson",
           "warped",
           "bamboo",
-          "cherry",
-          "pale_oak"
+          "cherry"
         ],
         "stripped": [
           "true"
@@ -67,8 +65,7 @@
           "crimson",
           "warped",
           "bamboo",
-          "cherry",
-          "pale_oak"
+          "cherry"
         ],
         "stripped": [
           "true",
@@ -102,8 +99,7 @@
           "crimson",
           "warped",
           "bamboo",
-          "cherry",
-          "pale_oak"
+          "cherry"
         ]
       }
     },
@@ -167,9 +163,7 @@
           "cherry",
           "tuff",
           "tuff_brick",
-          "polished_tuff",
-          "pale_oak",
-          "resin_brick"
+          "polished_tuff"
         ],
         "shape": [
           "straight",
@@ -313,9 +307,7 @@
           "cherry",
           "tuff",
           "tuff_brick",
-          "polished_tuff",
-          "pale_oak",
-          "resin_brick"
+          "polished_tuff"
         ],
         "type": [
           "bottom",
@@ -370,8 +362,7 @@
           "crimson",
           "warped",
           "bamboo",
-          "cherry",
-          "pale_oak"
+          "cherry"
         ],
         "north": [
           "true",
@@ -410,8 +401,7 @@
           "crimson",
           "warped",
           "bamboo",
-          "cherry",
-          "pale_oak"
+          "cherry"
         ],
         "in_wall": [
           "true",
@@ -454,8 +444,7 @@
           "waxed_exposed_copper",
           "waxed_oxidized_copper",
           "waxed_weathered_copper",
-          "weathered_copper",
-          "pale_oak"
+          "weathered_copper"
         ],
         "open": [
           "true",
@@ -492,8 +481,7 @@
           "waxed_exposed_copper",
           "waxed_oxidized_copper",
           "waxed_weathered_copper",
-          "weathered_copper",
-          "pale_oak"
+          "weathered_copper"
         ],
         "open": [
           "true",
@@ -542,8 +530,7 @@
           "warped",
           "polished_blackstone",
           "bamboo",
-          "cherry",
-          "pale_oak"
+          "cherry"
         ]
       }
     },
@@ -573,8 +560,7 @@
           "warped",
           "polished_blackstone",
           "bamboo",
-          "cherry",
-          "pale_oak"
+          "cherry"
         ]
       }
     },
@@ -610,8 +596,7 @@
           "mud_brick",
           "tuff",
           "tuff_brick",
-          "polished_tuff",
-          "resin_brick"
+          "polished_tuff"
         ],
         "north": [
           "none",
@@ -683,15 +668,6 @@
     },
     {
       "name": "universal_minecraft:mud_bricks"
-    },
-    {
-      "name": "universal_minecraft:resin_block"
-    },
-    {
-      "name": "universal_minecraft:chiseled_resin_bricks"
-    },
-    {
-      "name": "universal_minecraft:resin_bricks"
     },
     {
       "name": "universal_minecraft:sandstone",
@@ -2015,10 +1991,7 @@
           "flowering_azalea_bush",
           "mangrove_propagule",
           "cherry_sapling",
-          "torchflower",
-          "pale_oak",
-          "closed_eyeblossom",
-          "open_eyeblossom"
+          "torchflower"
         ]
       }
     },
@@ -2101,8 +2074,7 @@
           "crimson",
           "warped",
           "bamboo",
-          "cherry",
-          "pale_oak"
+          "cherry"
         ],
         "rotation": [
           "0",
@@ -2143,8 +2115,7 @@
           "crimson",
           "warped",
           "bamboo",
-          "cherry",
-          "pale_oak"
+          "cherry"
         ]
       }
     },
@@ -2166,8 +2137,7 @@
           "crimson",
           "warped",
           "bamboo",
-          "cherry",
-          "pale_oak"
+          "cherry"
         ],
         "rotation": [
           "0",
@@ -2209,8 +2179,7 @@
           "crimson",
           "warped",
           "bamboo",
-          "cherry",
-          "pale_oak"
+          "cherry"
         ]
       }
     },
