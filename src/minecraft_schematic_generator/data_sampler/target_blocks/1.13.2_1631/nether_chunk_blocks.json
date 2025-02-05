@@ -86,21 +86,7 @@
           "purpur",
           "prismarine",
           "prismarine_brick",
-          "dark_prismarine",
-          "andesite",
-          "diorite",
-          "end_stone_brick",
-          "granite",
-          "mossy_cobblestone",
-          "mossy_stone_brick",
-          "polished_andesite",
-          "polished_diorite",
-          "polished_granite",
-          "red_nether_brick",
-          "smooth_quartz",
-          "smooth_red_sandstone",
-          "smooth_sandstone",
-          "stone"
+          "dark_prismarine"
         ],
         "shape": [
           "straight",
@@ -147,7 +133,6 @@
           "dark_oak",
           "petrified_oak",
           "brick",
-          "stone",
           "cobblestone",
           "stone_brick",
           "sandstone",
@@ -158,21 +143,6 @@
           "prismarine",
           "prismarine_brick",
           "dark_prismarine",
-          "andesite",
-          "cut_red_sandstone",
-          "cut_sandstone",
-          "diorite",
-          "end_stone_brick",
-          "granite",
-          "mossy_cobblestone",
-          "mossy_stone_brick",
-          "polished_andesite",
-          "polished_diorite",
-          "polished_granite",
-          "red_nether_brick",
-          "smooth_quartz",
-          "smooth_red_sandstone",
-          "smooth_sandstone",
           "smooth_stone"
         ],
         "type": [
@@ -355,19 +325,7 @@
         ],
         "material": [
           "cobblestone",
-          "mossy_cobblestone",
-          "andesite",
-          "brick",
-          "diorite",
-          "end_stone_brick",
-          "granite",
-          "mossy_stone_brick",
-          "nether_brick",
-          "prismarine",
-          "red_nether_brick",
-          "red_sandstone",
-          "sandstone",
-          "stone_brick"
+          "mossy_cobblestone"
         ],
         "north": [
           "none",
@@ -1151,37 +1109,7 @@
           "oxeye_daisy",
           "grass",
           "fern",
-          "dead_bush",
-          "cornflower",
-          "wither_rose",
-          "lily_of_the_valley"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:bamboo_sapling",
-      "properties": {
-        "stage": [
-          "0",
-          "1"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:bamboo",
-      "properties": {
-        "thickness": [
-          "thin",
-          "thick"
-        ],
-        "leaves": [
-          "none",
-          "small",
-          "large"
-        ],
-        "stage": [
-          "0",
-          "1"
+          "dead_bush"
         ]
       }
     },
@@ -1383,9 +1311,6 @@
       }
     },
     {
-      "name": "universal_minecraft:sweet_berry_bush"
-    },
-    {
       "name": "universal_minecraft:lily_pad"
     },
     {
@@ -1563,15 +1488,6 @@
       }
     },
     {
-      "name": "universal_minecraft:lantern",
-      "properties": {
-        "hanging": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:end_rod",
       "properties": {
         "facing": [
@@ -1597,53 +1513,6 @@
       "name": "universal_minecraft:crafting_table"
     },
     {
-      "name": "universal_minecraft:stonecutter",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:cartography_table"
-    },
-    {
-      "name": "universal_minecraft:fletching_table"
-    },
-    {
-      "name": "universal_minecraft:smithing_table"
-    },
-    {
-      "name": "universal_minecraft:grindstone",
-      "properties": {
-        "face": [
-          "floor",
-          "wall",
-          "ceiling"
-        ],
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:loom",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:furnace",
       "properties": {
         "facing": [
@@ -1653,55 +1522,6 @@
           "west"
         ],
         "lit": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:smoker",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ],
-        "lit": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:blast_furnace",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ],
-        "lit": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:campfire",
-      "properties": {
-        "facing": [
-          "north",
-          "east",
-          "south",
-          "west"
-        ],
-        "lit": [
-          "true",
-          "false"
-        ],
-        "signal_fire": [
           "true",
           "false"
         ]
@@ -1720,22 +1540,6 @@
           "north",
           "south",
           "west"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:composter",
-      "properties": {
-        "level": [
-          "0",
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7",
-          "8"
         ]
       }
     },
@@ -1840,27 +1644,6 @@
       }
     },
     {
-      "name": "universal_minecraft:bell",
-      "properties": {
-        "attachment": [
-          "ceiling",
-          "double_wall",
-          "floor",
-          "single_wall"
-        ],
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ],
-        "powered": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:beacon"
     },
     {
@@ -1900,9 +1683,6 @@
       }
     },
     {
-      "name": "universal_minecraft:scaffolding"
-    },
-    {
       "name": "universal_minecraft:flower_pot",
       "properties": {
         "plant": [
@@ -1926,11 +1706,7 @@
           "brown_mushroom",
           "fern",
           "dead_bush",
-          "cactus",
-          "cornflower",
-          "wither_rose",
-          "lily_of_the_valley",
-          "bamboo"
+          "cactus"
         ]
       }
     },
@@ -1938,30 +1714,10 @@
       "name": "universal_minecraft:bookshelf"
     },
     {
-      "name": "universal_minecraft:lectern",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ],
-        "has_book": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:sign",
       "properties": {
         "material": [
-          "oak",
-          "spruce",
-          "birch",
-          "jungle",
-          "acacia",
-          "dark_oak"
+          "oak"
         ],
         "rotation": [
           "0",
@@ -1993,12 +1749,7 @@
           "west"
         ],
         "material": [
-          "oak",
-          "spruce",
-          "birch",
-          "jungle",
-          "acacia",
-          "dark_oak"
+          "oak"
         ]
       }
     },
@@ -2014,21 +1765,6 @@
           "east",
           "south",
           "west"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:barrel",
-      "properties": {
-        "facing": [
-          "north",
-          "east",
-          "south",
-          "west"
-        ],
-        "open": [
-          "true",
-          "false"
         ]
       }
     },
