@@ -155,19 +155,7 @@
           "warped",
           "blackstone",
           "polished_blackstone_brick",
-          "polished_blackstone",
-          "oxidized_cut_copper",
-          "weathered_cut_copper",
-          "exposed_cut_copper",
-          "cut_copper",
-          "waxed_oxidized_cut_copper",
-          "waxed_weathered_cut_copper",
-          "waxed_exposed_cut_copper",
-          "waxed_cut_copper",
-          "cobbled_deepslate",
-          "polished_deepslate",
-          "deepslate_tile",
-          "deepslate_brick"
+          "polished_blackstone"
         ],
         "shape": [
           "straight",
@@ -289,19 +277,7 @@
           "warped",
           "blackstone",
           "polished_blackstone_brick",
-          "polished_blackstone",
-          "oxidized_cut_copper",
-          "weathered_cut_copper",
-          "exposed_cut_copper",
-          "cut_copper",
-          "waxed_oxidized_cut_copper",
-          "waxed_weathered_cut_copper",
-          "waxed_exposed_cut_copper",
-          "waxed_cut_copper",
-          "cobbled_deepslate",
-          "polished_deepslate",
-          "deepslate_tile",
-          "deepslate_brick"
+          "polished_blackstone"
         ],
         "type": [
           "bottom",
@@ -547,11 +523,7 @@
           "stone_brick",
           "blackstone",
           "polished_blackstone_brick",
-          "polished_blackstone",
-          "cobbled_deepslate",
-          "polished_deepslate",
-          "deepslate_tile",
-          "deepslate_brick"
+          "polished_blackstone"
         ],
         "north": [
           "none",
@@ -573,27 +545,6 @@
           "tall"
         ]
       }
-    },
-    {
-      "name": "universal_minecraft:cobbled_deepslate"
-    },
-    {
-      "name": "universal_minecraft:chiseled_deepslate"
-    },
-    {
-      "name": "universal_minecraft:polished_deepslate"
-    },
-    {
-      "name": "universal_minecraft:deepslate_bricks"
-    },
-    {
-      "name": "universal_minecraft:cracked_deepslate_bricks"
-    },
-    {
-      "name": "universal_minecraft:deepslate_tiles"
-    },
-    {
-      "name": "universal_minecraft:cracked_deepslate_tiles"
     },
     {
       "name": "universal_minecraft:red_sandstone",
@@ -728,57 +679,6 @@
       "name": "universal_minecraft:smooth_quartz"
     },
     {
-      "name": "universal_minecraft:amethyst_block"
-    },
-    {
-      "name": "universal_minecraft:copper_block"
-    },
-    {
-      "name": "universal_minecraft:cut_copper"
-    },
-    {
-      "name": "universal_minecraft:exposed_copper"
-    },
-    {
-      "name": "universal_minecraft:exposed_cut_copper"
-    },
-    {
-      "name": "universal_minecraft:weathered_copper"
-    },
-    {
-      "name": "universal_minecraft:weathered_cut_copper"
-    },
-    {
-      "name": "universal_minecraft:oxidized_copper"
-    },
-    {
-      "name": "universal_minecraft:oxidized_cut_copper"
-    },
-    {
-      "name": "universal_minecraft:waxed_copper_block"
-    },
-    {
-      "name": "universal_minecraft:waxed_cut_copper"
-    },
-    {
-      "name": "universal_minecraft:waxed_exposed_copper"
-    },
-    {
-      "name": "universal_minecraft:waxed_exposed_cut_copper"
-    },
-    {
-      "name": "universal_minecraft:waxed_weathered_copper"
-    },
-    {
-      "name": "universal_minecraft:waxed_weathered_cut_copper"
-    },
-    {
-      "name": "universal_minecraft:waxed_oxidized_copper"
-    },
-    {
-      "name": "universal_minecraft:waxed_oxidized_cut_copper"
-    },
-    {
       "name": "universal_minecraft:wool",
       "properties": {
         "color": [
@@ -873,9 +773,6 @@
     },
     {
       "name": "universal_minecraft:glass"
-    },
-    {
-      "name": "universal_minecraft:tinted_glass"
     },
     {
       "name": "universal_minecraft:stained_glass",
@@ -996,40 +893,6 @@
       }
     },
     {
-      "name": "universal_minecraft:candle",
-      "properties": {
-        "candles": [
-          "1",
-          "2",
-          "3",
-          "4"
-        ],
-        "color": [
-          "default",
-          "white",
-          "orange",
-          "magenta",
-          "light_blue",
-          "yellow",
-          "lime",
-          "pink",
-          "gray",
-          "light_gray",
-          "cyan",
-          "purple",
-          "blue",
-          "brown",
-          "green",
-          "red",
-          "black"
-        ],
-        "lit": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:banner",
       "properties": {
         "color": [
@@ -1122,71 +985,7 @@
       "name": "universal_minecraft:ancient_debris"
     },
     {
-      "name": "universal_minecraft:raw_iron_block"
-    },
-    {
-      "name": "universal_minecraft:raw_copper_block"
-    },
-    {
-      "name": "universal_minecraft:raw_gold_block"
-    },
-    {
       "name": "universal_minecraft:glowstone"
-    },
-    {
-      "name": "universal_minecraft:budding_amethyst"
-    },
-    {
-      "name": "universal_minecraft:small_amethyst_bud",
-      "properties": {
-        "facing": [
-          "down",
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:medium_amethyst_bud",
-      "properties": {
-        "facing": [
-          "down",
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:large_amethyst_bud",
-      "properties": {
-        "facing": [
-          "down",
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:amethyst_cluster",
-      "properties": {
-        "facing": [
-          "down",
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
-        ]
-      }
     },
     {
       "name": "universal_minecraft:nether_wart_block"
@@ -1598,19 +1397,6 @@
       }
     },
     {
-      "name": "universal_minecraft:lightning_rod",
-      "properties": {
-        "facing": [
-          "down",
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:flower_pot",
       "properties": {
         "plant": [
@@ -1627,9 +1413,7 @@
           "crimson_fungus",
           "warped_fungus",
           "crimson_roots",
-          "warped_roots",
-          "azalea_bush",
-          "flowering_azalea_bush"
+          "warped_roots"
         ]
       }
     },
@@ -1765,16 +1549,6 @@
       "properties": {
         "axis": [
           "x",
-          "z"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:infested_deepslate",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
           "z"
         ]
       }
