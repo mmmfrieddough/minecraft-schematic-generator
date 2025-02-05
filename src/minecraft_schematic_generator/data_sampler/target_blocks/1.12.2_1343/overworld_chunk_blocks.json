@@ -966,13 +966,7 @@
       }
     },
     {
-      "name": "universal_minecraft:honeycomb_block"
-    },
-    {
       "name": "universal_minecraft:slime_block"
-    },
-    {
-      "name": "universal_minecraft:honey_block"
     },
     {
       "name": "universal_minecraft:redstone_torch",
@@ -1242,25 +1236,6 @@
     },
     {
       "name": "universal_minecraft:scaffolding"
-    },
-    {
-      "name": "universal_minecraft:beehive",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ],
-        "honey_level": [
-          "0",
-          "1",
-          "2",
-          "3",
-          "4",
-          "5"
-        ]
-      }
     },
     {
       "name": "universal_minecraft:flower_pot",
