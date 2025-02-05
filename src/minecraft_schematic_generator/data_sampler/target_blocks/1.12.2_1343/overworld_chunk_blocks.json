@@ -14,9 +14,7 @@
           "birch",
           "jungle",
           "acacia",
-          "dark_oak",
-          "crimson",
-          "warped"
+          "dark_oak"
         ],
         "stripped": [
           "true",
@@ -38,9 +36,7 @@
           "birch",
           "jungle",
           "acacia",
-          "dark_oak",
-          "crimson",
-          "warped"
+          "dark_oak"
         ],
         "stripped": [
           "true"
@@ -58,27 +54,7 @@
           "spruce",
           "birch",
           "jungle",
-          "acacia",
-          "crimson",
-          "warped"
-        ],
-        "stripped": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:log",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ],
-        "material": [
-          "crimson",
-          "warped"
+          "acacia"
         ],
         "stripped": [
           "true",
@@ -90,9 +66,7 @@
       "name": "universal_minecraft:planks",
       "properties": {
         "material": [
-          "jungle",
-          "crimson",
-          "warped"
+          "jungle"
         ]
       }
     },
@@ -132,12 +106,7 @@
           "smooth_quartz",
           "smooth_red_sandstone",
           "smooth_sandstone",
-          "stone",
-          "crimson",
-          "warped",
-          "blackstone",
-          "polished_blackstone_brick",
-          "polished_blackstone"
+          "stone"
         ],
         "shape": [
           "straight",
@@ -204,12 +173,7 @@
           "red_nether_brick",
           "smooth_quartz",
           "smooth_red_sandstone",
-          "smooth_sandstone",
-          "crimson",
-          "warped",
-          "blackstone",
-          "polished_blackstone_brick",
-          "polished_blackstone"
+          "smooth_sandstone"
         ],
         "type": [
           "bottom",
@@ -242,9 +206,7 @@
           "spruce",
           "birch",
           "jungle",
-          "nether_brick",
-          "crimson",
-          "warped"
+          "nether_brick"
         ],
         "north": [
           "true",
@@ -278,9 +240,7 @@
           "spruce",
           "birch",
           "jungle",
-          "acacia",
-          "crimson",
-          "warped"
+          "acacia"
         ],
         "in_wall": [
           "true",
@@ -312,9 +272,7 @@
         "material": [
           "birch",
           "jungle",
-          "dark_oak",
-          "crimson",
-          "warped"
+          "dark_oak"
         ],
         "open": [
           "true",
@@ -341,9 +299,7 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "iron",
-          "crimson",
-          "warped"
+          "iron"
         ],
         "open": [
           "true",
@@ -380,10 +336,7 @@
           "birch",
           "jungle",
           "acacia",
-          "dark_oak",
-          "crimson",
-          "warped",
-          "polished_blackstone"
+          "dark_oak"
         ]
       }
     },
@@ -407,10 +360,7 @@
           "birch",
           "jungle",
           "acacia",
-          "dark_oak",
-          "crimson",
-          "warped",
-          "polished_blackstone"
+          "dark_oak"
         ]
       }
     },
@@ -435,10 +385,7 @@
           "red_nether_brick",
           "red_sandstone",
           "sandstone",
-          "stone_brick",
-          "blackstone",
-          "polished_blackstone_brick",
-          "polished_blackstone"
+          "stone_brick"
         ],
         "north": [
           "none",
@@ -508,54 +455,7 @@
       "name": "universal_minecraft:nether_bricks"
     },
     {
-      "name": "universal_minecraft:cracked_nether_bricks"
-    },
-    {
-      "name": "universal_minecraft:chiseled_nether_bricks"
-    },
-    {
       "name": "universal_minecraft:red_nether_bricks"
-    },
-    {
-      "name": "universal_minecraft:basalt",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:smooth_basalt"
-    },
-    {
-      "name": "universal_minecraft:polished_basalt",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:blackstone"
-    },
-    {
-      "name": "universal_minecraft:gilded_blackstone"
-    },
-    {
-      "name": "universal_minecraft:chiseled_polished_blackstone"
-    },
-    {
-      "name": "universal_minecraft:polished_blackstone"
-    },
-    {
-      "name": "universal_minecraft:polished_blackstone_bricks"
-    },
-    {
-      "name": "universal_minecraft:cracked_polished_blackstone_bricks"
     },
     {
       "name": "universal_minecraft:end_stone"
@@ -583,32 +483,16 @@
       "name": "universal_minecraft:iron_block"
     },
     {
-      "name": "universal_minecraft:chain",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:redstone_block"
     },
     {
       "name": "universal_minecraft:emerald_block"
     },
     {
-      "name": "universal_minecraft:netherite_block"
-    },
-    {
       "name": "universal_minecraft:quartz_block"
     },
     {
       "name": "universal_minecraft:chiseled_quartz_block"
-    },
-    {
-      "name": "universal_minecraft:quartz_bricks"
     },
     {
       "name": "universal_minecraft:quartz_pillar",
@@ -934,31 +818,10 @@
       }
     },
     {
-      "name": "universal_minecraft:crying_obsidian"
-    },
-    {
-      "name": "universal_minecraft:crimson_nylium"
-    },
-    {
-      "name": "universal_minecraft:warped_nylium"
-    },
-    {
       "name": "universal_minecraft:soul_sand"
     },
     {
-      "name": "universal_minecraft:soul_soil"
-    },
-    {
-      "name": "universal_minecraft:soul_fire"
-    },
-    {
-      "name": "universal_minecraft:nether_gold_ore"
-    },
-    {
       "name": "universal_minecraft:nether_quartz_ore"
-    },
-    {
-      "name": "universal_minecraft:ancient_debris"
     },
     {
       "name": "universal_minecraft:glowstone"
@@ -967,39 +830,12 @@
       "name": "universal_minecraft:nether_wart_block"
     },
     {
-      "name": "universal_minecraft:warped_wart_block"
-    },
-    {
-      "name": "universal_minecraft:shroomlight"
-    },
-    {
-      "name": "universal_minecraft:crimson_fungus"
-    },
-    {
-      "name": "universal_minecraft:warped_fungus"
-    },
-    {
       "name": "universal_minecraft:plant",
       "properties": {
         "plant_type": [
           "wither_rose"
         ]
       }
-    },
-    {
-      "name": "universal_minecraft:crimson_roots"
-    },
-    {
-      "name": "universal_minecraft:warped_roots"
-    },
-    {
-      "name": "universal_minecraft:nether_sprouts"
-    },
-    {
-      "name": "universal_minecraft:weeping_vines"
-    },
-    {
-      "name": "universal_minecraft:twisting_vines"
     },
     {
       "name": "universal_minecraft:chorus_plant",
@@ -1139,18 +975,6 @@
       "name": "universal_minecraft:honey_block"
     },
     {
-      "name": "universal_minecraft:soul_torch",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:redstone_torch",
       "properties": {
         "facing": [
@@ -1167,15 +991,6 @@
     },
     {
       "name": "universal_minecraft:lantern",
-      "properties": {
-        "hanging": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:soul_lantern",
       "properties": {
         "hanging": [
           "true",
@@ -1284,25 +1099,6 @@
     },
     {
       "name": "universal_minecraft:campfire",
-      "properties": {
-        "facing": [
-          "north",
-          "east",
-          "south",
-          "west"
-        ],
-        "lit": [
-          "true",
-          "false"
-        ],
-        "signal_fire": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:soul_campfire",
       "properties": {
         "facing": [
           "north",
@@ -1445,9 +1241,6 @@
       "name": "universal_minecraft:conduit"
     },
     {
-      "name": "universal_minecraft:lodestone"
-    },
-    {
       "name": "universal_minecraft:scaffolding"
     },
     {
@@ -1482,11 +1275,7 @@
           "cornflower",
           "wither_rose",
           "lily_of_the_valley",
-          "bamboo",
-          "crimson_fungus",
-          "warped_fungus",
-          "crimson_roots",
-          "warped_roots"
+          "bamboo"
         ]
       }
     },
@@ -1514,9 +1303,7 @@
           "birch",
           "jungle",
           "acacia",
-          "dark_oak",
-          "crimson",
-          "warped"
+          "dark_oak"
         ],
         "rotation": [
           "0",
@@ -1552,9 +1339,7 @@
           "birch",
           "jungle",
           "acacia",
-          "dark_oak",
-          "crimson",
-          "warped"
+          "dark_oak"
         ]
       }
     },
@@ -1596,18 +1381,6 @@
           "east",
           "south",
           "west"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:respawn_anchor",
-      "properties": {
-        "charges": [
-          "0",
-          "1",
-          "2",
-          "3",
-          "4"
         ]
       }
     },
@@ -1742,9 +1515,6 @@
           "false"
         ]
       }
-    },
-    {
-      "name": "universal_minecraft:target"
     },
     {
       "name": "universal_minecraft:lever",
