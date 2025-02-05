@@ -1030,7 +1030,6 @@
           "light_gray",
           "gray",
           "black",
-          "brown",
           "red",
           "orange",
           "yellow",
@@ -1458,7 +1457,6 @@
       "name": "universal_minecraft:grindstone",
       "properties": {
         "face": [
-          "wall",
           "ceiling"
         ],
         "facing": [
