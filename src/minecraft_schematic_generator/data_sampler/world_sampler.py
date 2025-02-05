@@ -11,6 +11,7 @@ import time
 from collections import Counter
 from multiprocessing import Process, Queue
 from queue import Empty
+from typing import TypedDict
 
 import psutil
 from tqdm import tqdm
@@ -34,6 +35,11 @@ from amulet.api.level import World  # noqa: E402
 from amulet.api.selection import SelectionBox, SelectionGroup  # noqa: E402
 from amulet.level.formats.sponge_schem import SpongeSchemFormatWrapper  # noqa: E402
 from amulet.utils.world_utils import chunk_coords_to_block_coords  # noqa: E402
+
+
+class TargetBlock(TypedDict):
+    name: str
+    properties: dict[str, list[str]]
 
 
 class WorldSampler:
@@ -110,7 +116,9 @@ class WorldSampler:
             world.close()
         return name, version, data_version, timestamp
 
-    def _get_available_target_block_versions(self) -> dict:
+    def _get_available_target_block_versions(
+        self,
+    ) -> dict[int, tuple[tuple[int, int, int], str]]:
         """Returns a list of available target block versions"""
         dir = os.path.join(os.path.dirname(__file__), "target_blocks")
 
@@ -158,7 +166,7 @@ class WorldSampler:
 
     def load_target_blocks(
         self, directory: str, version: tuple[int, int, int], data_version: int
-    ) -> tuple[dict, dict]:
+    ) -> tuple[dict[str, list[TargetBlock]], dict[str, list[TargetBlock]]]:
         """Loads the target blocks from the files and returns them"""
         # Initialize dictionaries
         chunk_target_blocks = {}
@@ -289,7 +297,9 @@ class WorldSampler:
 
         return True
 
-    def _check_block_rule(self, rule: dict, block_name: str, block_props: dict) -> bool:
+    def _check_block_rule(
+        self, rule: TargetBlock, block_name: str, block_props: dict
+    ) -> bool:
         """Returns True if the block matches the rule"""
         # Check name
         rule_name = rule.get("name", "*")
@@ -306,7 +316,7 @@ class WorldSampler:
 
     def _check_block_rules(
         self,
-        filters: list,
+        filters: list[TargetBlock],
         block: Block,
     ) -> bool:
         """
@@ -346,7 +356,9 @@ class WorldSampler:
 
         return False
 
-    def _check_block(self, filters: list, block: Block, cache: dict) -> bool:
+    def _check_block(
+        self, filters: list[TargetBlock], block: Block, cache: dict[str, bool]
+    ) -> bool:
         """Returns True if the block matches the filters"""
         cache_key = block.full_blockstate
         if cache_key not in cache:
@@ -445,9 +457,9 @@ class WorldSampler:
 
     def _chunk_contains_target_blocks(
         self,
-        target_blocks: list,
+        target_blocks: list[TargetBlock],
         chunk: Chunk,
-        block_cache: dict,
+        block_cache: dict[str, bool],
     ) -> bool:
         """Returns True if the chunk contains any of the target blocks"""
         # return random.random() < 0.01
@@ -456,7 +468,7 @@ class WorldSampler:
                 return True
         return False
 
-    def _get_chunk_config(self, target_blocks: list) -> dict:
+    def _get_chunk_config(self, target_blocks: list[TargetBlock]) -> dict:
         """Returns the configuration for marking chunks"""
         return {
             "target_blocks": target_blocks,
@@ -468,9 +480,9 @@ class WorldSampler:
         directory: str,
         timestamp: int,
         dimension: str,
-        target_blocks: list,
+        target_blocks: list[TargetBlock],
         visited_chunks: set[tuple[int, int]],
-        relevant_chunks: set,
+        relevant_chunks: set[tuple[int, int]],
     ) -> None:
         """Save the current chunk progress to a file"""
         config = self._get_chunk_config(target_blocks)
@@ -481,8 +493,12 @@ class WorldSampler:
         self._save_progress(directory, timestamp, dimension, "chunk", config, data)
 
     def _load_chunk_progress(
-        self, directory: str, timestamp: int, dimension: str, target_blocks: list
-    ) -> tuple[set, set]:
+        self,
+        directory: str,
+        timestamp: int,
+        dimension: str,
+        target_blocks: list[TargetBlock],
+    ) -> tuple[set[tuple[int, int]], set[tuple[int, int]]]:
         """Load the current chunk progress from a file"""
         current_config = self._get_chunk_config(target_blocks)
         data = self._load_progress(
@@ -494,7 +510,7 @@ class WorldSampler:
             else (set(), set())
         )
 
-    def _get_sample_config(self, target_blocks: list) -> dict:
+    def _get_sample_config(self, target_blocks: list[TargetBlock]) -> dict:
         """Returns the configuration for identifying samples"""
         return {
             "target_blocks": target_blocks,
@@ -509,9 +525,9 @@ class WorldSampler:
         directory: str,
         timestamp: int,
         dimension: str,
-        target_blocks: list,
-        sampled_chunks: set,
-        sample_positions: set,
+        target_blocks: list[TargetBlock],
+        sampled_chunks: set[tuple[int, int]],
+        sample_positions: set[tuple[int, int, int]],
     ) -> None:
         """Save the current sample progress to a file"""
         config = self._get_sample_config(target_blocks)
@@ -522,8 +538,12 @@ class WorldSampler:
         self._save_progress(directory, timestamp, dimension, "sample", config, data)
 
     def _load_sample_progress(
-        self, directory: str, timestamp: int, dimension: str, target_blocks: list
-    ) -> tuple[set, set]:
+        self,
+        directory: str,
+        timestamp: int,
+        dimension: str,
+        target_blocks: list[TargetBlock],
+    ) -> tuple[set[tuple[int, int]], set[tuple[int, int, int]]]:
         """Load the current sample progress from a file"""
         current_config = self._get_sample_config(target_blocks)
         data = self._load_progress(
@@ -539,7 +559,7 @@ class WorldSampler:
         self,
         directory: str,
         dimension: str,
-        target_blocks: list,
+        target_blocks: list[TargetBlock],
         all_chunks_queue: Queue,
         visited_chunks_queue: Queue,
     ) -> None:
@@ -607,9 +627,9 @@ class WorldSampler:
         self,
         directory: str,
         dimension: str,
-        x_coords: list,
-        z_coords: list,
-        intensities: list,
+        x_coords: list[int],
+        z_coords: list[int],
+        intensities: list[int],
         title: str,
         colorbar: str = None,
     ) -> None:
@@ -668,7 +688,7 @@ class WorldSampler:
         plt.close()
 
     def _visualize_marked_chunks(
-        self, directory: str, dimension: str, relevant_chunks: set
+        self, directory: str, dimension: str, relevant_chunks: set[tuple[int, int]]
     ) -> None:
         if len(relevant_chunks) == 0:
             self._create_visualization(
@@ -694,7 +714,10 @@ class WorldSampler:
         )
 
     def _visualize_sample_positions(
-        self, directory: str, dimension: str, sample_positions: set
+        self,
+        directory: str,
+        dimension: str,
+        sample_positions: set[tuple[int, int, int]],
     ) -> None:
         if len(sample_positions) == 0:
             self._create_visualization(
@@ -774,8 +797,8 @@ class WorldSampler:
         directory: str,
         timestamp: int,
         dimension: str,
-        target_blocks: list,
-    ) -> set:
+        target_blocks: list[TargetBlock],
+    ) -> set[tuple[int, int]]:
         """Looks through chunks in a world and marks them as relevant or not relevant"""
 
         # Get all chunk coordinates
@@ -947,10 +970,10 @@ class WorldSampler:
 
     def _get_target_palette_indices(
         self,
-        target_blocks: list,
+        target_blocks: list[TargetBlock],
         chunk: Chunk,
-        block_cache: dict,
-    ) -> set:
+        block_cache: dict[str, bool],
+    ) -> set[int]:
         """Returns a set of indices of blocks from the chunk palette that we are targeting"""
         target_indices = set()
         for i, block in enumerate(chunk.block_palette):
@@ -977,10 +1000,10 @@ class WorldSampler:
         self,
         world: World,
         dimension: str,
-        target_blocks: list,
+        target_blocks: list[TargetBlock],
         chunk_coords: tuple[int, int],
-        block_cache: dict,
-    ) -> set:
+        block_cache: dict[str, bool],
+    ) -> set[tuple[int, int, int]]:
         """Identifies samples from a chunk"""
         sample_positions = set()
         min_height = world.bounds(dimension).min_y
@@ -1123,7 +1146,7 @@ class WorldSampler:
         self,
         directory: str,
         dimension: str,
-        target_blocks: list,
+        target_blocks: list[TargetBlock],
         relevant_chunks_queue: Queue,
         sampled_chunks_queue: Queue,
     ) -> None:
@@ -1187,8 +1210,8 @@ class WorldSampler:
         directory: str,
         timestamp: int,
         dimension: str,
-        target_blocks: set,
-        relevant_chunks: set,
+        target_blocks: list[TargetBlock],
+        relevant_chunks: set[tuple[int, int]],
     ) -> set:
         """Identifies samples from the marked chunks"""
 
@@ -1530,7 +1553,7 @@ class WorldSampler:
         level_name: str,
         timestamp: int,
         dimension: str,
-        all_sample_positions: set,
+        all_sample_positions: set[tuple[int, int, int]],
     ) -> None:
         """Collects samples from the world at the identified positions"""
         world_name = os.path.relpath(directory, root_directory)
