@@ -176,10 +176,7 @@
           "mud_brick",
           "bamboo",
           "bamboo_mosaic",
-          "cherry",
-          "tuff",
-          "tuff_brick",
-          "polished_tuff"
+          "cherry"
         ],
         "shape": [
           "straight",
@@ -250,10 +247,7 @@
           "mud_brick",
           "bamboo",
           "bamboo_mosaic",
-          "cherry",
-          "tuff",
-          "tuff_brick",
-          "polished_tuff"
+          "cherry"
         ],
         "type": [
           "bottom",
@@ -361,15 +355,7 @@
           "crimson",
           "warped",
           "bamboo",
-          "cherry",
-          "copper",
-          "exposed_copper",
-          "oxidized_copper",
-          "waxed_copper",
-          "waxed_exposed_copper",
-          "waxed_oxidized_copper",
-          "waxed_weathered_copper",
-          "weathered_copper"
+          "cherry"
         ],
         "open": [
           "true",
@@ -402,15 +388,7 @@
           "crimson",
           "warped",
           "bamboo",
-          "cherry",
-          "copper",
-          "exposed_copper",
-          "oxidized_copper",
-          "waxed_copper",
-          "waxed_exposed_copper",
-          "waxed_oxidized_copper",
-          "waxed_weathered_copper",
-          "weathered_copper"
+          "cherry"
         ],
         "open": [
           "true",
@@ -499,10 +477,7 @@
           "polished_deepslate",
           "deepslate_tile",
           "deepslate_brick",
-          "mud_brick",
-          "tuff",
-          "tuff_brick",
-          "polished_tuff"
+          "mud_brick"
         ],
         "north": [
           "none",
@@ -586,18 +561,6 @@
     },
     {
       "name": "universal_minecraft:reinforced_deepslate"
-    },
-    {
-      "name": "universal_minecraft:chiseled_tuff"
-    },
-    {
-      "name": "universal_minecraft:polished_tuff"
-    },
-    {
-      "name": "universal_minecraft:tuff_bricks"
-    },
-    {
-      "name": "universal_minecraft:chiseled_tuff_bricks"
     },
     {
       "name": "universal_minecraft:brick_block"
@@ -789,169 +752,49 @@
       "name": "universal_minecraft:copper_block"
     },
     {
-      "name": "universal_minecraft:chiseled_copper"
-    },
-    {
-      "name": "universal_minecraft:copper_grate"
-    },
-    {
       "name": "universal_minecraft:cut_copper"
-    },
-    {
-      "name": "universal_minecraft:copper_bulb",
-      "properties": {
-        "lit": [
-          "true",
-          "false"
-        ]
-      }
     },
     {
       "name": "universal_minecraft:exposed_copper"
     },
     {
-      "name": "universal_minecraft:exposed_chiseled_copper"
-    },
-    {
-      "name": "universal_minecraft:exposed_copper_grate"
-    },
-    {
       "name": "universal_minecraft:exposed_cut_copper"
-    },
-    {
-      "name": "universal_minecraft:exposed_copper_bulb",
-      "properties": {
-        "lit": [
-          "true",
-          "false"
-        ]
-      }
     },
     {
       "name": "universal_minecraft:weathered_copper"
     },
     {
-      "name": "universal_minecraft:weathered_chiseled_copper"
-    },
-    {
-      "name": "universal_minecraft:weathered_copper_grate"
-    },
-    {
       "name": "universal_minecraft:weathered_cut_copper"
-    },
-    {
-      "name": "universal_minecraft:weathered_copper_bulb",
-      "properties": {
-        "lit": [
-          "true",
-          "false"
-        ]
-      }
     },
     {
       "name": "universal_minecraft:oxidized_copper"
     },
     {
-      "name": "universal_minecraft:oxidized_chiseled_copper"
-    },
-    {
-      "name": "universal_minecraft:oxidized_copper_grate"
-    },
-    {
       "name": "universal_minecraft:oxidized_cut_copper"
-    },
-    {
-      "name": "universal_minecraft:oxidized_copper_bulb",
-      "properties": {
-        "lit": [
-          "true",
-          "false"
-        ]
-      }
     },
     {
       "name": "universal_minecraft:waxed_copper_block"
     },
     {
-      "name": "universal_minecraft:waxed_chiseled_copper"
-    },
-    {
-      "name": "universal_minecraft:waxed_copper_grate"
-    },
-    {
       "name": "universal_minecraft:waxed_cut_copper"
-    },
-    {
-      "name": "universal_minecraft:waxed_copper_bulb",
-      "properties": {
-        "lit": [
-          "true",
-          "false"
-        ]
-      }
     },
     {
       "name": "universal_minecraft:waxed_exposed_copper"
     },
     {
-      "name": "universal_minecraft:waxed_exposed_chiseled_copper"
-    },
-    {
-      "name": "universal_minecraft:waxed_exposed_copper_grate"
-    },
-    {
       "name": "universal_minecraft:waxed_exposed_cut_copper"
-    },
-    {
-      "name": "universal_minecraft:waxed_exposed_copper_bulb",
-      "properties": {
-        "lit": [
-          "true",
-          "false"
-        ]
-      }
     },
     {
       "name": "universal_minecraft:waxed_weathered_copper"
     },
     {
-      "name": "universal_minecraft:waxed_weathered_chiseled_copper"
-    },
-    {
-      "name": "universal_minecraft:waxed_weathered_copper_grate"
-    },
-    {
       "name": "universal_minecraft:waxed_weathered_cut_copper"
-    },
-    {
-      "name": "universal_minecraft:waxed_weathered_copper_bulb",
-      "properties": {
-        "lit": [
-          "true",
-          "false"
-        ]
-      }
     },
     {
       "name": "universal_minecraft:waxed_oxidized_copper"
     },
     {
-      "name": "universal_minecraft:waxed_oxidized_chiseled_copper"
-    },
-    {
-      "name": "universal_minecraft:waxed_oxidized_copper_grate"
-    },
-    {
       "name": "universal_minecraft:waxed_oxidized_cut_copper"
-    },
-    {
-      "name": "universal_minecraft:waxed_oxidized_copper_bulb",
-      "properties": {
-        "lit": [
-          "true",
-          "false"
-        ]
-      }
     },
     {
       "name": "universal_minecraft:wool",
@@ -2435,17 +2278,6 @@
       }
     },
     {
-      "name": "universal_minecraft:vault",
-      "properties": {
-        "facing": [
-          "north",
-          "east",
-          "south",
-          "west"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:infested_block",
       "properties": {
         "material": [
@@ -2721,25 +2553,6 @@
       }
     },
     {
-      "name": "crafter",
-      "properties": {
-        "orientation": [
-          "down_east",
-          "down_north",
-          "down_south",
-          "down_west",
-          "up_east",
-          "up_north",
-          "up_south",
-          "up_west",
-          "west_up",
-          "east_up",
-          "north_up",
-          "south_up"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:hopper",
       "properties": {
         "enabled": [
@@ -2876,9 +2689,6 @@
     },
     {
       "name": "universal_minecraft:spawner"
-    },
-    {
-      "name": "universal_minecraft:trial_spawner"
     },
     {
       "name": "universal_minecraft:command_block",
