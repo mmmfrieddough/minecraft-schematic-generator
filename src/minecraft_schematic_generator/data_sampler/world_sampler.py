@@ -361,6 +361,14 @@ class WorldSampler:
         finally:
             world.close()
 
+    def _get_level_name(self, directory: str) -> str:
+        """Gets the name of the Minecraft world"""
+        world = amulet.load_level(directory)
+        try:
+            return world.level_wrapper.level_name
+        finally:
+            world.close()
+
     def _save_progress(
         self, directory: str, dimension: str, name: str, config: dict, data: dict
     ) -> None:
@@ -1384,13 +1392,21 @@ class WorldSampler:
 
     def _get_schematic_hash(
         self,
-        world_name: str,
+        level_name: str,
         dimension: str,
         position: tuple[int, int, int],
         timestamp: int,
     ) -> str:
         """Returns the hash of the schematic file for the given position"""
-        filename = world_name + dimension + str(position) + str(timestamp)
+        filename = (
+            level_name
+            + dimension
+            + str(position)
+            + str(timestamp)
+            + str(self.sample_size)
+            + str(self.sample_size)
+            + str(self.sample_size)
+        )
         return hashlib.sha256(filename.encode()).hexdigest()
 
     def _get_dimension_directory(self, world_name: str, dimension: str) -> str:
@@ -1403,12 +1419,13 @@ class WorldSampler:
     def _get_schematic_path(
         self,
         world_name: str,
+        level_name: str,
         dimension: str,
         position: tuple[int, int, int],
         timestamp: int,
     ) -> str:
         """Returns the path to the schematic file for the given position"""
-        file_hash = self._get_schematic_hash(world_name, dimension, position, timestamp)
+        file_hash = self._get_schematic_hash(level_name, dimension, position, timestamp)
         dimension_dir = self._get_dimension_directory(world_name, dimension)
         return os.path.join(dimension_dir, file_hash + ".schem")
 
@@ -1417,6 +1434,7 @@ class WorldSampler:
         directory: str,
         dimension: str,
         world_name: str,
+        level_name: str,
         sample_positions_queue: Queue,
         sampled_positions_queue: Queue,
         timestamp: int,
@@ -1445,6 +1463,7 @@ class WorldSampler:
                 # Get inputs ready
                 path = self._get_schematic_path(
                     world_name,
+                    level_name,
                     dimension,
                     position,
                     timestamp,
@@ -1514,6 +1533,8 @@ class WorldSampler:
         # Get world timestamp for schematic validation
         timestamp = self._get_world_timestamp(directory)
 
+        level_name = self._get_level_name(directory)
+
         # Check if the schematic directory exists
         if not os.path.exists(schematic_directory):
             remaining_sample_positions = all_sample_positions
@@ -1530,7 +1551,7 @@ class WorldSampler:
             # Map positions to their schematic hashes
             desired_hash_map = {
                 self._get_schematic_hash(
-                    world_name, dimension, position, timestamp
+                    level_name, dimension, position, timestamp
                 ): position
                 for position in all_sample_positions
             }
@@ -1600,6 +1621,7 @@ class WorldSampler:
                     worker_directory,
                     dimension,
                     world_name,
+                    level_name,
                     sample_positions_queue,
                     sampled_positions_queue,
                     timestamp,
