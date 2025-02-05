@@ -15,31 +15,6 @@
           "jungle",
           "acacia",
           "dark_oak"
-        ],
-        "stripped": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:log",
-      "properties": {
-        "axis": [
-          "x",
-          "y",
-          "z"
-        ],
-        "material": [
-          "oak",
-          "spruce",
-          "birch",
-          "jungle",
-          "acacia",
-          "dark_oak"
-        ],
-        "stripped": [
-          "true"
         ]
       }
     },
@@ -55,10 +30,6 @@
           "birch",
           "jungle",
           "acacia"
-        ],
-        "stripped": [
-          "true",
-          "false"
         ]
       }
     },
@@ -89,10 +60,7 @@
           "red_sandstone",
           "nether_brick",
           "quartz",
-          "purpur",
-          "prismarine",
-          "prismarine_brick",
-          "dark_prismarine"
+          "purpur"
         ],
         "shape": [
           "straight",
@@ -140,10 +108,7 @@
           "red_sandstone",
           "nether_brick",
           "quartz",
-          "purpur",
-          "prismarine",
-          "prismarine_brick",
-          "dark_prismarine"
+          "purpur"
         ],
         "type": [
           "bottom",
@@ -264,11 +229,6 @@
           "top"
         ],
         "material": [
-          "spruce",
-          "birch",
-          "jungle",
-          "acacia",
-          "dark_oak",
           "iron"
         ],
         "open": [
@@ -299,18 +259,6 @@
       }
     },
     {
-      "name": "universal_minecraft:pressure_plate",
-      "properties": {
-        "material": [
-          "spruce",
-          "birch",
-          "jungle",
-          "acacia",
-          "dark_oak"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:button",
       "properties": {
         "face": [
@@ -325,12 +273,7 @@
           "west"
         ],
         "material": [
-          "oak",
-          "spruce",
-          "birch",
-          "jungle",
-          "acacia",
-          "dark_oak"
+          "oak"
         ]
       }
     },
@@ -644,7 +587,6 @@
       "name": "universal_minecraft:shulker_box",
       "properties": {
         "color": [
-          "default",
           "white",
           "orange",
           "magenta",
@@ -820,73 +762,6 @@
       "name": "universal_minecraft:chorus_flower"
     },
     {
-      "name": "universal_minecraft:dried_kelp_block"
-    },
-    {
-      "name": "universal_minecraft:coral_block",
-      "properties": {
-        "coral_type": [
-          "tube",
-          "brain",
-          "bubble",
-          "fire",
-          "horn"
-        ],
-        "dead": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:coral",
-      "properties": {
-        "coral_type": [
-          "tube",
-          "brain",
-          "bubble",
-          "fire",
-          "horn"
-        ],
-        "dead": [
-          "true",
-          "false"
-        ],
-        "waterlogged": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:coral_fan",
-      "properties": {
-        "coral_type": [
-          "tube",
-          "brain",
-          "bubble",
-          "fire",
-          "horn"
-        ],
-        "dead": [
-          "true",
-          "false"
-        ],
-        "facing": [
-          "down",
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
-        ],
-        "waterlogged": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:sponge",
       "properties": {
         "wet": [
@@ -1038,9 +913,6 @@
     },
     {
       "name": "universal_minecraft:beacon"
-    },
-    {
-      "name": "universal_minecraft:conduit"
     },
     {
       "name": "universal_minecraft:flower_pot",

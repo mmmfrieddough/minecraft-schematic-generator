@@ -15,10 +15,6 @@
           "jungle",
           "acacia",
           "dark_oak"
-        ],
-        "stripped": [
-          "true",
-          "false"
         ]
       }
     },
@@ -37,10 +33,6 @@
           "jungle",
           "acacia",
           "dark_oak"
-        ],
-        "stripped": [
-          "true",
-          "false"
         ]
       }
     },
@@ -83,10 +75,7 @@
           "sandstone",
           "red_sandstone",
           "quartz",
-          "purpur",
-          "prismarine",
-          "prismarine_brick",
-          "dark_prismarine"
+          "purpur"
         ],
         "shape": [
           "straight",
@@ -140,9 +129,6 @@
           "nether_brick",
           "quartz",
           "purpur",
-          "prismarine",
-          "prismarine_brick",
-          "dark_prismarine",
           "smooth_stone"
         ],
         "type": [
@@ -260,11 +246,6 @@
         ],
         "material": [
           "oak",
-          "spruce",
-          "birch",
-          "jungle",
-          "acacia",
-          "dark_oak",
           "iron"
         ],
         "open": [
@@ -278,11 +259,6 @@
       "properties": {
         "material": [
           "oak",
-          "spruce",
-          "birch",
-          "jungle",
-          "acacia",
-          "dark_oak",
           "stone"
         ]
       }
@@ -303,11 +279,6 @@
         ],
         "material": [
           "oak",
-          "spruce",
-          "birch",
-          "jungle",
-          "acacia",
-          "dark_oak",
           "stone"
         ]
       }
@@ -749,7 +720,6 @@
       "name": "universal_minecraft:shulker_box",
       "properties": {
         "color": [
-          "default",
           "white",
           "orange",
           "magenta",
@@ -946,9 +916,6 @@
     },
     {
       "name": "universal_minecraft:packed_ice"
-    },
-    {
-      "name": "universal_minecraft:blue_ice"
     },
     {
       "name": "universal_minecraft:snow_block"
@@ -1194,17 +1161,6 @@
       "name": "universal_minecraft:chorus_flower"
     },
     {
-      "name": "universal_minecraft:turtle_egg",
-      "properties": {
-        "eggs": [
-          "1",
-          "2",
-          "3",
-          "4"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:wheat",
       "properties": {
         "age": [
@@ -1312,103 +1268,6 @@
     },
     {
       "name": "universal_minecraft:lily_pad"
-    },
-    {
-      "name": "universal_minecraft:seagrass"
-    },
-    {
-      "name": "universal_minecraft:tall_seagrass",
-      "properties": {
-        "half": [
-          "upper",
-          "lower"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:sea_pickle",
-      "properties": {
-        "dead": [
-          "true",
-          "false"
-        ],
-        "pickles": [
-          "1",
-          "2",
-          "3",
-          "4"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:kelp"
-    },
-    {
-      "name": "universal_minecraft:dried_kelp_block"
-    },
-    {
-      "name": "universal_minecraft:coral_block",
-      "properties": {
-        "coral_type": [
-          "tube",
-          "brain",
-          "bubble",
-          "fire",
-          "horn"
-        ],
-        "dead": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:coral",
-      "properties": {
-        "coral_type": [
-          "tube",
-          "brain",
-          "bubble",
-          "fire",
-          "horn"
-        ],
-        "dead": [
-          "true",
-          "false"
-        ],
-        "waterlogged": [
-          "true",
-          "false"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:coral_fan",
-      "properties": {
-        "coral_type": [
-          "tube",
-          "brain",
-          "bubble",
-          "fire",
-          "horn"
-        ],
-        "dead": [
-          "true",
-          "false"
-        ],
-        "facing": [
-          "down",
-          "east",
-          "north",
-          "south",
-          "up",
-          "west"
-        ],
-        "waterlogged": [
-          "true",
-          "false"
-        ]
-      }
     },
     {
       "name": "universal_minecraft:sponge",
@@ -1667,9 +1526,6 @@
           "false"
         ]
       }
-    },
-    {
-      "name": "universal_minecraft:conduit"
     },
     {
       "name": "universal_minecraft:ladder",
