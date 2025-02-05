@@ -14,8 +14,7 @@
           "dark_oak",
           "mangrove",
           "crimson",
-          "warped",
-          "cherry"
+          "warped"
         ],
         "stripped": [
           "true",
@@ -70,9 +69,7 @@
           "dark_oak",
           "mangrove",
           "crimson",
-          "warped",
-          "bamboo",
-          "cherry"
+          "warped"
         ],
         "stripped": [
           "true"
@@ -90,9 +87,7 @@
           "birch",
           "mangrove",
           "crimson",
-          "warped",
-          "bamboo",
-          "cherry"
+          "warped"
         ],
         "stripped": [
           "true",
@@ -124,9 +119,7 @@
         "material": [
           "mangrove",
           "crimson",
-          "warped",
-          "bamboo",
-          "cherry"
+          "warped"
         ]
       }
     },
@@ -179,10 +172,7 @@
           "polished_deepslate",
           "deepslate_tile",
           "deepslate_brick",
-          "mud_brick",
-          "bamboo",
-          "bamboo_mosaic",
-          "cherry"
+          "mud_brick"
         ],
         "shape": [
           "straight",
@@ -316,10 +306,7 @@
           "polished_deepslate",
           "deepslate_tile",
           "deepslate_brick",
-          "mud_brick",
-          "bamboo",
-          "bamboo_mosaic",
-          "cherry"
+          "mud_brick"
         ],
         "type": [
           "bottom",
@@ -383,9 +370,7 @@
           "mangrove",
           "nether_brick",
           "crimson",
-          "warped",
-          "bamboo",
-          "cherry"
+          "warped"
         ],
         "north": [
           "true",
@@ -418,9 +403,7 @@
           "birch",
           "mangrove",
           "crimson",
-          "warped",
-          "bamboo",
-          "cherry"
+          "warped"
         ],
         "in_wall": [
           "true",
@@ -453,9 +436,7 @@
           "birch",
           "mangrove",
           "crimson",
-          "warped",
-          "bamboo",
-          "cherry"
+          "warped"
         ],
         "open": [
           "true",
@@ -482,9 +463,7 @@
           "mangrove",
           "iron",
           "crimson",
-          "warped",
-          "bamboo",
-          "cherry"
+          "warped"
         ],
         "open": [
           "true",
@@ -529,9 +508,7 @@
           "mangrove",
           "crimson",
           "warped",
-          "polished_blackstone",
-          "bamboo",
-          "cherry"
+          "polished_blackstone"
         ]
       }
     },
@@ -558,9 +535,7 @@
           "mangrove",
           "crimson",
           "warped",
-          "polished_blackstone",
-          "bamboo",
-          "cherry"
+          "polished_blackstone"
         ]
       }
     },
@@ -1552,7 +1527,6 @@
           "harp",
           "hat",
           "iron_xylophone",
-          "piglin",
           "pling",
           "skeleton",
           "snare",
@@ -1697,59 +1671,7 @@
           "warped_roots",
           "azalea_bush",
           "flowering_azalea_bush",
-          "mangrove_propagule",
-          "cherry_sapling",
-          "torchflower"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:decorated_pot",
-      "properties": {
-        "cracked": [
-          "true",
-          "false"
-        ],
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:chiseled_bookshelf",
-      "properties": {
-        "facing": [
-          "east",
-          "north",
-          "south",
-          "west"
-        ],
-        "slot_0_occupied": [
-          "true",
-          "false"
-        ],
-        "slot_1_occupied": [
-          "true",
-          "false"
-        ],
-        "slot_2_occupied": [
-          "true",
-          "false"
-        ],
-        "slot_3_occupied": [
-          "true",
-          "false"
-        ],
-        "slot_4_occupied": [
-          "true",
-          "false"
-        ],
-        "slot_5_occupied": [
-          "true",
-          "false"
+          "mangrove_propagule"
         ]
       }
     },
@@ -1779,9 +1701,7 @@
           "dark_oak",
           "mangrove",
           "crimson",
-          "warped",
-          "bamboo",
-          "cherry"
+          "warped"
         ],
         "rotation": [
           "0",
@@ -1819,73 +1739,7 @@
           "dark_oak",
           "mangrove",
           "crimson",
-          "warped",
-          "bamboo",
-          "cherry"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:hanging_sign",
-      "properties": {
-        "connection": [
-          "up",
-          "up_chain"
-        ],
-        "material": [
-          "oak",
-          "spruce",
-          "birch",
-          "jungle",
-          "acacia",
-          "dark_oak",
-          "mangrove",
-          "crimson",
-          "warped",
-          "bamboo",
-          "cherry"
-        ],
-        "rotation": [
-          "0",
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7",
-          "8",
-          "9",
-          "10",
-          "11",
-          "12",
-          "13",
-          "14",
-          "15"
-        ]
-      }
-    },
-    {
-      "name": "universal_minecraft:wall_hanging_sign",
-      "properties": {
-        "facing": [
-          "north",
-          "east",
-          "south",
-          "west"
-        ],
-        "material": [
-          "oak",
-          "spruce",
-          "birch",
-          "jungle",
-          "acacia",
-          "dark_oak",
-          "mangrove",
-          "crimson",
-          "warped",
-          "bamboo",
-          "cherry"
+          "warped"
         ]
       }
     },
@@ -1918,7 +1772,6 @@
         "mob": [
           "creeper",
           "dragon",
-          "piglin",
           "player",
           "skeleton",
           "wither_skeleton",
