@@ -85,17 +85,30 @@ class WorldSampler:
         """Returns the path to the data directory for a world"""
         return os.path.join(directory, ".minecraft_schematic_generator")
 
-    def _get_world_version(self, directory: str) -> tuple[tuple[int, int, int], int]:
-        """Gets the version of the Minecraft world"""
-        world = amulet.load_level(directory)
+    def _get_world_timestamp(self, directory: str) -> int:
+        """Gets the timestamp of the Minecraft world"""
         try:
+            world = amulet.load_level(directory)
+            timestamp = world.level_wrapper.last_played
+        finally:
+            world.close()
+        return timestamp
+
+    def _get_world_info(
+        self, directory: str
+    ) -> tuple[str, int, tuple[int, int, int], int]:
+        """Gets the name, version, data version, and timestamp of the Minecraft world"""
+        try:
+            world = amulet.load_level(directory)
+            name = world.level_wrapper.level_name
             data_version = world.level_wrapper.version
             version = world.translation_manager._get_version_number(
                 world.level_wrapper.platform, data_version
             )
-            return version, data_version
+            timestamp = world.level_wrapper.last_played
         finally:
             world.close()
+        return name, version, data_version, timestamp
 
     def _get_available_target_block_versions(self) -> dict:
         """Returns a list of available target block versions"""
@@ -122,10 +135,9 @@ class WorldSampler:
         return version_dirs
 
     def _get_version_specific_target_block_path(
-        self, directory: str
+        self, world_version: tuple[int, int, int], world_data_version: int
     ) -> tuple[str, tuple[int, int, int], tuple[int, int, int]]:
         """Gets the path to the version-specific file that's closest to but not older than the world version"""
-        world_version, world_data_version = self._get_world_version(directory)
         available_versions = self._get_available_target_block_versions()
 
         # Find the oldest version that's not older than the world version
@@ -142,15 +154,11 @@ class WorldSampler:
         closest_version, closest_path = available_versions[closest_data_version]
 
         # Return path and version
-        return (
-            closest_path,
-            closest_version,
-            closest_data_version,
-            world_version,
-            world_data_version,
-        )
+        return closest_path, closest_version, closest_data_version
 
-    def load_target_blocks(self, directory: str) -> tuple[dict, dict]:
+    def load_target_blocks(
+        self, directory: str, version: tuple[int, int, int], data_version: int
+    ) -> tuple[dict, dict]:
         """Loads the target blocks from the files and returns them"""
         # Initialize dictionaries
         chunk_target_blocks = {}
@@ -172,24 +180,16 @@ class WorldSampler:
                     print(f"Using custom {block_type} target blocks for {dimension}")
                 else:
                     if version_path is None:
-                        (
-                            version_path,
-                            selected_version,
-                            selected_data_version,
-                            world_version,
-                            world_data_version,
-                        ) = self._get_version_specific_target_block_path(directory)
+                        version_path, selected_version, selected_data_version = (
+                            self._get_version_specific_target_block_path(
+                                version, data_version
+                            )
+                        )
                         selected_version_str = ".".join(
                             str(x) for x in selected_version
                         )
-                        world_version_str = ".".join(str(x) for x in world_version)
                         print(
                             f"Using target blocks from version {selected_data_version} ({selected_version_str})"
-                            + (
-                                f" (closest to {world_data_version} ({world_version_str}))"
-                                if selected_data_version != world_data_version
-                                else ""
-                            )
                         )
                     config_path = os.path.join(version_path, filename)
 
@@ -353,32 +353,20 @@ class WorldSampler:
             cache[cache_key] = self._check_block_rules(filters, block)
         return cache[cache_key]
 
-    def _get_world_timestamp(self, directory: str) -> int:
-        """Gets the last played timestamp of the Minecraft world"""
-        world = amulet.load_level(directory)
-        try:
-            return world.level_wrapper.last_played
-        finally:
-            world.close()
-
-    def _get_level_name(self, directory: str) -> str:
-        """Gets the name of the Minecraft world"""
-        world = amulet.load_level(directory)
-        try:
-            return world.level_wrapper.level_name
-        finally:
-            world.close()
-
     def _save_progress(
-        self, directory: str, dimension: str, name: str, config: dict, data: dict
+        self,
+        directory: str,
+        timestamp: int,
+        dimension: str,
+        name: str,
+        config: dict,
+        data: dict,
     ) -> None:
         data_dir = self._get_data_directory(directory)
         os.makedirs(data_dir, exist_ok=True)
         dimension = dimension.replace(":", "_")
         temp_file_path = os.path.join(data_dir, f"{dimension}_{name}_progress_temp.pkl")
         final_file_path = os.path.join(data_dir, f"{dimension}_{name}_progress.pkl")
-
-        timestamp = self._get_world_timestamp(directory)
 
         # Try to save multiple times with a delay in case the file is locked
         max_retries = 3
@@ -415,13 +403,16 @@ class WorldSampler:
                 raise
 
     def _load_progress(
-        self, directory: str, dimension: str, name: str, current_config: dict
+        self,
+        directory: str,
+        timestamp: int,
+        dimension: str,
+        name: str,
+        current_config: dict,
     ) -> dict | None:
         data_dir = self._get_data_directory(directory)
         dimension = dimension.replace(":", "_")
         path = os.path.join(data_dir, f"{dimension}_{name}_progress.pkl")
-
-        timestamp = self._get_world_timestamp(directory)
 
         if os.path.exists(path):
             try:
@@ -475,9 +466,10 @@ class WorldSampler:
     def _save_chunk_progress(
         self,
         directory: str,
+        timestamp: int,
         dimension: str,
         target_blocks: list,
-        visited_chunks: set,
+        visited_chunks: set[tuple[int, int]],
         relevant_chunks: set,
     ) -> None:
         """Save the current chunk progress to a file"""
@@ -486,14 +478,16 @@ class WorldSampler:
             "visited_chunks": visited_chunks,
             "relevant_chunks": relevant_chunks,
         }
-        self._save_progress(directory, dimension, "chunk", config, data)
+        self._save_progress(directory, timestamp, dimension, "chunk", config, data)
 
     def _load_chunk_progress(
-        self, directory: str, dimension: str, target_blocks: list
+        self, directory: str, timestamp: int, dimension: str, target_blocks: list
     ) -> tuple[set, set]:
         """Load the current chunk progress from a file"""
         current_config = self._get_chunk_config(target_blocks)
-        data = self._load_progress(directory, dimension, "chunk", current_config)
+        data = self._load_progress(
+            directory, timestamp, dimension, "chunk", current_config
+        )
         return (
             (data["visited_chunks"], data["relevant_chunks"])
             if data
@@ -513,6 +507,7 @@ class WorldSampler:
     def _save_sample_progress(
         self,
         directory: str,
+        timestamp: int,
         dimension: str,
         target_blocks: list,
         sampled_chunks: set,
@@ -524,14 +519,16 @@ class WorldSampler:
             "sampled_chunks": sampled_chunks,
             "sample_positions": sample_positions,
         }
-        self._save_progress(directory, dimension, "sample", config, data)
+        self._save_progress(directory, timestamp, dimension, "sample", config, data)
 
     def _load_sample_progress(
-        self, directory: str, dimension: str, target_blocks: list
+        self, directory: str, timestamp: int, dimension: str, target_blocks: list
     ) -> tuple[set, set]:
         """Load the current sample progress from a file"""
         current_config = self._get_sample_config(target_blocks)
-        data = self._load_progress(directory, dimension, "sample", current_config)
+        data = self._load_progress(
+            directory, timestamp, dimension, "sample", current_config
+        )
         return (
             (data["sampled_chunks"], data["sample_positions"])
             if data
@@ -775,6 +772,7 @@ class WorldSampler:
         self,
         root_directory: str,
         directory: str,
+        timestamp: int,
         dimension: str,
         target_blocks: list,
     ) -> set:
@@ -791,7 +789,7 @@ class WorldSampler:
 
         # Load progress
         visited_chunks, relevant_chunks = self._load_chunk_progress(
-            directory, dimension, target_blocks
+            directory, timestamp, dimension, target_blocks
         )
 
         # Remove visited chunks from the list
@@ -808,8 +806,6 @@ class WorldSampler:
         if len(remaining_chunk_coords) == 0:
             print(f"All {len(all_chunk_coords)} world chunks have already been visited")
             return relevant_chunks
-
-        timestamp = self._get_world_timestamp(directory)
 
         # Create queues
         all_chunks_queue = Queue()
@@ -903,6 +899,7 @@ class WorldSampler:
                 if time.time() - last_save_time > self.progress_save_period:
                     self._save_chunk_progress(
                         directory,
+                        timestamp,
                         dimension,
                         target_blocks,
                         visited_chunks,
@@ -938,7 +935,12 @@ class WorldSampler:
 
             # Final save
             self._save_chunk_progress(
-                directory, dimension, target_blocks, visited_chunks, relevant_chunks
+                directory,
+                timestamp,
+                dimension,
+                target_blocks,
+                visited_chunks,
+                relevant_chunks,
             )
 
         return relevant_chunks
@@ -1183,6 +1185,7 @@ class WorldSampler:
         self,
         root_directory: str,
         directory: str,
+        timestamp: int,
         dimension: str,
         target_blocks: set,
         relevant_chunks: set,
@@ -1191,7 +1194,7 @@ class WorldSampler:
 
         # Load progress
         sampled_chunks, sample_positions = self._load_sample_progress(
-            directory, dimension, target_blocks
+            directory, timestamp, dimension, target_blocks
         )
 
         # Store original size of sampled chunks
@@ -1222,6 +1225,7 @@ class WorldSampler:
             # Save the updated sample positions
             self._save_sample_progress(
                 directory,
+                timestamp,
                 dimension,
                 target_blocks,
                 sampled_chunks,
@@ -1251,8 +1255,6 @@ class WorldSampler:
             else:
                 print("No relevant chunks to sample")
             return sample_positions
-
-        timestamp = self._get_world_timestamp(directory)
 
         # Create queues
         relevant_chunks_queue = Queue()
@@ -1346,6 +1348,7 @@ class WorldSampler:
                 if time.time() - last_save_time > self.progress_save_period:
                     self._save_sample_progress(
                         directory,
+                        timestamp,
                         dimension,
                         target_blocks,
                         sampled_chunks,
@@ -1382,6 +1385,7 @@ class WorldSampler:
             # Final save
             self._save_sample_progress(
                 directory,
+                timestamp,
                 dimension,
                 target_blocks,
                 sampled_chunks,
@@ -1523,17 +1527,14 @@ class WorldSampler:
         self,
         root_directory: str,
         directory: str,
+        level_name: str,
+        timestamp: int,
         dimension: str,
         all_sample_positions: set,
     ) -> None:
         """Collects samples from the world at the identified positions"""
         world_name = os.path.relpath(directory, root_directory)
         schematic_directory = self._get_dimension_directory(world_name, dimension)
-
-        # Get world timestamp for schematic validation
-        timestamp = self._get_world_timestamp(directory)
-
-        level_name = self._get_level_name(directory)
 
         # Check if the schematic directory exists
         if not os.path.exists(schematic_directory):
@@ -1734,11 +1735,24 @@ class WorldSampler:
     def sample_world(self, root_directory: str, directory: str) -> None:
         """Samples a world"""
         print(f"Sampling {directory}")
-        chunk_target_blocks, sample_target_blocks = self.load_target_blocks(directory)
+        name, version, data_version, timestamp = self._get_world_info(directory)
+        print(f"Level name: {name}")
+        version_str = ".".join(str(x) for x in version)
+        print(f"Version: {version_str}")
+        print(
+            f"Last played: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(timestamp))}"
+        )
+        chunk_target_blocks, sample_target_blocks = self.load_target_blocks(
+            directory, version, data_version
+        )
         for dimension in self.DIMENSIONS:
             print(f"Sampling dimension: {dimension}")
             relevant_chunks = self._mark_chunks(
-                root_directory, directory, dimension, chunk_target_blocks[dimension]
+                root_directory,
+                directory,
+                timestamp,
+                dimension,
+                chunk_target_blocks[dimension],
             )
             try:
                 self._visualize_marked_chunks(directory, dimension, relevant_chunks)
@@ -1747,6 +1761,7 @@ class WorldSampler:
             sample_positions = self._identify_samples(
                 root_directory,
                 directory,
+                timestamp,
                 dimension,
                 sample_target_blocks[dimension],
                 relevant_chunks,
@@ -1756,7 +1771,7 @@ class WorldSampler:
             except Exception as e:
                 print(f"Error visualizing sample positions: {e}")
             self._collect_samples(
-                root_directory, directory, dimension, sample_positions
+                root_directory, directory, name, timestamp, dimension, sample_positions
             )
         if self.clear_worker_directories:
             self._clear_worker_directories(root_directory, directory)
