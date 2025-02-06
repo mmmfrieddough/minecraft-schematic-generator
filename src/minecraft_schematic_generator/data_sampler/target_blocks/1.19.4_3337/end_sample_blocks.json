@@ -1230,21 +1230,6 @@
       "name": "universal_minecraft:snow_block"
     },
     {
-      "name": "universal_minecraft:snow",
-      "properties": {
-        "layers": [
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7",
-          "8"
-        ]
-      }
-    },
-    {
       "name": "universal_minecraft:moss_block"
     },
     {
