@@ -21,7 +21,7 @@ from minecraft_schematic_generator.constants import (
     MINECRAFT_VERSION,
 )
 
-logging.getLogger("amulet").setLevel(logging.WARNING)
+logging.getLogger("amulet").setLevel(logging.ERROR)
 logging.getLogger("PyMCTranslate").setLevel(logging.CRITICAL)
 
 import amulet  # noqa: E402
@@ -473,12 +473,14 @@ class WorldSampler:
         timestamp: int,
         dimension: str,
         target_blocks: list[TargetBlock],
+        all_chunks: set[tuple[int, int]],
         visited_chunks: set[tuple[int, int]],
         relevant_chunks: set[tuple[int, int]],
     ) -> None:
         """Save the current chunk progress to a file"""
         config = self._get_chunk_config(target_blocks)
         data = {
+            "all_chunks": all_chunks,
             "visited_chunks": visited_chunks,
             "relevant_chunks": relevant_chunks,
         }
@@ -490,16 +492,16 @@ class WorldSampler:
         timestamp: int,
         dimension: str,
         target_blocks: list[TargetBlock],
-    ) -> tuple[set[tuple[int, int]], set[tuple[int, int]]]:
+    ) -> tuple[set[tuple[int, int]], set[tuple[int, int]], set[tuple[int, int]]]:
         """Load the current chunk progress from a file"""
         current_config = self._get_chunk_config(target_blocks)
         data = self._load_progress(
             directory, timestamp, dimension, "chunk", current_config
         )
         return (
-            (data["visited_chunks"], data["relevant_chunks"])
+            (data["all_chunks"], data["visited_chunks"], data["relevant_chunks"])
             if data
-            else (set(), set())
+            else (None, set(), set())
         )
 
     def _get_sample_config(self, target_blocks: list[TargetBlock]) -> dict:
@@ -800,25 +802,28 @@ class WorldSampler:
     ) -> set[tuple[int, int]]:
         """Looks through chunks in a world and marks them as relevant or not relevant"""
 
-        # Get all chunk coordinates
-        world = amulet.load_level(directory)
-        all_chunk_coords = world.all_chunk_coords(dimension)
-        world.close()
-
-        if len(all_chunk_coords) == 0:
-            print("No chunks found in the dimension")
-            return set()
-
         # Load progress
-        visited_chunks, relevant_chunks = self._load_chunk_progress(
+        all_chunks, visited_chunks, relevant_chunks = self._load_chunk_progress(
             directory, timestamp, dimension, target_blocks
         )
 
+        # Get all chunk coordinates
+        if all_chunks is None:
+            try:
+                world = amulet.load_level(directory)
+                all_chunks = world.all_chunk_coords(dimension)
+            finally:
+                world.close()
+
+        if len(all_chunks) == 0:
+            print("No chunks found in the dimension")
+            return set()
+
         # Remove visited chunks from the list
-        remaining_chunk_coords = all_chunk_coords - visited_chunks
+        remaining_chunk_coords = all_chunks - visited_chunks
 
         # Limit the number of chunks to check
-        if self.chunk_search_limit and len(all_chunk_coords) > self.chunk_search_limit:
+        if self.chunk_search_limit and len(all_chunks) > self.chunk_search_limit:
             remaining_chunks = max(self.chunk_search_limit - len(visited_chunks), 0)
             remaining_chunk_coords = set(
                 random.sample(list(remaining_chunk_coords), remaining_chunks)
@@ -826,7 +831,7 @@ class WorldSampler:
 
         # Check if all chunks have already been visited
         if len(remaining_chunk_coords) == 0:
-            print(f"All {len(all_chunk_coords)} world chunks have already been visited")
+            print(f"All {len(all_chunks)} world chunks have already been visited")
             return relevant_chunks
 
         # Create queues
@@ -929,6 +934,7 @@ class WorldSampler:
                         timestamp,
                         dimension,
                         target_blocks,
+                        all_chunks,
                         visited_chunks,
                         relevant_chunks,
                     )
@@ -966,6 +972,7 @@ class WorldSampler:
                 timestamp,
                 dimension,
                 target_blocks,
+                all_chunks,
                 visited_chunks,
                 relevant_chunks,
             )
@@ -1775,7 +1782,7 @@ class WorldSampler:
         name, version, data_version, timestamp = self._get_world_info(directory)
         print(f"Level name: {name}")
         version_str = ".".join(str(x) for x in version)
-        print(f"Version: {version_str}")
+        print(f"Version: {data_version} ({version_str})")
         print(
             f"Last played: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(timestamp))}"
         )
