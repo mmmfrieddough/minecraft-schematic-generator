@@ -6,7 +6,7 @@ from torch.nn.functional import conv3d
 from torch.profiler import record_function
 from torch.utils.data import Dataset
 
-from minecraft_schematic_generator.converter import BlockTokenMapper
+from minecraft_schematic_generator.converter import BlockTokenConverter
 
 
 class MinecraftDataset(Dataset):
@@ -15,7 +15,7 @@ class MinecraftDataset(Dataset):
         file_path: str,
         split: str,
         generator: str,
-        block_token_mapper: BlockTokenMapper,
+        block_token_mapper: BlockTokenConverter,
     ):
         # These should be in universal format as we are feeding them directly into the mapping
         natural_block_strings = [

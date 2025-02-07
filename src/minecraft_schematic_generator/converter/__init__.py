@@ -1,5 +1,10 @@
-from .converter import SchematicArrayConverter
-from .file_handler import BlockTokenFileHandler
-from .mapping import BlockTokenMapper
+from .block_token_converter import BlockTokenConverter
+from .block_token_mapper import FileBlockTokenMapper, SharedDictBlockTokenMapper
+from .schematic_array_converter import SchematicArrayConverter
 
-__all__ = ["SchematicArrayConverter", "BlockTokenFileHandler", "BlockTokenMapper"]
+__all__ = [
+    "SchematicArrayConverter",
+    "FileBlockTokenMapper",
+    "BlockTokenConverter",
+    "SharedDictBlockTokenMapper",
+]

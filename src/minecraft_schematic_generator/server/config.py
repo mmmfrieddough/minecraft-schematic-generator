@@ -5,7 +5,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from minecraft_schematic_generator.converter import BlockTokenFileHandler
+from minecraft_schematic_generator.converter import FileBlockTokenMapper
 from minecraft_schematic_generator.model import TransformerMinecraftStructureGenerator
 
 # Set PyMCTranslate logging level before importing it
@@ -15,7 +15,7 @@ from PyMCTranslate import TranslationManager  # noqa: E402
 
 class AppState(BaseModel):
     model: TransformerMinecraftStructureGenerator = None
-    file_handler: BlockTokenFileHandler = None
+    file_handler: FileBlockTokenMapper = None
     translation_manager: TranslationManager = None
     checkpoint_path: Optional[str]
     model_path: Optional[str]

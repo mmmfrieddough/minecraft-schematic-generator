@@ -9,7 +9,7 @@ from minecraft_schematic_generator.constants import (
     VOID_AIR_BLOCK_ID,
     VOID_AIR_BLOCK_STR,
 )
-from minecraft_schematic_generator.converter import BlockTokenMapper
+from minecraft_schematic_generator.converter import BlockTokenConverter
 from minecraft_schematic_generator.data_preparer import SchematicLoader
 from minecraft_schematic_generator.model import TransformerMinecraftStructureGenerator
 
@@ -18,7 +18,7 @@ class StructureGenerator:
     def __init__(
         self,
         model: TransformerMinecraftStructureGenerator,
-        block_token_mapper: BlockTokenMapper,
+        block_token_mapper: BlockTokenConverter,
     ):
         self.logger = logging.getLogger(__name__)
         self.model = model

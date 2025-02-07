@@ -6,7 +6,7 @@ from minecraft_schematic_generator.constants import (
     MINECRAFT_VERSION,
 )
 
-from .file_handler import BlockTokenFileHandler
+from .block_token_mapper import BlockTokenMapperInterface, FileBlockTokenMapper
 
 # Set PyMCTranslate logging level before importing it
 logging.getLogger("PyMCTranslate").setLevel(logging.WARNING)
@@ -14,13 +14,13 @@ import amulet  # noqa: E402
 import PyMCTranslate  # noqa: E402
 
 
-class BlockTokenMapper:
+class BlockTokenConverter:
     def __init__(
         self,
-        file_handler: BlockTokenFileHandler | None = None,
+        file_handler: BlockTokenMapperInterface | None = None,
         version_translator: PyMCTranslate.Version | None = None,
     ):
-        self.file_handler = file_handler or BlockTokenFileHandler()
+        self.file_handler = file_handler or FileBlockTokenMapper()
         self.version_translator = (
             version_translator
             # Default to the version we are using for the project

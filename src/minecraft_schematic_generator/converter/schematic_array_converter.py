@@ -4,12 +4,12 @@ import numpy as np
 import schempy
 from schempy import Schematic
 
-from .mapping import BlockTokenMapper
+from .block_token_converter import BlockTokenConverter
 
 
 class SchematicArrayConverter:
-    def __init__(self, block_token_mapper: BlockTokenMapper | None = None):
-        self.block_token_mapper = block_token_mapper or BlockTokenMapper()
+    def __init__(self, block_token_mapper: BlockTokenConverter | None = None):
+        self.block_token_mapper = block_token_mapper or BlockTokenConverter()
 
     def schematic_to_array(
         self, schematic: Schematic, update_mapping: bool = False

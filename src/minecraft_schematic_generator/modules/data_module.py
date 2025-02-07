@@ -6,7 +6,7 @@ from lightning import LightningDataModule
 from torch.utils.data import ConcatDataset
 from tqdm import tqdm
 
-from minecraft_schematic_generator.converter import BlockTokenMapper
+from minecraft_schematic_generator.converter import BlockTokenConverter
 from minecraft_schematic_generator.model import MinecraftDataset, ResumableDataLoader
 
 
@@ -31,7 +31,7 @@ class MinecraftDataModule(LightningDataModule):
         self.separate_validation_datasets = separate_validation_datasets
         self.val_dataset_names = {}
         self._rng_state = None
-        self._block_token_mapper = BlockTokenMapper()
+        self._block_token_mapper = BlockTokenConverter()
 
     def state_dict(self) -> dict:
         """Save datamodule state."""
