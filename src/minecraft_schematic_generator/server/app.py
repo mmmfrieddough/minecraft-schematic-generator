@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from minecraft_schematic_generator.converter import (
     BlockTokenConverter,
-    FileBlockTokenMapper,
+    DictBlockTokenMapper,
 )
 from minecraft_schematic_generator.version import GITHUB_REPO, __version__
 
@@ -73,8 +73,15 @@ async def lifespan(app: SchematicGeneratorApp):
     )
     logger.info("Model loaded successfully")
 
-    app.state.file_handler = FileBlockTokenMapper()
+    app.state.block_token_mapper = DictBlockTokenMapper(
+        app.state.model.block_str_mapping
+    )
     app.state.translation_manager = PyMCTranslate.new_translation_manager()
+    minecraft_version = app.state.translation_manager.version_numbers("java")[-1]
+    minecraft_version_str = ".".join(str(x) for x in minecraft_version)
+    logger.info(
+        f"Translation manager loaded for up to Minecraft {minecraft_version_str}"
+    )
 
     yield
 
@@ -108,7 +115,7 @@ async def complete_structure(input: StructureRequest, request: Request):
             input.platform, input.version_number
         )
         block_token_mapper = BlockTokenConverter(
-            app.state.file_handler, version_translator
+            app.state.block_token_mapper, version_translator
         )
         generator = StructureGenerator(app.state.model, block_token_mapper)
         input_tensor = generator.prepare_input_tensor(input.structure)

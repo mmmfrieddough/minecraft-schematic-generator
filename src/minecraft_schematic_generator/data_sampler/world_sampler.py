@@ -10,16 +10,25 @@ import shutil
 import time
 from collections import Counter
 from functools import partial
-from multiprocessing import Process, Queue
+from multiprocessing import Manager, Process, Queue, RLock
+from multiprocessing.synchronize import Lock as LockBase
+from pathlib import Path
 from queue import Empty
 from typing import Callable, TypedDict
 
+import h5py
 import psutil
+from h5py import File, Group
 from tqdm import tqdm
 
 from minecraft_schematic_generator.constants import (
     MINECRAFT_PLATFORM,
     MINECRAFT_VERSION,
+)
+from minecraft_schematic_generator.converter import (
+    BlockTokenConverter,
+    SchematicArrayConverter,
+    SharedDictBlockTokenMapper,
 )
 
 logging.getLogger("amulet").setLevel(logging.CRITICAL)
@@ -50,24 +59,30 @@ class WorldSampler:
         "minecraft:the_end": "end",
     }
 
+    _schematic_array_converter: SchematicArrayConverter = None
+
     def __init__(
         self,
-        schematic_directory,
-        temp_directory,
-        progress_save_period,
-        chunk_mark_radius,
-        sample_offset,
-        sample_size,
-        sample_target_block_threshold,
-        sample_minimum_air_threshold,
-        sampling_purge_interval,
-        chunk_search_limit=None,
-        sample_search_limit=None,
-        sample_limit=None,
-        worker_check_period=3,
-        resource_usage_limit=0.70,
-        progress_per_second_target=0.1,
-        worker_scaling_factor=0.5,
+        schematic_directory: str,
+        temp_directory: str,
+        progress_save_period: int,
+        chunk_mark_radius: int,
+        sample_offset: int,
+        sample_size: int,
+        sample_target_block_threshold: int,
+        sample_minimum_air_threshold: int,
+        sampling_purge_interval: int = 5,
+        chunk_search_limit: int | None = None,
+        sample_search_limit: int | None = None,
+        sample_limit: int | None = None,
+        worker_check_period: int = 3,
+        resource_usage_limit: float = 0.70,
+        progress_per_second_target: float = 0.1,
+        worker_scaling_factor: float = 0.5,
+        save_schematics: bool = True,
+        save_to_hdf5: bool = False,
+        hdf5_path: str | None = None,
+        split_ratios: tuple[float, float, float] = (0.8, 0.1, 0.1),
     ):
         self.schematic_directory = schematic_directory
         self.temp_directory = temp_directory
@@ -85,6 +100,10 @@ class WorldSampler:
         self.chunk_search_limit = chunk_search_limit
         self.sample_search_limit = sample_search_limit
         self.sample_limit = sample_limit
+        self.save_schematics = save_schematics
+        self.save_to_hdf5 = save_to_hdf5
+        self.hdf5_path = hdf5_path
+        self._split_ratios = split_ratios
 
     def _get_data_directory(self, directory: str) -> str:
         """Returns the path to the data directory for a world"""
@@ -848,7 +867,12 @@ class WorldSampler:
 
         # Check if all chunks have already been visited
         if len(remaining_chunk_coords) == 0:
-            print(f"All {len(all_chunks)} world chunks have already been visited")
+            if len(visited_chunks) > 0:
+                print(
+                    f"All {len(visited_chunks)} world chunks have already been visited"
+                )
+            else:
+                print("No chunks to visit")
             return relevant_chunks
 
         block_cache = {}
@@ -1156,9 +1180,9 @@ class WorldSampler:
 
         # Check if all relevant chunks have already been sampled
         if len(remaining_relevant_chunk_positions) == 0:
-            if len(relevant_chunks) > 0:
+            if len(sampled_chunks) > 0:
                 print(
-                    f"All {len(relevant_chunks)} relevant chunks have already been sampled"
+                    f"All {len(sampled_chunks)} relevant chunks have already been sampled"
                 )
             else:
                 print("No relevant chunks to sample")
@@ -1304,6 +1328,7 @@ class WorldSampler:
         output_label: str | None = None,
         unsuccessful_label: str | None = None,
         save_function: Callable[[set, set], None] | None = None,
+        purge_interval: int | None = None,
     ) -> set:
         # Create queues
         input_queue = Queue()
@@ -1322,7 +1347,7 @@ class WorldSampler:
                     input_queue,
                     output_queue,
                     worker_function,
-                    self.sampling_purge_interval,
+                    purge_interval,
                 ),
             )
             process.start()
@@ -1365,7 +1390,10 @@ class WorldSampler:
                     processed_item, successful, data = output_queue.get()
                     existing_data.add(processed_item)
                     if output_data is not None:
-                        output_data.update(data)
+                        if isinstance(output_data, list):
+                            output_data.append(data)
+                        else:
+                            output_data.update(data)
                     if not successful:
                         unsuccessful_count += 1
                     pbar.update(1)
@@ -1503,9 +1531,9 @@ class WorldSampler:
 
         # Check if there are any samples to collect
         if len(remaining_sample_positions) == 0:
-            if len(all_sample_positions) > 0:
+            if len(existing_sample_positions) > 0:
                 print(
-                    f"All {len(all_sample_positions)} sample schematics have already been saved"
+                    f"All {len(existing_sample_positions)} sample schematics have already been saved"
                 )
             else:
                 print("No sample schematics to save")
@@ -1534,7 +1562,404 @@ class WorldSampler:
             progress_description="Saving sample schematics",
             existing_data=existing_sample_positions,
             input_data=remaining_sample_positions,
+            purge_interval=self.sampling_purge_interval,
         )
+
+    block_properties_to_remove = {
+        "minecraft:sugar_cane": ["age"],
+        "minecraft:lectern": ["powered"],
+        "minecraft:daylight_detector": ["power"],
+        "minecraft:note_block": ["instrument", "note", "powered"],
+        "minecraft:observer": ["powered"],
+        "minecraft:dispenser": ["triggered"],
+        "minecraft:hopper": ["enabled"],
+        "minecraft:tripwire": ["powered"],
+        "minecraft:fire": ["age"],
+        "minecraft:barrel": ["open"],
+        "minecraft:cactus": ["age"],
+        "minecraft:tnt": ["unstable"],
+        "minecraft:chorus_flower": ["age"],
+        "minecraft:dropper": ["triggered"],
+    }
+
+    block_id_contains_properties_to_remove = {
+        "leaves": ["distance", "persistent"],
+        "door": ["powered"],
+        "button": ["powered"],
+        "pressure_plate": ["powered", "power"],
+    }
+
+    @staticmethod
+    def clean_block_properties(block: Block) -> None:
+        if not block or not block.properties:
+            return
+        for block_id, properties in WorldSampler.block_properties_to_remove.items():
+            if block.id == block_id:
+                for property in properties:
+                    block.properties.pop(property, None)
+        for (
+            block_id_contains,
+            properties,
+        ) in WorldSampler.block_id_contains_properties_to_remove.items():
+            if block_id_contains in block.id:
+                for property in properties:
+                    block.properties.pop(property, None)
+
+    def _sample_position_to_array(
+        self,
+        world: World,
+        _: str,
+        item: tuple[str, tuple[int, int, int]],
+        dimension: str,
+        mapping: dict[str, int],
+        lock: LockBase,
+    ) -> None:
+        """Worker function for converting sample positions to arrays"""
+        hash_name, position = item
+
+        # Initialize converters once
+        if not WorldSampler._schematic_array_converter:
+            block_token_mapper = SharedDictBlockTokenMapper(mapping, lock)
+            WorldSampler._block_token_converter = BlockTokenConverter(
+                block_token_mapper
+            )
+
+        # Get inputs ready
+        x, y, z = position
+        array = np.zeros(
+            (self.sample_size, self.sample_size, self.sample_size), dtype=int
+        )
+
+        # Directly get blocks from world
+        for dx, dy, dz in np.ndindex(array.shape):
+            block = world.get_block(x + dx, y + dy, z + dz, dimension)
+            token = self._block_token_converter.universal_block_to_token(
+                block, update_mapping=True
+            )
+            array[dz, dy, dx] = token
+
+        return (position, True, (hash_name, array))
+
+    @staticmethod
+    def split_data(
+        all_files: set, split_ratios: tuple[float, float, float]
+    ) -> dict[str, set[str]]:
+        """
+        Split the data deterministically based on the hash of the file names.
+
+        :param all_files: Set of all file names to split.
+        :param split_ratios: Ratios to split the data into (train, validation, test).
+        :return: A dictionary with keys 'train', 'validation', and 'test' mapping to the respective file sets.
+        """
+        # Calculate cumulative ratios for determining splits
+        cumulative_ratios = [
+            sum(split_ratios[: i + 1]) for i in range(len(split_ratios))
+        ]
+
+        # Initialize the split sets
+        splits = {"train": set(), "validation": set(), "test": set()}
+
+        # Assign files to splits based on the hash value of their names
+        for file_name in all_files:
+            # Remove the file extension to get the hash
+            hash_hex = Path(file_name).stem
+
+            # Use the hash of the file name to get a number between 0 and 1
+            hash_fraction = int(hash_hex, 16) / 16 ** len(hash_hex)
+
+            # Determine the split based on the hash fraction and cumulative ratios
+            if hash_fraction < cumulative_ratios[0]:
+                splits["train"].add(file_name)
+            elif hash_fraction < cumulative_ratios[1]:
+                splits["validation"].add(file_name)
+            else:
+                splits["test"].add(file_name)
+
+        return splits
+
+    @staticmethod
+    def _create_datasets(group: Group, names: list[str], structures: list[np.ndarray]):
+        # Delete old datasets
+        if "names" in group:
+            del group["names"]
+        if "structures" in group:
+            del group["structures"]
+
+        dt = h5py.string_dtype(encoding="utf-8")
+        group.create_dataset("names", data=names, dtype=dt)
+        group.create_dataset("structures", data=structures)
+
+    @staticmethod
+    def _update_datasets(group: Group, names: list[str], structures: list[np.ndarray]):
+        # Get the existing datasets
+        if "names" in group and len(group["names"]) > 0:
+            names = np.concatenate((group["names"][:], names))
+        if "structures" in group and len(group["structures"]) > 0:
+            structures = np.concatenate((group["structures"][:], structures), axis=0)
+
+        WorldSampler._create_datasets(group, names, structures)
+
+    @staticmethod
+    def _sync_group(
+        hdf5_file: File, set_type: str, dataset: str, required_names: set[str]
+    ) -> tuple[set[str], set[str]]:
+        """Sync the group by removing outdated samples and returning the names that need processing"""
+        existing_names = hdf5_file[set_type][dataset]["names"].asstr()[:]
+        names_to_remove = set(existing_names) - required_names
+
+        if names_to_remove:
+            print(
+                f"Removing {len(names_to_remove)}/{len(existing_names)} outdated samples from {dataset} {set_type}"
+            )
+
+            # Create mask for elements to keep
+            keep_mask = [name not in names_to_remove for name in existing_names]
+
+            # Get the existing data and filter
+            existing_structures = hdf5_file[set_type][dataset]["structures"][:]
+            filtered_names = existing_names[keep_mask]
+            filtered_structures = existing_structures[keep_mask]
+
+            # Replace the datasets
+            WorldSampler._create_datasets(
+                hdf5_file[set_type][dataset], filtered_names, filtered_structures
+            )
+
+        # Return existing names and names that need to be processed
+        remaining_names = set(existing_names) - names_to_remove
+        names_to_process = required_names - remaining_names
+
+        return remaining_names, names_to_process
+
+    @staticmethod
+    def _load_mapping(hdf5_file: File) -> dict[str, int]:
+        """Load the mapping from the HDF5 file"""
+        mapping_group = hdf5_file.require_group("mapping")
+        if "block_to_token" in mapping_group:
+            mapping_str = mapping_group["block_to_token"][()]
+            mapping_json = json.loads(mapping_str)
+            return dict(mapping_json)
+        return {}
+
+    @staticmethod
+    def _save_mapping(hdf5_file: File, mapping: dict[str, int]) -> None:
+        """Save the mapping to the HDF5 file"""
+        mapping_str = json.dumps(mapping)
+        mapping_group = hdf5_file.require_group("mapping")
+        if "block_to_token" in mapping_group:
+            del mapping_group["block_to_token"]
+        mapping_group.create_dataset("block_to_token", data=mapping_str)
+
+    def _save_to_hdf5(
+        self,
+        root_directory: str,
+        directory: str,
+        timestamp: int,
+        dimension: str,
+        level_name: str,
+        all_sample_positions: set[tuple[int, int, int]],
+    ) -> None:
+        """Saves the samples to an HDF5 file"""
+        relative_path = os.path.relpath(directory, root_directory)
+        dataset_name = os.path.join(relative_path, self.DIMENSIONS[dimension])
+
+        # Create a mapping of hashes to positions
+        sample_entries = [
+            (
+                self._get_schematic_hash(level_name, dimension, pos, timestamp),
+                pos,
+            )
+            for pos in all_sample_positions
+        ]
+
+        # Split the sample hashes
+        sample_names = [e[0] for e in sample_entries]
+        splits = WorldSampler.split_data(sample_names, self._split_ratios)
+
+        # Read existing datasets and mapping
+        existing_names = set()
+        need_processing_names = set()
+        with h5py.File(self.hdf5_path, "a") as hdf5_file:
+            # Load the mapping
+            mapping = WorldSampler._load_mapping(hdf5_file)
+
+            # Go through each set type
+            for set_type in ["train", "validation", "test"]:
+                # Check if the group exists
+                if (
+                    set_type in hdf5_file
+                    and dataset_name in hdf5_file[set_type]
+                    and "names" in hdf5_file[set_type][dataset_name]
+                    and "structures" in hdf5_file[set_type][dataset_name]
+                ):
+                    required_names = splits[set_type]
+                    existing_set_names, need_processing_set_names = (
+                        WorldSampler._sync_group(
+                            hdf5_file, set_type, dataset_name, required_names
+                        )
+                    )
+                    existing_names.update(existing_set_names)
+                    need_processing_names.update(need_processing_set_names)
+                else:
+                    need_processing_names.update(splits[set_type])
+
+        # Limit the number of samples to process
+        if self.sample_limit and len(all_sample_positions) > self.sample_limit:
+            remaining_samples = max(self.sample_limit - len(existing_names), 0)
+            need_processing_names = set(
+                random.sample(list(need_processing_names), remaining_samples)
+            )
+
+        # Check if there are any samples to process
+        if len(need_processing_names) == 0:
+            if len(existing_names) > 0:
+                print(
+                    f"All {len(existing_names)} sample arrays have already been saved"
+                )
+            else:
+                print("No sample arrays to save")
+            return
+
+        # Create a manager to share the mapping between processes
+        manager = Manager()
+        shared_mapping = manager.dict(mapping)
+        lock = RLock()
+
+        # Convert hashes back to positions for processing
+        need_processing_entries = [
+            entry for entry in sample_entries if entry[0] in need_processing_names
+        ]
+
+        worker_function = partial(
+            self._sample_position_to_array,
+            dimension=dimension,
+            mapping=shared_mapping,
+            lock=lock,
+        )
+
+        # Process the samples in parallel
+        output_data = []
+        self._run_workers(
+            root_directory=root_directory,
+            directory=directory,
+            timestamp=timestamp,
+            worker_function=worker_function,
+            progress_description="Converting samples to arrays",
+            existing_data=existing_names,
+            input_data=need_processing_entries,
+            output_data=output_data,
+        )
+
+        if not output_data:
+            print("No sample arrays produced")
+
+        # Process the output data
+        names, structures = zip(*output_data)
+        output_splits = WorldSampler.split_data(names, self._split_ratios)
+        structure_map = {n: st for n, st in zip(names, structures)}
+
+        # Save everything to the HDF5 file
+        mapping = dict(shared_mapping)
+        with h5py.File(self.hdf5_path, "a") as hdf5_file:
+            # Save updated mapping
+            WorldSampler._save_mapping(hdf5_file, mapping)
+
+            for set_type in output_splits:
+                if len(output_splits[set_type]) == 0:
+                    continue
+
+                set_group = hdf5_file.require_group(set_type)
+                dataset_group = set_group.require_group(dataset_name)
+
+                subset_names = list(output_splits[set_type])
+                subset_structures = [structure_map[n] for n in subset_names]
+
+                WorldSampler._update_datasets(
+                    dataset_group, subset_names, subset_structures
+                )
+
+    def sample_dimension(
+        self,
+        root_directory: str,
+        directory: str,
+        dimension: str,
+        level_name: str,
+        timestamp: int,
+        chunk_target_blocks: dict[str, list[TargetBlock]],
+        sample_target_blocks: dict[str, list[TargetBlock]],
+    ) -> None:
+        """Samples a dimension."""
+        print(f"Sampling dimension: {dimension}")
+        relevant_chunks = self._mark_chunks(
+            root_directory,
+            directory,
+            timestamp,
+            dimension,
+            chunk_target_blocks[dimension],
+        )
+        try:
+            self._visualize_marked_chunks(directory, dimension, relevant_chunks)
+        except Exception as e:
+            print(f"Error visualizing marked chunks: {e}")
+        sample_positions = self._identify_samples(
+            root_directory,
+            directory,
+            timestamp,
+            dimension,
+            sample_target_blocks[dimension],
+            relevant_chunks,
+        )
+        try:
+            self._visualize_sample_positions(directory, dimension, sample_positions)
+        except Exception as e:
+            print(f"Error visualizing sample positions: {e}")
+        if self.save_schematics:
+            self._save_sample_schematics(
+                root_directory,
+                directory,
+                level_name,
+                timestamp,
+                dimension,
+                sample_positions,
+            )
+        if self.save_to_hdf5:
+            self._save_to_hdf5(
+                root_directory,
+                directory,
+                timestamp,
+                dimension,
+                level_name,
+                sample_positions,
+            )
+
+    def sample_world(self, root_directory: str, directory: str) -> None:
+        """Samples a world"""
+        print(f"Sampling {directory}")
+        name, version, data_version, timestamp = self._get_world_info(directory)
+        print(f"Level name: {name}")
+        if data_version <= 0:
+            print("Version: Unknown (pre 1.12.2)")
+        else:
+            version_str = ".".join(str(x) for x in version)
+            print(f"Version: {data_version} (~{version_str})")
+        print(
+            f"Last played: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(timestamp))}"
+        )
+        chunk_target_blocks, sample_target_blocks = self.load_target_blocks(
+            directory, version, data_version
+        )
+        for dimension in self.DIMENSIONS:
+            self.sample_dimension(
+                root_directory,
+                directory,
+                dimension,
+                name,
+                timestamp,
+                chunk_target_blocks,
+                sample_target_blocks,
+            )
+        self._clear_worker_directories(root_directory, directory)
+        print(f"Done sampling {directory}")
 
     def sample_directory(self, directory: str) -> None:
         """Samples a directory of worlds recursively."""
@@ -1558,53 +1983,6 @@ class WorldSampler:
             print("Done sampling directory")
         except KeyboardInterrupt:
             pass
-
-    def sample_world(self, root_directory: str, directory: str) -> None:
-        """Samples a world"""
-        print(f"Sampling {directory}")
-        name, version, data_version, timestamp = self._get_world_info(directory)
-        print(f"Level name: {name}")
-        if data_version <= 0:
-            print("Version: Unknown (pre 1.12.2)")
-        else:
-            version_str = ".".join(str(x) for x in version)
-            print(f"Version: {data_version} (~{version_str})")
-        print(
-            f"Last played: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(timestamp))}"
-        )
-        chunk_target_blocks, sample_target_blocks = self.load_target_blocks(
-            directory, version, data_version
-        )
-        for dimension in self.DIMENSIONS:
-            print(f"Sampling dimension: {dimension}")
-            relevant_chunks = self._mark_chunks(
-                root_directory,
-                directory,
-                timestamp,
-                dimension,
-                chunk_target_blocks[dimension],
-            )
-            try:
-                self._visualize_marked_chunks(directory, dimension, relevant_chunks)
-            except Exception as e:
-                print(f"Error visualizing marked chunks: {e}")
-            sample_positions = self._identify_samples(
-                root_directory,
-                directory,
-                timestamp,
-                dimension,
-                sample_target_blocks[dimension],
-                relevant_chunks,
-            )
-            try:
-                self._visualize_sample_positions(directory, dimension, sample_positions)
-            except Exception as e:
-                print(f"Error visualizing sample positions: {e}")
-            self._save_sample_schematics(
-                root_directory, directory, name, timestamp, dimension, sample_positions
-            )
-        self._clear_worker_directories(root_directory, directory)
-        print(f"Done sampling {directory}")
 
     def clear_directory(self, directory: str) -> None:
         """Clears all progress and samples from a directory"""

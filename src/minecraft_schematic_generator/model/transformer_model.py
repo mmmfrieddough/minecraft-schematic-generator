@@ -36,6 +36,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
     def __init__(
         self,
         num_classes: int,
+        block_str_mapping: dict[str, int],
         max_structure_size: int,
         embedding_dropout: float,
         model_dim: int,
@@ -46,10 +47,11 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
     ):
         super().__init__()
         self.num_classes = num_classes
+        self.block_str_mapping = block_str_mapping
         self.max_structure_size = max_structure_size
         self.max_sequence_length = max_structure_size**3
-        self.embedding_dim = embedding_dim or model_dim
         self.model_dim = model_dim
+        self.embedding_dim = embedding_dim or model_dim
 
         # Input
         self.embedding = nn.Embedding(num_classes, self.embedding_dim)

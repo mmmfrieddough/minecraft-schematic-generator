@@ -15,8 +15,9 @@ class MinecraftDataset(Dataset):
         file_path: str,
         split: str,
         generator: str,
-        block_token_mapper: BlockTokenConverter,
+        block_token_converter: BlockTokenConverter,
     ):
+        # Represent "natural" blocks that the player is not likely to want to build with
         # These should be in universal format as we are feeding them directly into the mapping
         natural_block_strings = [
             "universal_minecraft:dirt",
@@ -29,35 +30,21 @@ class MinecraftDataset(Dataset):
             "universal_minecraft:basalt[axis=y]",
             "universal_minecraft:blackstone",
             "universal_minecraft:gravel",
-            "universal_minecraft:dripstone_block",
-            "universal_minecraft:moss_block",
             "universal_minecraft:deepslate[axis=y]",
             "universal_minecraft:tuff",
-            "universal_minecraft:snow_block",
-            "universal_minecraft:ice",
-            "universal_minecraft:packed_ice",
-            "universal_minecraft:lava[falling=false,flowing=false,level=0]",
             "universal_minecraft:sand",
-            "universal_minecraft:sandstone[variant=normal]",
-            "universal_minecraft:terracotta",
-            "universal_minecraft:stained_terracotta[color=red]",
-            "universal_minecraft:stained_terracotta[color=orange]",
-            "universal_minecraft:stained_terracotta[color=yellow]",
-            "universal_minecraft:stained_terracotta[color=brown]",
-            "universal_minecraft:stained_terracotta[color=white]",
-            "universal_minecraft:stained_terracotta[color=light_gray]",
             "universal_minecraft:end_stone",
         ]
-        self.natural_block_tokens = torch.tensor(
+        self._natural_block_tokens = torch.tensor(
             [
-                block_token_mapper.universal_to_token(block)
+                block_token_converter.universal_str_to_token(block)
                 for block in natural_block_strings
             ]
         )
 
-        self.file_path = file_path
-        self.split = split
-        self.generator = generator
+        self._file_path = file_path
+        self._split = split
+        self._generator = generator
 
         # Get the dataset length
         with h5py.File(file_path, "r") as file:
@@ -264,7 +251,7 @@ class MinecraftDataset(Dataset):
             # Decide if we should ignore natural blocks
             if random.random() < 0.75:
                 # print('Ignoring natural blocks')
-                ignore_blocks = self.natural_block_tokens
+                ignore_blocks = self._natural_block_tokens
             else:
                 # print('Not ignoring natural blocks')
                 ignore_blocks = torch.tensor([])
@@ -376,10 +363,10 @@ class MinecraftDataset(Dataset):
         with record_function("getitem_total"):
             with record_function("read_structure"):
                 # Load single structure from disk when needed
-                with h5py.File(self.file_path, "r") as file:
+                with h5py.File(self._file_path, "r") as file:
                     # Read directly into a torch tensor with the correct dtype
                     structure = torch.from_numpy(
-                        file[self.split][self.generator]["structures"][idx][()]
+                        file[self._split][self._generator]["structures"][idx][()]
                     ).long()
 
             with record_function("mask_structure"):

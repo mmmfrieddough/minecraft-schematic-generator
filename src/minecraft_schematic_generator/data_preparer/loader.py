@@ -147,7 +147,7 @@ class SchematicLoader:
     @staticmethod
     def _sync_dataset(
         hdf5_file: File, set_type: str, dataset: str, required_names: set[str]
-    ) -> set[str]:
+    ) -> tuple[set[str], set[str]]:
         """Sync the dataset by removing outdated samples and returning the names that need processing"""
         existing_names = [
             n.decode("utf-8") for n in hdf5_file[set_type][dataset]["names"][:]
@@ -183,9 +183,10 @@ class SchematicLoader:
             )
 
         # Return names that need to be processed (names in required_names but not in existing_names)
-        names_to_process = required_names - set(existing_names)
+        existing_names = set(existing_names) - names_to_remove
+        names_to_process = required_names - existing_names
 
-        return names_to_process
+        return existing_names, names_to_process
 
     @staticmethod
     def load_schematics(

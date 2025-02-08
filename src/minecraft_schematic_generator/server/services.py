@@ -1,7 +1,6 @@
 import logging
 
 import torch
-from schempy.components import Block
 
 from minecraft_schematic_generator.constants import (
     AIR_BLOCK_ID,
@@ -10,7 +9,6 @@ from minecraft_schematic_generator.constants import (
     VOID_AIR_BLOCK_STR,
 )
 from minecraft_schematic_generator.converter import BlockTokenConverter
-from minecraft_schematic_generator.data_preparer import SchematicLoader
 from minecraft_schematic_generator.model import TransformerMinecraftStructureGenerator
 
 
@@ -25,20 +23,16 @@ class StructureGenerator:
         self.block_token_mapper = block_token_mapper
 
     def convert_block_to_token(self, block_str: str) -> int:
-        # Convert to schempy Block and clean properties
-        block = Block.from_string(block_str.lower())
-        SchematicLoader.clean_block_properties(block)
-
         try:
-            universal_block_str = self.block_token_mapper._versioned_to_universal(
-                str(block)
+            universal_block = self.block_token_mapper.versioned_str_to_universal_block(
+                block_str
             )
-            if universal_block_str == VOID_AIR_BLOCK_STR:
+            if universal_block.blockstate == VOID_AIR_BLOCK_STR:
                 return VOID_AIR_BLOCK_ID
-            return self.block_token_mapper.universal_to_token(universal_block_str)
+            return self.block_token_mapper.universal_block_to_token(universal_block)
         except KeyError:
             self.logger.warning(
-                f"Block {universal_block_str} not found in mapping. Returning unused token."
+                f"Block {universal_block.blockstate} not found in mapping. Returning unused token."
             )
             return self.block_token_mapper.get_unused_token()
 
@@ -89,7 +83,9 @@ class StructureGenerator:
                 air_probability_iteration_scaling,
             ):
                 blocks_generated += 1
-                versioned_block_str = self.block_token_mapper.token_to_versioned(token)
+                versioned_block_str = self.block_token_mapper.token_to_versioned_str(
+                    token
+                )
                 yield {"block_state": versioned_block_str, "z": z, "y": y, "x": x}
 
             self.logger.info(

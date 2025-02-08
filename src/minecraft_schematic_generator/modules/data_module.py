@@ -1,3 +1,4 @@
+import json
 from typing import Any, List
 
 import h5py
@@ -6,7 +7,10 @@ from lightning import LightningDataModule
 from torch.utils.data import ConcatDataset
 from tqdm import tqdm
 
-from minecraft_schematic_generator.converter import BlockTokenConverter
+from minecraft_schematic_generator.converter import (
+    BlockTokenConverter,
+    DictBlockTokenMapper,
+)
 from minecraft_schematic_generator.model import MinecraftDataset, ResumableDataLoader
 
 
@@ -31,7 +35,19 @@ class MinecraftDataModule(LightningDataModule):
         self.separate_validation_datasets = separate_validation_datasets
         self.val_dataset_names = {}
         self._rng_state = None
-        self._block_token_mapper = BlockTokenConverter()
+
+        with h5py.File(self.file_path, "r") as file:
+            # Load the mapping
+            if "mapping" in file:
+                mapping_group = file["mapping"]
+                mapping_str = mapping_group["block_to_token"][()]
+                mapping_json = json.loads(mapping_str)
+                self.block_str_mapping = dict(mapping_json)
+            else:
+                raise ValueError("Mapping not found in HDF5 file.")
+
+            block_token_mapper = DictBlockTokenMapper(self.block_str_mapping)
+            self.block_token_converter = BlockTokenConverter(block_token_mapper)
 
     def state_dict(self) -> dict:
         """Save datamodule state."""
@@ -68,7 +84,7 @@ class MinecraftDataModule(LightningDataModule):
                         self.file_path,
                         "train",
                         generator_type,
-                        self._block_token_mapper,
+                        self.block_token_converter,
                     ),
                 )
                 for generator_type in tqdm(train_keys, desc="Loading training datasets")
@@ -80,7 +96,7 @@ class MinecraftDataModule(LightningDataModule):
                         self.file_path,
                         "validation",
                         generator_type,
-                        self._block_token_mapper,
+                        self.block_token_converter,
                     ),
                 )
                 for generator_type in tqdm(val_keys, desc="Loading validation datasets")
@@ -89,7 +105,10 @@ class MinecraftDataModule(LightningDataModule):
                 (
                     generator_type,
                     MinecraftDataset(
-                        self.file_path, "test", generator_type, self._block_token_mapper
+                        self.file_path,
+                        "test",
+                        generator_type,
+                        self.block_token_converter,
                     ),
                 )
                 for generator_type in tqdm(test_keys, desc="Loading test datasets")

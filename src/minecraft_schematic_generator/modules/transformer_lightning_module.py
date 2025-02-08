@@ -11,6 +11,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
     def __init__(
         self,
         num_classes: int,
+        block_str_mapping: dict[str, int],
         max_structure_size: int,
         embedding_dropout: float,
         embedding_dim: int,
@@ -24,6 +25,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         super().__init__()
         self.model = TransformerMinecraftStructureGenerator(
             num_classes=num_classes,
+            block_str_mapping=block_str_mapping,
             max_structure_size=max_structure_size,
             embedding_dropout=embedding_dropout,
             model_dim=model_dim,

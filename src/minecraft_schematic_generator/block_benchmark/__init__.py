@@ -1,4 +1,7 @@
-from minecraft_schematic_generator.converter import SchematicArrayConverter
+from minecraft_schematic_generator.converter import (
+    BlockTokenConverter,
+    SchematicArrayConverter,
+)
 
 from .benchmark_registry import BenchmarkCategory, BenchmarkRegistry
 from .benchmarks.bed_benchmark import BedBenchmark
@@ -13,10 +16,12 @@ from .benchmarks.stairs_benchmark import StairsBenchmark
 from .benchmarks.tall_plant_benchmark import TallPlantBenchmark
 
 
-def create_default_registry(save_debug_schematics) -> BenchmarkRegistry:
+def create_default_registry(
+    block_token_converter: BlockTokenConverter, save_debug_schematics: bool
+) -> BenchmarkRegistry:
     """Create and populate a registry with all standard benchmarks"""
     registry = BenchmarkRegistry()
-    schematic_array_converter = SchematicArrayConverter()
+    schematic_array_converter = SchematicArrayConverter(block_token_converter)
 
     registry.register_benchmark(
         BenchmarkCategory.STRUCTURES,
@@ -119,11 +124,12 @@ def create_default_registry(save_debug_schematics) -> BenchmarkRegistry:
 
 def run_benchmark(
     model,
-    num_runs=1,
-    save_debug_schematics=False,
-    base_seed=0,
-    batch_size=1,
-    show_progress=True,
+    block_token_converter: BlockTokenConverter,
+    num_runs: int = 1,
+    save_debug_schematics: bool = False,
+    base_seed: int = 0,
+    batch_size: int = 1,
+    show_progress: bool = True,
 ):
     """
     Run the full benchmark suite with all default tests.
@@ -139,7 +145,7 @@ def run_benchmark(
     Returns:
         BenchmarkSuite containing all results
     """
-    registry = create_default_registry(save_debug_schematics)
+    registry = create_default_registry(block_token_converter, save_debug_schematics)
     results = registry.run_all(model, num_runs, base_seed, batch_size, show_progress)
     return results
 

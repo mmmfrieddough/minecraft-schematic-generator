@@ -8,8 +8,8 @@ from .block_token_converter import BlockTokenConverter
 
 
 class SchematicArrayConverter:
-    def __init__(self, block_token_mapper: BlockTokenConverter | None = None):
-        self.block_token_mapper = block_token_mapper or BlockTokenConverter()
+    def __init__(self, block_token_converter: BlockTokenConverter):
+        self._block_token_converter = block_token_converter
 
     def schematic_to_array(
         self, schematic: Schematic, update_mapping: bool = False
@@ -24,7 +24,7 @@ class SchematicArrayConverter:
         # Go through each block in the palette
         for block, index in schematic.get_block_palette().items():
             # Map the block to a token
-            token = self.block_token_mapper.versioned_to_token(
+            token = self._block_token_converter.versioned_str_to_token(
                 str(block), update_mapping
             )
 
@@ -46,7 +46,9 @@ class SchematicArrayConverter:
         # Loop through all blocks in the schematic
         for x, y, z in schematic.iter_block_positions():
             token = array[z, y, x].item()
-            versioned_block_str = self.block_token_mapper.token_to_versioned(token)
+            versioned_block_str = self._block_token_converter.token_to_versioned_str(
+                token
+            )
             block = schempy.Block.from_string(versioned_block_str)
             schematic.set_block(x, y, z, block)
 
