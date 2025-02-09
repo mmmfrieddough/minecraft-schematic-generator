@@ -43,8 +43,6 @@
           "acacia",
           "dark_oak",
           "mangrove",
-          "crimson",
-          "warped",
           "bamboo",
           "cherry",
           "pale_oak"
@@ -69,6 +67,23 @@
         ],
         "stripped": [
           "true"
+        ]
+      }
+    },
+    {
+      "name": "universal_minecraft:log",
+      "properties": {
+        "axis": [
+          "x",
+          "z"
+        ],
+        "material": [
+          "crimson",
+          "warped"
+        ],
+        "stripped": [
+          "true",
+          "false"
         ]
       }
     },
@@ -699,9 +714,6 @@
           "z"
         ]
       }
-    },
-    {
-      "name": "universal_minecraft:blackstone"
     },
     {
       "name": "universal_minecraft:gilded_blackstone"
@@ -1453,9 +1465,6 @@
     },
     {
       "name": "universal_minecraft:clay"
-    },
-    {
-      "name": "universal_minecraft:gravel"
     },
     {
       "name": "universal_minecraft:sand"
