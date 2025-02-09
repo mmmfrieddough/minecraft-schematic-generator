@@ -67,7 +67,7 @@ class WorldSampler:
         temp_directory: str,
         progress_save_period: int,
         chunk_mark_radius: int,
-        sample_offset: int,
+        sample_overlap_proportion: float,
         sample_size: int,
         sample_target_block_threshold: int,
         sample_minimum_air_threshold: int,
@@ -77,7 +77,7 @@ class WorldSampler:
         sample_limit: int | None = None,
         worker_check_period: int = 3,
         resource_usage_limit: float = 0.70,
-        progress_per_second_target: float = 0.1,
+        progress_per_second_target: float = 0.2,
         worker_scaling_factor: float = 0.5,
         save_schematics: bool = True,
         save_to_hdf5: bool = False,
@@ -88,7 +88,7 @@ class WorldSampler:
         self.temp_directory = temp_directory
         self.progress_save_period = progress_save_period
         self.chunk_mark_radius = chunk_mark_radius
-        self.sample_offset = sample_offset
+        self.sample_overlap_proportion = sample_overlap_proportion
         self.sample_size = sample_size
         self.sample_target_block_threshold = sample_target_block_threshold
         self.sample_minimum_air_threshold = sample_minimum_air_threshold
@@ -528,7 +528,7 @@ class WorldSampler:
         """Returns the configuration for identifying samples"""
         return {
             "target_blocks": target_blocks,
-            "offset": self.sample_offset,
+            "overlap_proportion": self.sample_overlap_proportion,
             "size": self.sample_size,
             "target_block_threshold": self.sample_target_block_threshold,
             "minimum_air_threshold": self.sample_minimum_air_threshold,
@@ -860,6 +860,9 @@ class WorldSampler:
 
         # Limit the number of chunks to check
         if self.chunk_search_limit and len(all_chunks) > self.chunk_search_limit:
+            print(
+                f"Limiting chunk search to {self.chunk_search_limit}/{len(all_chunks)}"
+            )
             remaining_chunks = max(self.chunk_search_limit - len(visited_chunks), 0)
             remaining_chunk_coords = set(
                 random.sample(list(remaining_chunk_coords), remaining_chunks)
@@ -922,18 +925,18 @@ class WorldSampler:
         return target_indices
 
     def _get_deterministic_random_offsets(
-        self, chunk_coords: tuple[int, int]
+        self, chunk_coords: tuple[int, int], max_offset: int
     ) -> tuple[int, int, int]:
         # Convert the chunk coordinates to a string
         coord_str = f"{chunk_coords[0]}_{chunk_coords[1]}"
-        # Use a hash function, e.g., SHA-256
+        # Hash it
         hash_obj = hashlib.sha256(coord_str.encode())
         # Convert the hash to an integer
         hash_int = int(hash_obj.hexdigest(), base=16)
         # Generate three offsets using different ranges of the hash
-        x_offset = hash_int % self.sample_offset
-        y_offset = (hash_int // self.sample_offset) % self.sample_offset
-        z_offset = (hash_int // (self.sample_offset**2)) % self.sample_offset
+        x_offset = hash_int % max_offset
+        y_offset = (hash_int // max_offset) % max_offset
+        z_offset = (hash_int // (max_offset**2)) % max_offset
         return x_offset, y_offset, z_offset
 
     def _identify_sample_positions_in_chunk(
@@ -998,10 +1001,11 @@ class WorldSampler:
         air_count = np.cumsum(np.cumsum(np.cumsum(air_block, axis=2), axis=1), axis=0)
 
         # Iterate through grid of possible selection start positions
-        x_offset, y_offset, z_offset = self._get_deterministic_random_offsets(
-            chunk_coords
-        )
         m = self.sample_size
+        sample_offset = math.ceil(m * (1 - self.sample_overlap_proportion))
+        x_offset, y_offset, z_offset = self._get_deterministic_random_offsets(
+            chunk_coords, sample_offset
+        )
         y_size = max_height - min_height
         y_limit = y_size - m
         middle_offset = m // 2
@@ -1058,25 +1062,28 @@ class WorldSampler:
                         total_air -= air_count[i - 1, j - 1, k - 1]
 
                     # Check both conditions
+                    total_positions = m**3
                     if (
-                        total_marked > self.sample_target_block_threshold
-                        and total_air > self.sample_minimum_air_threshold
+                        total_marked
+                        > total_positions * self.sample_target_block_threshold
+                        and total_air
+                        > total_positions * self.sample_minimum_air_threshold
                     ):
                         x = x_start + i
                         y = j + min_height
                         z = z_start + k
                         sample_positions.add((x, y, z))
 
-                    k += self.sample_offset
+                    k += sample_offset
 
                 if found_valid_position_y:
-                    j += self.sample_offset
+                    j += sample_offset
                     found_valid_position_x = True
                 else:
                     j += 1
 
             if found_valid_position_x:
-                i += self.sample_offset
+                i += sample_offset
             else:
                 i += 1
 
@@ -1169,6 +1176,9 @@ class WorldSampler:
 
         # Limit the number of chunks to search
         if self.sample_search_limit and len(relevant_chunks) > self.sample_search_limit:
+            print(
+                f"Limiting sample search to {self.sample_search_limit}/{len(relevant_chunks)}"
+            )
             remaining_relevant_chunks = max(
                 self.sample_search_limit - len(sampled_chunks), 0
             )
@@ -1520,6 +1530,9 @@ class WorldSampler:
 
         # Limit the number of samples to collect
         if self.sample_limit and len(all_sample_positions) > self.sample_limit:
+            print(
+                f"Limiting sample collection to {self.sample_limit}/{len(all_sample_positions)}"
+            )
             remaining_samples = max(
                 self.sample_limit
                 - (len(all_sample_positions) - len(remaining_sample_positions)),
@@ -1565,46 +1578,6 @@ class WorldSampler:
             purge_interval=self.sampling_purge_interval,
         )
 
-    block_properties_to_remove = {
-        "minecraft:sugar_cane": ["age"],
-        "minecraft:lectern": ["powered"],
-        "minecraft:daylight_detector": ["power"],
-        "minecraft:note_block": ["instrument", "note", "powered"],
-        "minecraft:observer": ["powered"],
-        "minecraft:dispenser": ["triggered"],
-        "minecraft:hopper": ["enabled"],
-        "minecraft:tripwire": ["powered"],
-        "minecraft:fire": ["age"],
-        "minecraft:barrel": ["open"],
-        "minecraft:cactus": ["age"],
-        "minecraft:tnt": ["unstable"],
-        "minecraft:chorus_flower": ["age"],
-        "minecraft:dropper": ["triggered"],
-    }
-
-    block_id_contains_properties_to_remove = {
-        "leaves": ["distance", "persistent"],
-        "door": ["powered"],
-        "button": ["powered"],
-        "pressure_plate": ["powered", "power"],
-    }
-
-    @staticmethod
-    def clean_block_properties(block: Block) -> None:
-        if not block or not block.properties:
-            return
-        for block_id, properties in WorldSampler.block_properties_to_remove.items():
-            if block.id == block_id:
-                for property in properties:
-                    block.properties.pop(property, None)
-        for (
-            block_id_contains,
-            properties,
-        ) in WorldSampler.block_id_contains_properties_to_remove.items():
-            if block_id_contains in block.id:
-                for property in properties:
-                    block.properties.pop(property, None)
-
     def _sample_position_to_array(
         self,
         world: World,
@@ -1633,6 +1606,10 @@ class WorldSampler:
         # Directly get blocks from world
         for dx, dy, dz in np.ndindex(array.shape):
             block = world.get_block(x + dx, y + dy, z + dz, dimension)
+            if block.namespace != "universal_minecraft":
+                print(
+                    f"Found non-universal block {block} at {x + dx}, {y + dy}, {z + dz}"
+                )
             token = self._block_token_converter.universal_block_to_token(
                 block, update_mapping=True
             )
@@ -1961,16 +1938,20 @@ class WorldSampler:
         self._clear_worker_directories(root_directory, directory)
         print(f"Done sampling {directory}")
 
-    def sample_directory(self, directory: str) -> None:
+    def sample_directory(self, directory: str, world_index: int | None = None) -> None:
         """Samples a directory of worlds recursively."""
         try:
             print(f"Sampling directory: {directory}")
+            current_index = 0
             for root, dirs, files in os.walk(directory):
                 # Skip if we're at the root directory
                 if root == directory:
                     continue
 
                 if "level.dat" in files:
+                    current_index += 1
+                    if world_index is not None and current_index != world_index:
+                        continue
                     print("--------------------")
                     self.sample_world(directory, root)
                     # Prevent further traversal into subdirectories of a world
