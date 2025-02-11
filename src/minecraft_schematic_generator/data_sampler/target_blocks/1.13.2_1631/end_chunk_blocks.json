@@ -1707,9 +1707,6 @@
       }
     },
     {
-      "name": "universal_minecraft:dragon_egg"
-    },
-    {
       "name": "universal_minecraft:end_portal_frame",
       "properties": {
         "eye": [
@@ -1723,9 +1720,6 @@
           "west"
         ]
       }
-    },
-    {
-      "name": "universal_minecraft:end_portal"
     },
     {
       "name": "universal_minecraft:nether_portal",

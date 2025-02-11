@@ -2202,8 +2202,7 @@
       "name": "universal_minecraft:bedrock",
       "properties": {
         "infiniburn": [
-          "true",
-          "false"
+          "true"
         ]
       }
     },
@@ -2994,9 +2993,6 @@
           "west"
         ]
       }
-    },
-    {
-      "name": "universal_minecraft:end_portal"
     },
     {
       "name": "universal_minecraft:nether_portal",
