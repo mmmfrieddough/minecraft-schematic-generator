@@ -49,52 +49,56 @@ class DoorBenchmark(StructureBenchmark):
 
         # Place middle door
         complete_schematic.set_block(
-            self.SCHEMATIC_MIDDLE,
-            self.SCHEMATIC_MIDDLE,
-            self.SCHEMATIC_MIDDLE,
+            self._schematic_middle,
+            self._schematic_middle,
+            self._schematic_middle,
             Block("minecraft:stone"),
         )
         door_state = random.choice(door_states)
         complete_schematic.set_block(
-            self.SCHEMATIC_MIDDLE,
-            self.SCHEMATIC_MIDDLE + 1,
-            self.SCHEMATIC_MIDDLE,
+            self._schematic_middle,
+            self._schematic_middle + 1,
+            self._schematic_middle,
             Block(door_state["lower"]),
         )
         complete_schematic.set_block(
-            self.SCHEMATIC_MIDDLE,
-            self.SCHEMATIC_MIDDLE + 2,
-            self.SCHEMATIC_MIDDLE,
+            self._schematic_middle,
+            self._schematic_middle + 2,
+            self._schematic_middle,
             Block(door_state["upper"]),
         )
 
         # Track positions
         used_positions.update(
             {
-                (self.SCHEMATIC_MIDDLE, self.SCHEMATIC_MIDDLE, self.SCHEMATIC_MIDDLE),
                 (
-                    self.SCHEMATIC_MIDDLE,
-                    self.SCHEMATIC_MIDDLE + 1,
-                    self.SCHEMATIC_MIDDLE,
+                    self._schematic_middle,
+                    self._schematic_middle,
+                    self._schematic_middle,
                 ),
                 (
-                    self.SCHEMATIC_MIDDLE,
-                    self.SCHEMATIC_MIDDLE + 2,
-                    self.SCHEMATIC_MIDDLE,
+                    self._schematic_middle,
+                    self._schematic_middle + 1,
+                    self._schematic_middle,
+                ),
+                (
+                    self._schematic_middle,
+                    self._schematic_middle + 2,
+                    self._schematic_middle,
                 ),
             }
         )
         door_positions.update(
             {
                 (
-                    self.SCHEMATIC_MIDDLE,
-                    self.SCHEMATIC_MIDDLE + 1,
-                    self.SCHEMATIC_MIDDLE,
+                    self._schematic_middle,
+                    self._schematic_middle + 1,
+                    self._schematic_middle,
                 ): door_state["lower"],
                 (
-                    self.SCHEMATIC_MIDDLE,
-                    self.SCHEMATIC_MIDDLE + 2,
-                    self.SCHEMATIC_MIDDLE,
+                    self._schematic_middle,
+                    self._schematic_middle + 2,
+                    self._schematic_middle,
                 ): door_state["upper"],
             }
         )
@@ -103,9 +107,9 @@ class DoorBenchmark(StructureBenchmark):
         valid_positions = [
             (x, y, z)
             for x, y, z in product(
-                range(self.SCHEMATIC_SIZE),
-                range(self.SCHEMATIC_SIZE - 2),
-                range(self.SCHEMATIC_SIZE),
+                range(self._schematic_size),
+                range(self._schematic_size - 2),
+                range(self._schematic_size),
             )
             if (x, y, z) not in used_positions
         ]

@@ -50,12 +50,17 @@ class RedstonePowerBenchmark(StructureBenchmark):
         self,
         name: str,
         schematic_array_converter: SchematicArrayConverter,
+        schematic_size: int,
         component_type: RedstoneComponentType,
         save_debug_schematics=False,
         debug_output_dir="debug_schematics",
     ):
         super().__init__(
-            name, schematic_array_converter, save_debug_schematics, debug_output_dir
+            name,
+            schematic_array_converter,
+            schematic_size,
+            save_debug_schematics,
+            debug_output_dir,
         )
         self.component_type = component_type
 
@@ -96,10 +101,7 @@ class RedstonePowerBenchmark(StructureBenchmark):
                     f"minecraft:piston_head[facing=up,short=false,type={head_type}]",
                 )
             else:
-                return (
-                    f"{piston_type}[extended=false,facing=up]",
-                    "minecraft:air",
-                )
+                return f"{piston_type}[extended=false,facing=up]", None
 
     def place_power_source(
         self,
@@ -194,9 +196,9 @@ class RedstonePowerBenchmark(StructureBenchmark):
         for ax, ay, az in adjacents:
             # Check if coordinates are within schematic bounds
             if (
-                0 <= ax < self.SCHEMATIC_SIZE
-                and 0 <= ay < self.SCHEMATIC_SIZE
-                and 0 <= az < self.SCHEMATIC_SIZE
+                0 <= ax < self._schematic_size
+                and 0 <= ay < self._schematic_size
+                and 0 <= az < self._schematic_size
             ):
                 block = schematic.get_block(ax, ay, az)
                 if block and "minecraft:air" not in str(block):
@@ -231,9 +233,9 @@ class RedstonePowerBenchmark(StructureBenchmark):
         valid_sources = self.VALID_COMBINATIONS[self.component_type]
 
         # Place components in a grid pattern across the entire middle layer
-        for x in range(0, self.SCHEMATIC_SIZE):
-            for z in range(0, self.SCHEMATIC_SIZE):
-                y = self.SCHEMATIC_MIDDLE
+        for x in range(0, self._schematic_size):
+            for z in range(0, self._schematic_size):
+                y = self._schematic_middle
 
                 # Place base block if needed
                 if self.component_type == RedstoneComponentType.DOOR:
@@ -248,10 +250,10 @@ class RedstonePowerBenchmark(StructureBenchmark):
                 # Randomly choose and place power source
                 powered = False
                 if place_power_source:
-                    top = self.SCHEMATIC_MIDDLE + 1
-                    bottom = self.SCHEMATIC_MIDDLE - 1
+                    top = self._schematic_middle + 1
+                    bottom = self._schematic_middle - 1
                     if self.component_type == RedstoneComponentType.DOOR:
-                        top = self.SCHEMATIC_MIDDLE + 3
+                        top = self._schematic_middle + 3
                     source_type = random.choice(valid_sources)
                     # Try to place power source, respecting height constraints
                     source_positions, powered = self.place_power_source(
@@ -276,7 +278,7 @@ class RedstonePowerBenchmark(StructureBenchmark):
                     used_positions.add((x, y + 1, z))
 
                 # Randomly decide whether to remove this component
-                if random.random() < 0.5:
+                if random.random() < 0.25:
                     # Only remove if there will be an adjacent solid block
                     if self.has_adjacent_solid_block(partial_schematic, x, y, z):
                         removed_positions.add((x, y, z))

@@ -8,11 +8,13 @@ class BlockBenchmarkCallback(Callback):
     def __init__(
         self,
         block_token_converter: BlockTokenConverter,
+        schematic_size: int,
         num_runs: int = 100,
         save_debug_schematics: bool = False,
         base_seed: int = 0,
     ):
         self._block_token_converter = block_token_converter
+        self._schematic_size = schematic_size
         self._num_runs = num_runs
         self._save_debug_schematics = save_debug_schematics
         self._base_seed = base_seed
@@ -21,6 +23,7 @@ class BlockBenchmarkCallback(Callback):
         results = run_benchmark(
             pl_module.model,
             block_token_converter=self._block_token_converter,
+            schematic_size=self._schematic_size,
             num_runs=self._num_runs,
             save_debug_schematics=self._save_debug_schematics,
             base_seed=self._base_seed,

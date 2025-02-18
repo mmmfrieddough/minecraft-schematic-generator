@@ -19,11 +19,16 @@ class PortalBenchmark(StructureBenchmark):
         self,
         name: str,
         schematic_array_converter: SchematicArrayConverter,
+        schematic_size: int,
         save_debug_schematics: bool = False,
         debug_output_dir: str = "debug_schematics",
     ):
         super().__init__(
-            name, schematic_array_converter, save_debug_schematics, debug_output_dir
+            name,
+            schematic_array_converter,
+            schematic_size,
+            save_debug_schematics,
+            debug_output_dir,
         )
         self.portal_groups: Dict[Tuple[int, int, int], Set[Tuple[int, int, int]]] = {}
         self.portal_frames: Dict[Tuple[int, int, int], Set[Tuple[int, int, int]]] = {}
@@ -127,9 +132,9 @@ class PortalBenchmark(StructureBenchmark):
         for px, py, pz in area_coords:
             if (
                 (px, py, pz) in used_positions
-                or not (0 <= px < self.SCHEMATIC_SIZE)
-                or not (0 <= py < self.SCHEMATIC_SIZE)
-                or not (0 <= pz < self.SCHEMATIC_SIZE)
+                or not (0 <= px < self._schematic_size)
+                or not (0 <= py < self._schematic_size)
+                or not (0 <= pz < self._schematic_size)
             ):
                 return False
         return True
@@ -143,9 +148,9 @@ class PortalBenchmark(StructureBenchmark):
 
         # Place middle portal
         middle_pos = (
-            self.SCHEMATIC_MIDDLE,
-            self.SCHEMATIC_MIDDLE,
-            self.SCHEMATIC_MIDDLE,
+            self._schematic_middle,
+            self._schematic_middle,
+            self._schematic_middle,
         )
         portal_state = random.choice(portal_states)
         portal_blocks, frame_blocks = self.build_portal(
@@ -167,14 +172,16 @@ class PortalBenchmark(StructureBenchmark):
 
             x = random.randint(
                 0,
-                (self.SCHEMATIC_SIZE - width - 2) if is_x_axis else self.SCHEMATIC_SIZE,
+                (self._schematic_size - width - 2)
+                if is_x_axis
+                else self._schematic_size,
             )
-            y = random.randint(0, self.SCHEMATIC_SIZE - height - 2)
+            y = random.randint(0, self._schematic_size - height - 2)
             z = random.randint(
                 0,
-                (self.SCHEMATIC_SIZE - width - 2)
+                (self._schematic_size - width - 2)
                 if not is_x_axis
-                else self.SCHEMATIC_SIZE,
+                else self._schematic_size,
             )
 
             if self.can_place_portal(
@@ -216,9 +223,9 @@ class PortalBenchmark(StructureBenchmark):
         for ax, ay, az in adjacents:
             # Check if coordinates are within schematic bounds
             if (
-                0 <= ax < self.SCHEMATIC_SIZE
-                and 0 <= ay < self.SCHEMATIC_SIZE
-                and 0 <= az < self.SCHEMATIC_SIZE
+                0 <= ax < self._schematic_size
+                and 0 <= ay < self._schematic_size
+                and 0 <= az < self._schematic_size
             ):
                 block = schematic.get_block(ax, ay, az)
                 if block and "minecraft:air" not in str(block):

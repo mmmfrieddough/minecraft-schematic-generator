@@ -5,6 +5,8 @@ from torch.nn import functional as F
 
 from minecraft_schematic_generator.constants import AIR_BLOCK_ID, MASK_BLOCK_ID
 
+from .self_attention_decoder import SelfAttentionDecoder, SelfAttentionDecoderLayer
+
 MODEL_CARD_TEMPLATE = """
 ---
 language: en
@@ -62,10 +64,10 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         self.embedding_dropout = nn.Dropout(embedding_dropout)
 
         # Transformer
-        decoder_layer = nn.TransformerDecoderLayer(
-            model_dim, num_heads, dropout=decoder_dropout
+        decoder_layer = SelfAttentionDecoderLayer(
+            model_dim, num_heads, dropout=decoder_dropout, batch_first=True
         )
-        self.decoder = nn.TransformerDecoder(decoder_layer, num_layers)
+        self.decoder = SelfAttentionDecoder(decoder_layer, num_layers)
 
         # Output
         if self.embedding_dim != model_dim:
@@ -74,6 +76,67 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         self.output_layer.weight = self.embedding.weight
 
         self._init_weights()
+
+        self._flattening_orders = self._create_flattening_orders()
+
+    def _create_flattening_order(self, size: int) -> torch.Tensor:
+        """
+        Return a 1D LongTensor of length size^3 containing the "center-out" ordering
+        for a cubic volume of shape [size, size, size].
+        The list is sorted by L∞ distance from center, then lexicographically within each shell.
+        Each entry is an index in standard (row-major) flattening order.
+        """
+        c = size // 2
+        coords = []
+
+        # Gather all coordinates, calculate distance
+        for x in range(size):
+            for y in range(size):
+                for z in range(size):
+                    d = max(abs(x - c), abs(y - c), abs(z - c))
+                    coords.append((d, x, y, z))
+
+        # Sort by (distance, x, y, z)
+        coords.sort()
+
+        # Convert (x, y, z) → single integer index i = x*(size^2) + y*size + z
+        # in row-major ordering
+        flatten_idx = [(x * (size * size)) + (y * size) + z for (_, x, y, z) in coords]
+
+        # Make it a LongTensor
+        flatten_idx = torch.tensor(flatten_idx, dtype=torch.long)
+        return flatten_idx
+
+    def _create_flattening_orders(self) -> dict:
+        """Generate ordering tensors for every allowed odd cube size."""
+        orders = {}
+        # Generate orders for odd sizes from 3 up to max_structure_size
+        for size in range(3, self.max_structure_size + 1, 2):
+            flatten_idx = self._create_flattening_order(size)
+            self.register_buffer(f"flatten_idx_{size}", flatten_idx)
+            orders[size] = flatten_idx
+        return orders
+
+    def _flatten_structure(self, structure: torch.Tensor) -> torch.Tensor:
+        """Flatten a 3D structure tensor to a 1D tensor."""
+        batch = structure.size(0)
+        size = structure.size(-1)
+        flatten_idx = getattr(self, f"flatten_idx_{size}")
+        structure_1d = structure.view(batch, -1)
+        flatten_idx_batched = flatten_idx.unsqueeze(0).expand(batch, -1)
+        structure_flat = structure_1d.gather(1, flatten_idx_batched)
+        return structure_flat
+
+    def _unflatten_structure(self, structure_flat: torch.Tensor) -> torch.Tensor:
+        """Unflatten a 1D structure tensor to a 3D tensor."""
+        batch, channels, length = structure_flat.size()
+        size = round(length ** (1 / 3))
+        flatten_idx = getattr(self, f"flatten_idx_{size}")
+        flatten_idx_batched = flatten_idx.view(1, 1, -1).expand(batch, channels, -1)
+        out_2d = structure_flat.new_zeros(batch, channels, size**3)
+        out_2d.scatter_(dim=2, index=flatten_idx_batched, src=structure_flat)
+        out = out_2d.view(batch, channels, size, size, size)
+        return out
 
     def _init_weights(self):
         nn.init.xavier_uniform_(self.embedding.weight)
@@ -107,9 +170,12 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         if self.output_layer.bias is not None:
             nn.init.zeros_(self.output_layer.bias)
 
-    def forward(self, structure_flat: torch.Tensor) -> torch.Tensor:
+    def forward(self, structure: torch.Tensor) -> torch.Tensor:
+        # Flatten the structure
+        structure = self._flatten_structure(structure)
+
         # Embed the sequence
-        output_seq = self.embedding(structure_flat)
+        output_seq = self.embedding(structure)
 
         # Project the embedding if necessary
         if self.embedding_dim != self.model_dim:
@@ -117,20 +183,14 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
 
         # Use cached positions tensor, sliced to current sequence length
         output_seq = output_seq + self.positional_embedding(
-            self.positions[: structure_flat.size(1)]
+            self.positions[: structure.size(1)]
         )
 
         # Add dropout
         output_seq = self.embedding_dropout(output_seq)
 
-        # Reshape the sequence so the batch is the first dimension
-        output_seq = output_seq.transpose(0, 1)
-
         # Run the transformer
-        output = self.decoder(tgt=output_seq, memory=output_seq)
-
-        # Reshape back to the batch first format
-        output = output.transpose(0, 1)
+        output = self.decoder(tgt=output_seq)
 
         # Project back to embedding dimension if necessary
         if self.embedding_dim != self.model_dim:
@@ -142,7 +202,10 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         # Reshape so the class logits are before the sequence dimension
         output = output.transpose(1, 2)
 
-        return output
+        # Unflatten the structure
+        structure = self._unflatten_structure(output)
+
+        return structure
 
     def generate_model_card(self) -> ModelCard:
         return ModelCard.from_template(
@@ -157,39 +220,52 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         )
 
     def generate_neighbor_mask(self, tensor: torch.Tensor) -> torch.Tensor:
-        """Generates a mask indicating if an element has a neighbor > 1."""
+        """Generates a mask indicating if an element has a neighbor that is not air."""
+        # Add a temporary channel dimension
+        tensor = tensor.unsqueeze(1)
+
         kernel = torch.ones((1, 1, 3, 3, 3), dtype=tensor.dtype, device=tensor.device)
         kernel[0, 0, 1, 1, 1] = 0  # Ignore the central element
 
         # Create a mask of elements greater than AIR_BLOCK_ID
-        greater_than_1 = tensor > AIR_BLOCK_ID
+        non_air = tensor > AIR_BLOCK_ID
 
         # Convolve to count neighbors that are greater than AIR_BLOCK_ID
-        neighbors_greater_than_1 = (
-            F.conv3d(greater_than_1.float(), kernel.float(), padding=1) >= 1
+        has_non_air_neighbors = (
+            F.conv3d(non_air.float(), kernel.float(), padding=1) >= 1
         )
 
         # Return the mask
-        return neighbors_greater_than_1
+        return has_non_air_neighbors.squeeze(1)
 
     def _get_valid_positions(
         self, structure: torch.Tensor, filled_positions: torch.Tensor
     ) -> torch.Tensor:
         """Get ordered list of valid positions to fill, from center outward."""
-        # Generate mask of valid next elements
+        # Limit structure to positions that have been filled by the model
         mask_structure = structure * filled_positions
-        mask = self.generate_neighbor_mask(mask_structure) & (
-            structure == MASK_BLOCK_ID
-        )
+        # Generate mask of valid next elements
+        mask_structure = mask_structure.unsqueeze(0)
+        mask = self.generate_neighbor_mask(mask_structure)
+        mask_structure = mask_structure.squeeze(0)
+        mask = mask.squeeze(0)
+        # Limit to positions that were originally masked
+        mask = mask & (structure == MASK_BLOCK_ID)
 
         if not mask.any():
             return None
 
         # Get positions that need filling
-        valid_positions = mask.squeeze().nonzero()
+        valid_positions = mask.nonzero()
+
+        # Calculate center coordinates based on structure dimensions
+        center = torch.tensor(
+            [d // 2 for d in structure.shape],
+            device=valid_positions.device,
+            dtype=torch.float,
+        )
 
         # Calculate distances from center
-        center = torch.tensor([5.0, 5.0, 5.0], device=valid_positions.device)
         distances = torch.norm(valid_positions.float() - center, dim=1)
 
         # Return positions ordered by distance from center
@@ -197,7 +273,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
 
     def _predict_single_position(
         self,
-        flattened_structure: torch.Tensor,
+        structure: torch.Tensor,
         pos: torch.Tensor,
         temperature: float,
         iteration: int = 0,
@@ -205,10 +281,9 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
     ):
         """Make a prediction for a single position in the structure."""
         with torch.autocast(device_type="cuda"):
-            z, y, x = pos
-            flat_idx = z * self.max_structure_size**2 + y * self.max_structure_size + x
-            logits = self(flattened_structure)
-            logits_for_position = logits[0, :, flat_idx]
+            structure = structure.unsqueeze(0)
+            logits = self.forward(structure)
+            logits_for_position = logits[0, :, pos[0], pos[1], pos[2]]
 
             # Apply air probability scaling
             logits_for_position[AIR_BLOCK_ID] += iteration * air_probability_scaling
@@ -237,40 +312,23 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
             use_greedy: If True, always select most likely token without sampling
         """
         with torch.no_grad(), torch.autocast(device_type="cuda"):
-            # Store dimensionality
-            was_3d = structure.dim() == 3
+            # Add batch dimension if necessary
+            if structure.dim() == 3:
+                structure = structure.unsqueeze(0)
 
-            # Ensure we have the right shape
-            if was_3d:
-                structure = structure.unsqueeze(0).unsqueeze(0)
+            # Run the model
+            logits = self.forward(structure)
 
-            # Flatten the spatial dimensions (depth, height, width) into one dimension
-            batch_size, channels, depth, height, width = structure.size()
-            flattened = structure.view(batch_size, channels, depth * height * width)
-            flattened = flattened.squeeze(1)  # Remove channel dimension
-
-            logits = self(flattened)
-
+            # Select most likely token or sample from distribution
             if use_greedy:
                 predictions = torch.argmax(logits, dim=1)
             else:
-                # Reshape logits to [batch_size * sequence_length, num_classes]
-                reshaped_logits = logits.permute(0, 2, 1).reshape(-1, logits.size(1))
-                probabilities = F.softmax(reshaped_logits / temperature, dim=1)
-                predictions = torch.multinomial(probabilities, num_samples=1).view(
-                    batch_size, -1
-                )
+                probabilities = F.softmax(logits / temperature, dim=1)
+                predictions = torch.multinomial(probabilities, num_samples=1)
 
-            predictions = predictions.view(batch_size, depth, height, width)
-
-            result = structure.squeeze(
-                1
-            ).clone()  # Remove channel dimension from structure
+            # Copy original structure and replace masked positions with predictions
+            result = structure.clone()
             result[result == 0] = predictions[result == 0]
-
-            # Restore original shape if needed
-            if was_3d:
-                result = result.squeeze(0)
 
             return result
 
@@ -283,25 +341,36 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         max_blocks: int,
         air_probability_iteration_scaling: float,
     ):
-        # Ensure tensor has batch and channel dimensions
-        if structure.dim() == 3:
-            structure = structure.unsqueeze(0).unsqueeze(0)
+        assert structure.dim() == 3, "Structure must have 3 dimensions"
+        assert (
+            structure.size(0) <= self.max_structure_size
+        ), f"Z dimension {structure.size(0)} exceeds maximum size {self.max_structure_size}"
+        assert (
+            structure.size(1) <= self.max_structure_size
+        ), f"Y dimension {structure.size(1)} exceeds maximum size {self.max_structure_size}"
+        assert (
+            structure.size(2) <= self.max_structure_size
+        ), f"X dimension {structure.size(2)} exceeds maximum size {self.max_structure_size}"
 
-        flattened_structure = structure.view(1, -1)
-
-        # Initialize mask of valid next elements
+        # Initialize tensor to track filled positions
         filled_positions = torch.zeros_like(structure, dtype=torch.bool)
+
+        # Fill the center up to the start radius to pretend the model has already filled it
+        z_mid, y_mid, x_mid = (
+            structure.shape[0] // 2,
+            structure.shape[1] // 2,
+            structure.shape[2] // 2,
+        )
         filled_positions[
-            0,
-            0,
-            5 - start_radius : 5 + start_radius + 1,
-            5 - start_radius : 5 + start_radius + 1,
-            5 - start_radius : 5 + start_radius + 1,
+            z_mid - start_radius : z_mid + start_radius + 1,
+            y_mid - start_radius : y_mid + start_radius + 1,
+            x_mid - start_radius : x_mid + start_radius + 1,
         ] = 1
 
         with torch.no_grad():
             filled_blocks = 0
 
+            # Each iteration adds on a "layer" of blocks
             for iteration in range(max_iterations):
                 # print(f"Iteration {iteration+1}/{max_iterations}")
 
@@ -310,10 +379,10 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
                     # print("No more elements to update")
                     break
 
-                # Process each position in center-out order
+                # Process each position
                 for pos in valid_positions:
                     predicted_token = self._predict_single_position(
-                        flattened_structure,
+                        structure,
                         pos,
                         temperature,
                         iteration,
@@ -324,12 +393,12 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
                     yield predicted_token, z, y, x
 
                     if predicted_token != AIR_BLOCK_ID:
-                        filled_positions[0, 0, z, y, x] = 1
+                        filled_positions[z, y, x] = 1
                         filled_blocks += 1
                         # print(f"Filled {filled_blocks}/{max_blocks} solid blocks")
                     if filled_blocks >= max_blocks:
                         break
-                    structure[0, 0, z, y, x] = predicted_token
+                    structure[z, y, x] = predicted_token
 
                 if filled_blocks >= max_blocks:
                     break

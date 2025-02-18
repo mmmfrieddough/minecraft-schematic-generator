@@ -36,52 +36,56 @@ class TallPlantBenchmark(StructureBenchmark):
 
         # Place middle plant
         complete_schematic.set_block(
-            self.SCHEMATIC_MIDDLE,
-            self.SCHEMATIC_MIDDLE,
-            self.SCHEMATIC_MIDDLE,
+            self._schematic_middle,
+            self._schematic_middle,
+            self._schematic_middle,
             Block("minecraft:grass_block[snowy=false]"),
         )
         plant_state = random.choice(plant_states)
         complete_schematic.set_block(
-            self.SCHEMATIC_MIDDLE,
-            self.SCHEMATIC_MIDDLE + 1,
-            self.SCHEMATIC_MIDDLE,
+            self._schematic_middle,
+            self._schematic_middle + 1,
+            self._schematic_middle,
             Block(plant_state["lower"]),
         )
         complete_schematic.set_block(
-            self.SCHEMATIC_MIDDLE,
-            self.SCHEMATIC_MIDDLE + 2,
-            self.SCHEMATIC_MIDDLE,
+            self._schematic_middle,
+            self._schematic_middle + 2,
+            self._schematic_middle,
             Block(plant_state["upper"]),
         )
 
         # Track positions
         used_positions.update(
             {
-                (self.SCHEMATIC_MIDDLE, self.SCHEMATIC_MIDDLE, self.SCHEMATIC_MIDDLE),
                 (
-                    self.SCHEMATIC_MIDDLE,
-                    self.SCHEMATIC_MIDDLE + 1,
-                    self.SCHEMATIC_MIDDLE,
+                    self._schematic_middle,
+                    self._schematic_middle,
+                    self._schematic_middle,
                 ),
                 (
-                    self.SCHEMATIC_MIDDLE,
-                    self.SCHEMATIC_MIDDLE + 2,
-                    self.SCHEMATIC_MIDDLE,
+                    self._schematic_middle,
+                    self._schematic_middle + 1,
+                    self._schematic_middle,
+                ),
+                (
+                    self._schematic_middle,
+                    self._schematic_middle + 2,
+                    self._schematic_middle,
                 ),
             }
         )
         plant_positions.update(
             {
                 (
-                    self.SCHEMATIC_MIDDLE,
-                    self.SCHEMATIC_MIDDLE + 1,
-                    self.SCHEMATIC_MIDDLE,
+                    self._schematic_middle,
+                    self._schematic_middle + 1,
+                    self._schematic_middle,
                 ): plant_state["lower"],
                 (
-                    self.SCHEMATIC_MIDDLE,
-                    self.SCHEMATIC_MIDDLE + 2,
-                    self.SCHEMATIC_MIDDLE,
+                    self._schematic_middle,
+                    self._schematic_middle + 2,
+                    self._schematic_middle,
                 ): plant_state["upper"],
             }
         )
@@ -90,9 +94,9 @@ class TallPlantBenchmark(StructureBenchmark):
         valid_positions = [
             (x, y, z)
             for x, y, z in product(
-                range(self.SCHEMATIC_SIZE),
-                range(self.SCHEMATIC_SIZE - 2),
-                range(self.SCHEMATIC_SIZE),
+                range(self._schematic_size),
+                range(self._schematic_size - 2),
+                range(self._schematic_size),
             )
             if (x, y, z) not in used_positions
         ]

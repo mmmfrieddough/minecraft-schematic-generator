@@ -17,7 +17,9 @@ from .benchmarks.tall_plant_benchmark import TallPlantBenchmark
 
 
 def create_default_registry(
-    block_token_converter: BlockTokenConverter, save_debug_schematics: bool
+    block_token_converter: BlockTokenConverter,
+    schematic_size: int,
+    save_debug_schematics: bool,
 ) -> BenchmarkRegistry:
     """Create and populate a registry with all standard benchmarks"""
     registry = BenchmarkRegistry()
@@ -25,21 +27,30 @@ def create_default_registry(
 
     registry.register_benchmark(
         BenchmarkCategory.STRUCTURES,
-        DoorBenchmark("doors", schematic_array_converter, save_debug_schematics),
-    )
-    registry.register_benchmark(
-        BenchmarkCategory.STRUCTURES,
-        BedBenchmark("beds", schematic_array_converter, save_debug_schematics),
-    )
-    registry.register_benchmark(
-        BenchmarkCategory.STRUCTURES,
-        TallPlantBenchmark(
-            "tall_plants", schematic_array_converter, save_debug_schematics
+        DoorBenchmark(
+            "doors", schematic_array_converter, schematic_size, save_debug_schematics
         ),
     )
     registry.register_benchmark(
         BenchmarkCategory.STRUCTURES,
-        PortalBenchmark("portals", schematic_array_converter, save_debug_schematics),
+        BedBenchmark(
+            "beds", schematic_array_converter, schematic_size, save_debug_schematics
+        ),
+    )
+    registry.register_benchmark(
+        BenchmarkCategory.STRUCTURES,
+        TallPlantBenchmark(
+            "tall_plants",
+            schematic_array_converter,
+            schematic_size,
+            save_debug_schematics,
+        ),
+    )
+    registry.register_benchmark(
+        BenchmarkCategory.STRUCTURES,
+        PortalBenchmark(
+            "portals", schematic_array_converter, schematic_size, save_debug_schematics
+        ),
     )
 
     registry.register_benchmark(
@@ -47,6 +58,7 @@ def create_default_registry(
         PatternBenchmark(
             "plane",
             schematic_array_converter,
+            schematic_size,
             PatternType.PLANE,
             save_debug_schematics=save_debug_schematics,
         ),
@@ -56,6 +68,7 @@ def create_default_registry(
         PatternBenchmark(
             "checkerboard_plane",
             schematic_array_converter,
+            schematic_size,
             PatternType.PLANE,
             checkerboard=True,
             save_debug_schematics=save_debug_schematics,
@@ -66,6 +79,7 @@ def create_default_registry(
         PatternBenchmark(
             "cross",
             schematic_array_converter,
+            schematic_size,
             PatternType.CROSS,
             save_debug_schematics=save_debug_schematics,
         ),
@@ -75,6 +89,7 @@ def create_default_registry(
         PatternBenchmark(
             "checkerboard_cross",
             schematic_array_converter,
+            schematic_size,
             PatternType.CROSS,
             checkerboard=True,
             save_debug_schematics=save_debug_schematics,
@@ -85,6 +100,7 @@ def create_default_registry(
         StairsBenchmark(
             "stairs",
             schematic_array_converter,
+            schematic_size,
             min_width=0,
             max_width=3,
             save_debug_schematics=save_debug_schematics,
@@ -96,6 +112,7 @@ def create_default_registry(
         RedstonePowerBenchmark(
             "redstone_lamps",
             schematic_array_converter,
+            schematic_size,
             RedstoneComponentType.LAMP,
             save_debug_schematics,
         ),
@@ -105,6 +122,7 @@ def create_default_registry(
         RedstonePowerBenchmark(
             "iron_doors",
             schematic_array_converter,
+            schematic_size,
             RedstoneComponentType.DOOR,
             save_debug_schematics,
         ),
@@ -114,6 +132,7 @@ def create_default_registry(
         RedstonePowerBenchmark(
             "pistons",
             schematic_array_converter,
+            schematic_size,
             RedstoneComponentType.PISTON,
             save_debug_schematics,
         ),
@@ -125,6 +144,7 @@ def create_default_registry(
 def run_benchmark(
     model,
     block_token_converter: BlockTokenConverter,
+    schematic_size: int,
     num_runs: int = 1,
     save_debug_schematics: bool = False,
     base_seed: int = 0,
@@ -145,7 +165,9 @@ def run_benchmark(
     Returns:
         BenchmarkSuite containing all results
     """
-    registry = create_default_registry(block_token_converter, save_debug_schematics)
+    registry = create_default_registry(
+        block_token_converter, schematic_size, save_debug_schematics
+    )
     results = registry.run_all(model, num_runs, base_seed, batch_size, show_progress)
     return results
 

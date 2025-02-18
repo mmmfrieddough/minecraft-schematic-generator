@@ -100,6 +100,7 @@ class PatternBenchmark(StructureBenchmark):
         self,
         name: str,
         schematic_array_converter: SchematicArrayConverter,
+        schematic_size: int,
         pattern_type: PatternType,
         checkerboard: bool = False,
         removal_chance: float = 0.3,
@@ -107,7 +108,11 @@ class PatternBenchmark(StructureBenchmark):
         debug_output_dir="debug_schematics",
     ):
         super().__init__(
-            name, schematic_array_converter, save_debug_schematics, debug_output_dir
+            name,
+            schematic_array_converter,
+            schematic_size,
+            save_debug_schematics,
+            debug_output_dir,
         )
         self.pattern_type = pattern_type
         self.checkerboard = checkerboard
@@ -138,10 +143,10 @@ class PatternBenchmark(StructureBenchmark):
         if self.pattern_type == PatternType.PLANE:
             # Randomly choose which axis to fix
             fixed_axis = random.choice(["x", "y", "z"])
-            fixed_value = self.SCHEMATIC_MIDDLE
+            fixed_value = self._schematic_middle
 
             # Place blocks in the plane
-            for pos in product(range(self.SCHEMATIC_SIZE), repeat=2):
+            for pos in product(range(self._schematic_size), repeat=2):
                 x, y, z = [0] * 3
                 if fixed_axis == "x":
                     x, y, z = fixed_value, pos[0], pos[1]
@@ -160,11 +165,11 @@ class PatternBenchmark(StructureBenchmark):
 
         else:  # CROSS
             # Place blocks along each axis through the middle
-            for i in range(self.SCHEMATIC_SIZE):
+            for i in range(self._schematic_size):
                 positions = [
-                    (i, self.SCHEMATIC_MIDDLE, self.SCHEMATIC_MIDDLE),
-                    (self.SCHEMATIC_MIDDLE, i, self.SCHEMATIC_MIDDLE),
-                    (self.SCHEMATIC_MIDDLE, self.SCHEMATIC_MIDDLE, i),
+                    (i, self._schematic_middle, self._schematic_middle),
+                    (self._schematic_middle, i, self._schematic_middle),
+                    (self._schematic_middle, self._schematic_middle, i),
                 ]
 
                 for x, y, z in positions:

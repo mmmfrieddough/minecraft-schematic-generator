@@ -63,9 +63,9 @@ class BedBenchmark(StructureBenchmark):
 
         # Place middle bed
         middle_x, middle_y, middle_z = (
-            self.SCHEMATIC_MIDDLE,
-            self.SCHEMATIC_MIDDLE,
-            self.SCHEMATIC_MIDDLE,
+            self._schematic_middle,
+            self._schematic_middle,
+            self._schematic_middle,
         )
         bed_state = random.choice(bed_states)
 
@@ -105,9 +105,11 @@ class BedBenchmark(StructureBenchmark):
         valid_positions = [
             (x, y, z)
             for x, y, z in product(
-                range(self.SCHEMATIC_SIZE),
-                range(self.SCHEMATIC_SIZE - 1),  # -1 because beds are only 1 block high
-                range(self.SCHEMATIC_SIZE),
+                range(self._schematic_size),
+                range(
+                    self._schematic_size - 1
+                ),  # -1 because beds are only 1 block high
+                range(self._schematic_size),
             )
             if (x, y, z) not in used_positions
         ]
@@ -130,8 +132,8 @@ class BedBenchmark(StructureBenchmark):
                 }
 
                 if all(
-                    0 <= pos[0] < self.SCHEMATIC_SIZE
-                    and 0 <= pos[2] < self.SCHEMATIC_SIZE
+                    0 <= pos[0] < self._schematic_size
+                    and 0 <= pos[2] < self._schematic_size
                     for pos in required_positions
                 ) and not (required_positions & used_positions):
                     # Place support blocks

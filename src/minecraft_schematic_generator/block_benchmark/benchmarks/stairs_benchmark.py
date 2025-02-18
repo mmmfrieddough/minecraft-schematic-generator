@@ -64,6 +64,7 @@ class StairsBenchmark(StructureBenchmark):
         self,
         name: str,
         schematic_array_converter: SchematicArrayConverter,
+        schematic_size: int,
         removal_chance: float = 0.3,
         min_width: int = 1,
         max_width: int = 3,
@@ -71,7 +72,11 @@ class StairsBenchmark(StructureBenchmark):
         debug_output_dir="debug_schematics",
     ):
         super().__init__(
-            name, schematic_array_converter, save_debug_schematics, debug_output_dir
+            name,
+            schematic_array_converter,
+            schematic_size,
+            save_debug_schematics,
+            debug_output_dir,
         )
         self.removal_chance = removal_chance
         self.min_width = min_width
@@ -98,19 +103,19 @@ class StairsBenchmark(StructureBenchmark):
         upside_down_facing = opposite_directions[facing]
 
         # Place stairs along the diagonal, adjusting for direction
-        for i in range(self.SCHEMATIC_SIZE):
+        for i in range(self._schematic_size):
             # Place stairs across width
             for j in range(
-                self.SCHEMATIC_MIDDLE - stair_width,
-                self.SCHEMATIC_MIDDLE + stair_width + 1,
+                self._schematic_middle - stair_width,
+                self._schematic_middle + stair_width + 1,
             ):
                 # Adjust coordinates based on facing direction
                 if facing == "east":
                     x, y, z = i, i, j
                 elif facing == "west":
-                    x, y, z = self.SCHEMATIC_SIZE - 1 - i, i, j
+                    x, y, z = self._schematic_size - 1 - i, i, j
                 elif facing == "north":
-                    x, y, z = j, i, self.SCHEMATIC_SIZE - 1 - i
+                    x, y, z = j, i, self._schematic_size - 1 - i
                 else:  # south
                     x, y, z = j, i, i
 

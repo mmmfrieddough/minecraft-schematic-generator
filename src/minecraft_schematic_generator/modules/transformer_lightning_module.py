@@ -43,30 +43,17 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
     def forward(self, structure: torch.Tensor) -> torch.Tensor:
         return self.model(structure)
 
-    def loss_function(
-        self, predictions: torch.Tensor, targets: torch.Tensor
-    ) -> torch.Tensor:
-        return torch.nn.functional.cross_entropy(predictions, targets, ignore_index=0)
-
     def _forward_and_loss(self, batch: torch.Tensor) -> torch.Tensor:
         with record_function("data_prep"):
             # Get the structures
             full_structures, masked_structures = batch
 
-            # Create a mask for elements that are zero and adjacent to a value > 1
-            masked_structures = masked_structures.unsqueeze(1)
+            # Create a mask for the locations that we actually want to predict (the original masked locations that are next to a non-air block)
             mask = self.model.generate_neighbor_mask(masked_structures) & (
                 masked_structures == 0
             )
-            mask = mask.squeeze(1)
 
-            # Flatten the structures and mask
-            batch_size = full_structures.size(0)
-            full_structures = full_structures.view(batch_size, -1)
-            masked_structures = masked_structures.view(batch_size, -1)
-            mask = mask.view(batch_size, -1)
-
-            # Zero out the non-masked elements in full_structures
+            # Zero out the non-masked elements in full_structures so they don't contribute to the loss
             full_structures = full_structures * mask
 
         with record_function("model_forward"):
@@ -75,7 +62,9 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
 
         with record_function("compute_loss"):
             # Compute the loss
-            loss = self.loss_function(predicted_structures, full_structures)
+            loss = torch.nn.functional.cross_entropy(
+                predicted_structures, full_structures, ignore_index=0
+            )
 
             # Compute perplexity
             perplexity = torch.exp(loss)

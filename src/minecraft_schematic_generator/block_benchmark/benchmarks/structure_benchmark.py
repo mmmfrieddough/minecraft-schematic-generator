@@ -5,7 +5,6 @@ import numpy as np
 import torch
 from schempy import Schematic
 
-from minecraft_schematic_generator.constants import MAX_STRUCTURE_SIZE
 from minecraft_schematic_generator.converter import SchematicArrayConverter
 
 from .base_benchmark import BaseBenchmark
@@ -14,27 +13,27 @@ from .base_benchmark import BaseBenchmark
 class StructureBenchmark(BaseBenchmark):
     """Base class for benchmarks that test structure generation"""
 
-    SCHEMATIC_SIZE = MAX_STRUCTURE_SIZE
-    SCHEMATIC_MIDDLE = SCHEMATIC_SIZE // 2
-
     def __init__(
         self,
         name: str,
         schematic_array_converter: SchematicArrayConverter,
+        schematic_size: int,
         save_debug_schematics: bool = False,
         debug_output_dir: str = "debug_schematics",
     ):
         super().__init__(
             name, schematic_array_converter, save_debug_schematics, debug_output_dir
         )
+        self._schematic_size = schematic_size
+        self._schematic_middle = schematic_size // 2
 
     def create_schematics(self):
         """Create empty complete and partial schematics"""
         complete_schematic = Schematic(
-            self.SCHEMATIC_SIZE, self.SCHEMATIC_SIZE, self.SCHEMATIC_SIZE
+            self._schematic_size, self._schematic_size, self._schematic_size
         )
         partial_schematic = Schematic(
-            self.SCHEMATIC_SIZE, self.SCHEMATIC_SIZE, self.SCHEMATIC_SIZE
+            self._schematic_size, self._schematic_size, self._schematic_size
         )
         return complete_schematic, partial_schematic
 
