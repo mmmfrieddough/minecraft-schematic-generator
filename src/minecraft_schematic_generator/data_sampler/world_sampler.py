@@ -1399,7 +1399,7 @@ class WorldSampler:
                 while not output_queue.empty():
                     processed_item, successful, data = output_queue.get()
                     existing_data.add(processed_item)
-                    if output_data is not None:
+                    if output_data is not None and data is not None:
                         if isinstance(output_data, list):
                             output_data.append(data)
                         else:
@@ -1410,6 +1410,9 @@ class WorldSampler:
 
                 # Start new workers if needed
                 if time.time() - last_worker_check_time > self.worker_check_period:
+                    # Prune dead workers
+                    processes = [p for p in processes if p.is_alive()]
+
                     workers_to_start = self._calculate_workers_to_start(
                         len(processes),
                         pbar.n,
@@ -1604,18 +1607,20 @@ class WorldSampler:
         )
 
         # Directly get blocks from world
-        for dx, dy, dz in np.ndindex(array.shape):
-            block = world.get_block(x + dx, y + dy, z + dz, dimension)
-            if block.namespace != "universal_minecraft":
-                print(
-                    f"Found non-universal block {block} at {x + dx}, {y + dy}, {z + dz}"
+        try:
+            for dx, dy, dz in np.ndindex(array.shape):
+                block = world.get_block(x + dx, y + dy, z + dz, dimension)
+                # if block.namespace != "universal_minecraft":
+                #     print(
+                #         f"Found non-universal block {block} at {x + dx}, {y + dy}, {z + dz}"
+                #     )
+                token = self._block_token_converter.universal_block_to_token(
+                    block, update_mapping=True
                 )
-            token = self._block_token_converter.universal_block_to_token(
-                block, update_mapping=True
-            )
-            array[dz, dy, dx] = token
-
-        return (position, True, (hash_name, array))
+                array[dz, dy, dx] = token
+            return (position, True, (hash_name, array))
+        except ChunkDoesNotExist:
+            return (position, False, None)
 
     @staticmethod
     def split_data(
@@ -1825,10 +1830,12 @@ class WorldSampler:
             existing_data=existing_names,
             input_data=need_processing_entries,
             output_data=output_data,
+            unsuccessful_label="unsuccessful_samples",
         )
 
         if not output_data:
-            print("No sample arrays produced")
+            print("Error: No sample arrays produced")
+            return
 
         # Process the output data
         names, structures = zip(*output_data)
@@ -1978,10 +1985,10 @@ class WorldSampler:
         except KeyboardInterrupt:
             pass
 
-    def clear_world(self, directory: str) -> None:
-        """Clears all progress and samples from a world"""
-        print(f"Clearing {directory}")
-        data_dir = self._get_data_directory(directory)
-        if os.path.exists(data_dir):
-            shutil.rmtree(data_dir)
-        print(f"Done clearing {directory}")
+    # def clear_world(self, directory: str) -> None:
+    #     """Clears all progress and samples from a world"""
+    #     print(f"Clearing {directory}")
+    #     data_dir = self._get_data_directory(directory)
+    #     if os.path.exists(data_dir):
+    #         shutil.rmtree(data_dir)
+    #     print(f"Done clearing {directory}")
