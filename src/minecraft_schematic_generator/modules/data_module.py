@@ -20,7 +20,6 @@ class MinecraftDataModule(LightningDataModule):
         file_path: str,
         batch_size: int = 32,
         num_workers: int = 0,
-        combine_datasets: bool = False,
         separate_validation_datasets: List[str] = [],
     ):
         super().__init__()
@@ -31,7 +30,6 @@ class MinecraftDataModule(LightningDataModule):
         self.test_datasets = []
         self.num_workers = num_workers
         self.persistent_workers = num_workers > 0
-        self.combine_datasets = combine_datasets
         self.separate_validation_datasets = separate_validation_datasets
         self.val_dataset_names = {}
         self._rng_state = None
@@ -73,9 +71,40 @@ class MinecraftDataModule(LightningDataModule):
                 val_keys = [list(file["validation"].keys())[index]]
                 test_keys = [list(file["test"].keys())[index]]
             else:
-                train_keys = file["train"].keys()
-                val_keys = file["validation"].keys()
-                test_keys = file["test"].keys()
+                train_keys = list(file["train"].keys())
+                val_keys = list(file["validation"].keys())
+                test_keys = list(file["test"].keys())
+
+            # Collect separate validation datasets from all splits
+            separate_datasets = []
+            for generator_type in self.separate_validation_datasets:
+                # Check each split for the generator type
+                for split in ["train", "validation", "test"]:
+                    if generator_type in file[split]:
+                        separate_datasets.append(
+                            (
+                                generator_type,
+                                MinecraftDataset(
+                                    self.file_path,
+                                    split,
+                                    generator_type,
+                                    self.block_token_converter,
+                                ),
+                            )
+                        )
+            if self.separate_validation_datasets and not separate_datasets:
+                raise ValueError("Separate validation datasets not found")
+
+            # Filter out separate_validation_datasets from regular splits
+            train_keys = [
+                k for k in train_keys if k not in self.separate_validation_datasets
+            ]
+            val_keys = [
+                k for k in val_keys if k not in self.separate_validation_datasets
+            ]
+            test_keys = [
+                k for k in test_keys if k not in self.separate_validation_datasets
+            ]
 
             self.train_datasets = [
                 (
@@ -89,6 +118,8 @@ class MinecraftDataModule(LightningDataModule):
                 )
                 for generator_type in tqdm(train_keys, desc="Loading training datasets")
             ]
+
+            # Regular validation datasets plus the separate ones collected from all splits
             self.val_datasets = [
                 (
                     generator_type,
@@ -100,7 +131,8 @@ class MinecraftDataModule(LightningDataModule):
                     ),
                 )
                 for generator_type in tqdm(val_keys, desc="Loading validation datasets")
-            ]
+            ] + separate_datasets
+
             self.test_datasets = [
                 (
                     generator_type,
@@ -133,99 +165,67 @@ class MinecraftDataModule(LightningDataModule):
         )
 
     def val_dataloader(self):
-        if self.combine_datasets:
-            # Filter datasets to be combined and kept separate based on `separate_validation_datasets`
-            combined_val_datasets = [
-                dataset
-                for generator_type, dataset in self.val_datasets
-                if generator_type not in self.separate_validation_datasets
-            ]
-            separate_val_datasets = [
-                dataset
-                for generator_type, dataset in self.val_datasets
-                if generator_type in self.separate_validation_datasets
-            ]
-            separate_val_dataset_names = [
-                generator_type
-                for generator_type, dataset in self.val_datasets
-                if generator_type in self.separate_validation_datasets
-            ]
+        # Create a DataLoader for the combined datasets
+        combined_val_datasets = [
+            dataset
+            for generator_type, dataset in self.val_datasets
+            if generator_type not in self.separate_validation_datasets
+        ]
+        if combined_val_datasets:
+            combined_dataset = ConcatDataset(combined_val_datasets)
 
-            # Create a DataLoader for the combined datasets
-            if combined_val_datasets:
-                combined_dataset = ConcatDataset(combined_val_datasets)
+            # Shuffle the combined dataset once
+            indices = torch.randperm(len(combined_dataset))
+            combined_dataset = torch.utils.data.Subset(combined_dataset, indices)
 
-                # Shuffle the combined dataset once
-                indices = torch.randperm(len(combined_dataset))
-                combined_dataset = torch.utils.data.Subset(combined_dataset, indices)
-
-                combined_val_loader = ResumableDataLoader(
-                    combined_dataset,
-                    batch_size=self.batch_size,
-                    shuffle=False,
-                    drop_last=False,
-                    num_workers=self.num_workers,
-                    persistent_workers=self.persistent_workers,
-                )
-                val_loaders = [combined_val_loader]
-                self.val_dataset_names[0] = "combined"
-            else:
-                val_loaders = []
-
-            # Add separate DataLoaders for datasets not to be combined
-            for i in range(len(separate_val_datasets)):
-                dataloader = ResumableDataLoader(
-                    separate_val_datasets[i],
-                    batch_size=self.batch_size,
-                    shuffle=False,
-                    drop_last=False,
-                    num_workers=self.num_workers,
-                    persistent_workers=self.persistent_workers,
-                )
-                val_loaders.append(dataloader)
-                self.val_dataset_names[i + 1] = separate_val_dataset_names[i]
-        else:
-            val_loaders = [
-                ResumableDataLoader(
-                    dataset,
-                    batch_size=self.batch_size,
-                    shuffle=False,
-                    drop_last=False,
-                    num_workers=self.num_workers,
-                    persistent_workers=self.persistent_workers,
-                )
-                for _, dataset in self.val_datasets
-            ]
-        for i, loader in enumerate(val_loaders):
-            assert len(loader) > 0, f"Validation DataLoader at index {i} is empty."
-        return val_loaders
-
-    def test_dataloader(self):
-        if self.combine_datasets:
-            test_datasets = ConcatDataset(
-                [dataset for _, dataset in self.test_datasets]
-            )
-            test_loader = ResumableDataLoader(
-                test_datasets,
+            combined_val_loader = ResumableDataLoader(
+                combined_dataset,
                 batch_size=self.batch_size,
                 shuffle=False,
                 drop_last=False,
                 num_workers=self.num_workers,
                 persistent_workers=self.persistent_workers,
             )
-            test_loaders = [test_loader]
+            val_loaders = [combined_val_loader]
+            self.val_dataset_names[0] = "combined"
         else:
-            test_loaders = [
-                ResumableDataLoader(
-                    dataset,
-                    batch_size=self.batch_size,
-                    shuffle=False,
-                    drop_last=False,
-                    num_workers=self.num_workers,
-                    persistent_workers=self.persistent_workers,
-                )
-                for _, dataset in self.test_datasets
+            val_loaders = []
+
+        # Add separate DataLoaders for datasets not to be combined
+        for i, generator_type in enumerate(self.separate_validation_datasets):
+            datasets = [
+                dataset
+                for dataset_name, dataset in self.val_datasets
+                if dataset_name == generator_type
             ]
+            combined_dataset = ConcatDataset(datasets)
+            dataloader = ResumableDataLoader(
+                combined_dataset,
+                batch_size=self.batch_size,
+                shuffle=False,
+                drop_last=False,
+                num_workers=self.num_workers,
+                persistent_workers=self.persistent_workers,
+            )
+            val_loaders.append(dataloader)
+            self.val_dataset_names[i + 1] = generator_type
+
+        for i, loader in enumerate(val_loaders):
+            assert len(loader) > 0, f"Validation DataLoader at index {i} is empty."
+        return val_loaders
+
+    def test_dataloader(self):
+        test_datasets = ConcatDataset([dataset for _, dataset in self.test_datasets])
+        test_loader = ResumableDataLoader(
+            test_datasets,
+            batch_size=self.batch_size,
+            shuffle=False,
+            drop_last=False,
+            num_workers=self.num_workers,
+            persistent_workers=self.persistent_workers,
+        )
+        test_loaders = [test_loader]
+
         for i, loader in enumerate(test_loaders):
             assert len(loader) > 0, f"Test DataLoader at index {i} is empty."
         return test_loaders
