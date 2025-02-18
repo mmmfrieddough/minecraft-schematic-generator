@@ -13,6 +13,7 @@ class SaveOnInterruptCallback(Callback):
         if (
             isinstance(exception, KeyboardInterrupt)
             and self.checkpoint_callback is not None
+            and trainer.is_global_zero
         ):
             print("\nSaving checkpoint on interrupt...")
             self.checkpoint_callback.on_validation_end(trainer, lightning_module)
