@@ -145,24 +145,19 @@ jobs:
             **Note:** CUDA version requires an NVIDIA GPU but provides significantly faster inference.
 
             ### CPU Version
-            For macOS systems (best performance on Apple Silicon):
-            - [macOS](dist/minecraft-schematic-generator-mac/minecraft-schematic-generator-mac)
-
-            CPU versions for Windows/Linux are available but not recommended due to extremely slow inference times:
-            - [Windows CPU](dist/minecraft-schematic-generator.exe/minecraft-schematic-generator.exe)
-            - [Linux CPU](dist/minecraft-schematic-generator-linux/minecraft-schematic-generator-linux)
+            Systems without an NVIDIA GPU can use the CPU version. Select the appropriate download from the assets list below.
 
             ## System Requirements
             - Windows/Linux: NVIDIA GPU strongly recommended
             - macOS: Apple Silicon recommended for best performance
 
-            ## Server Configuration
-            The server can be started with:
+            ## Custom Configuration
+            The program can be opened by simply double clicking, or for custom options can be started with:
             ```bash
             ./minecraft-schematic-generator [options]
             ```
 
-            By default, it will run on http://localhost:8000
+            By default, it will run on http://localhost:8000 (Craftpilot will connect to this address).
           draft: false
           prerelease: false
           files: |
