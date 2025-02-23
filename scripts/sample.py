@@ -3,26 +3,22 @@ from minecraft_schematic_generator.data_sampler import WorldSampler
 
 def main():
     world_sampler = WorldSampler(
-        schematic_directory="data/schematics/temp",
+        schematic_directory="data/schematics",
         temp_directory="data/temp",
-        chunk_progress_save_interval=10000,
-        chunk_mark_radius=2,
-        sample_offset=7,
+        progress_save_period=30,
+        chunk_mark_radius=1,
+        sample_overlap_proportion=0.75,
         sample_size=11,
-        sample_interested_block_threshold=50,
-        sample_minimum_air_threshold=200,
-        sample_progress_save_interval=1000,
+        sample_target_block_threshold=0.04,
+        sample_minimum_air_threshold=0.15,
         sampling_purge_interval=3,
-        num_mark_chunks_workers=22,
-        num_identify_samples_workers=14,
-        num_collect_samples_workers=20,
-        clear_worker_directories=False,
-        # chunk_search_limit=50,
-        # sample_search_limit=30,
-        # sample_limit=300,
+        resource_usage_limit=0.8,
+        save_schematics=False,
+        save_to_hdf5=True,
+        hdf5_path="data/data_v3.h5",
     )
-    world_sampler.clear_directory("data/worlds/temp")
-    world_sampler.sample_directory("data/worlds/temp")
+    dir = "data"
+    world_sampler.sample_directory(dir)
 
 
 if __name__ == "__main__":

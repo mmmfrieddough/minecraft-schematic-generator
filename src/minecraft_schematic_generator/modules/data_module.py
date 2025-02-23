@@ -12,12 +12,14 @@ from minecraft_schematic_generator.converter import (
     DictBlockTokenMapper,
 )
 from minecraft_schematic_generator.model import MinecraftDataset, ResumableDataLoader
+from minecraft_schematic_generator.model.structure_masker import StructureMasker
 
 
 class MinecraftDataModule(LightningDataModule):
     def __init__(
         self,
         file_path: str,
+        structure_masker: StructureMasker,
         batch_size: int = 32,
         num_workers: int = 0,
         separate_validation_datasets: List[str] = [],
@@ -44,8 +46,14 @@ class MinecraftDataModule(LightningDataModule):
             else:
                 raise ValueError("Mapping not found in HDF5 file.")
 
+            self._structure_masker = structure_masker
             block_token_mapper = DictBlockTokenMapper(self.block_str_mapping)
-            self.block_token_converter = BlockTokenConverter(block_token_mapper)
+            block_token_converter = BlockTokenConverter(block_token_mapper)
+            self._block_token_converter = block_token_converter
+            self._structure_masker.setup(block_token_converter)
+
+    def get_block_token_converter(self):
+        return self._block_token_converter
 
     def state_dict(self) -> dict:
         """Save datamodule state."""
@@ -88,7 +96,7 @@ class MinecraftDataModule(LightningDataModule):
                                     self.file_path,
                                     split,
                                     generator_type,
-                                    self.block_token_converter,
+                                    self._structure_masker,
                                 ),
                             )
                         )
@@ -113,7 +121,7 @@ class MinecraftDataModule(LightningDataModule):
                         self.file_path,
                         "train",
                         generator_type,
-                        self.block_token_converter,
+                        self._structure_masker,
                     ),
                 )
                 for generator_type in tqdm(train_keys, desc="Loading training datasets")
@@ -127,7 +135,7 @@ class MinecraftDataModule(LightningDataModule):
                         self.file_path,
                         "validation",
                         generator_type,
-                        self.block_token_converter,
+                        self._structure_masker,
                     ),
                 )
                 for generator_type in tqdm(val_keys, desc="Loading validation datasets")
@@ -140,7 +148,7 @@ class MinecraftDataModule(LightningDataModule):
                         self.file_path,
                         "test",
                         generator_type,
-                        self.block_token_converter,
+                        self._structure_masker,
                     ),
                 )
                 for generator_type in tqdm(test_keys, desc="Loading test datasets")

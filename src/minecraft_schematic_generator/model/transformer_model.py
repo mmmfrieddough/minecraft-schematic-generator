@@ -219,7 +219,8 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
             parameters=f"{sum(p.numel() for p in self.parameters()):,}",
         )
 
-    def generate_neighbor_mask(self, tensor: torch.Tensor) -> torch.Tensor:
+    @staticmethod
+    def generate_neighbor_mask(tensor: torch.Tensor) -> torch.Tensor:
         """Generates a mask indicating if an element has a neighbor that is not air."""
         # Add a temporary channel dimension
         tensor = tensor.unsqueeze(1)
@@ -238,15 +239,18 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         # Return the mask
         return has_non_air_neighbors.squeeze(1)
 
+    @staticmethod
     def _get_valid_positions(
-        self, structure: torch.Tensor, filled_positions: torch.Tensor
+        structure: torch.Tensor, filled_positions: torch.Tensor
     ) -> torch.Tensor:
         """Get ordered list of valid positions to fill, from center outward."""
         # Limit structure to positions that have been filled by the model
         mask_structure = structure * filled_positions
         # Generate mask of valid next elements
         mask_structure = mask_structure.unsqueeze(0)
-        mask = self.generate_neighbor_mask(mask_structure)
+        mask = TransformerMinecraftStructureGenerator.generate_neighbor_mask(
+            mask_structure
+        )
         mask_structure = mask_structure.squeeze(0)
         mask = mask.squeeze(0)
         # Limit to positions that were originally masked
@@ -374,7 +378,11 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
             for iteration in range(max_iterations):
                 # print(f"Iteration {iteration+1}/{max_iterations}")
 
-                valid_positions = self._get_valid_positions(structure, filled_positions)
+                valid_positions = (
+                    TransformerMinecraftStructureGenerator._get_valid_positions(
+                        structure, filled_positions
+                    )
+                )
                 if valid_positions is None:
                     # print("No more elements to update")
                     break
