@@ -138,8 +138,6 @@
           "false"
         ],
         "material": [
-          "spruce",
-          "birch",
           "jungle",
           "nether_brick"
         ],
@@ -148,10 +146,6 @@
           "false"
         ],
         "south": [
-          "true",
-          "false"
-        ],
-        "waterlogged": [
           "true",
           "false"
         ],

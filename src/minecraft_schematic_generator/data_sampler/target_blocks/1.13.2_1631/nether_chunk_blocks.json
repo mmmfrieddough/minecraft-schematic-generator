@@ -165,18 +165,13 @@
           "birch",
           "jungle",
           "acacia",
-          "dark_oak",
-          "nether_brick"
+          "dark_oak"
         ],
         "north": [
           "true",
           "false"
         ],
         "south": [
-          "true",
-          "false"
-        ],
-        "waterlogged": [
           "true",
           "false"
         ],
@@ -1357,10 +1352,6 @@
         "dead": [
           "true",
           "false"
-        ],
-        "waterlogged": [
-          "true",
-          "false"
         ]
       }
     },
@@ -1385,10 +1376,6 @@
           "south",
           "up",
           "west"
-        ],
-        "waterlogged": [
-          "true",
-          "false"
         ]
       }
     },

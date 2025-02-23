@@ -358,9 +358,6 @@
           "false"
         ],
         "material": [
-          "spruce",
-          "birch",
-          "jungle",
           "mangrove",
           "nether_brick",
           "crimson",
@@ -371,10 +368,6 @@
           "false"
         ],
         "south": [
-          "true",
-          "false"
-        ],
-        "waterlogged": [
           "true",
           "false"
         ],
@@ -1172,7 +1165,6 @@
           "false"
         ],
         "waterlogged": [
-          "true",
           "false"
         ]
       }
@@ -1200,7 +1192,6 @@
           "west"
         ],
         "waterlogged": [
-          "true",
           "false"
         ]
       }

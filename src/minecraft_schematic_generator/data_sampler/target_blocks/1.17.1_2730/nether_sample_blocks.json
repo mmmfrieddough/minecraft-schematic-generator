@@ -241,10 +241,6 @@
           "true",
           "false"
         ],
-        "waterlogged": [
-          "true",
-          "false"
-        ],
         "west": [
           "true",
           "false"
@@ -1899,10 +1895,6 @@
         "dead": [
           "true",
           "false"
-        ],
-        "waterlogged": [
-          "true",
-          "false"
         ]
       }
     },
@@ -1927,10 +1919,6 @@
           "south",
           "up",
           "west"
-        ],
-        "waterlogged": [
-          "true",
-          "false"
         ]
       }
     },

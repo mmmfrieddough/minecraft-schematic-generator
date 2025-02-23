@@ -223,7 +223,6 @@
           "jungle",
           "acacia",
           "dark_oak",
-          "nether_brick",
           "crimson",
           "warped"
         ],
@@ -232,10 +231,6 @@
           "false"
         ],
         "south": [
-          "true",
-          "false"
-        ],
-        "waterlogged": [
           "true",
           "false"
         ],
@@ -1502,10 +1497,6 @@
         "dead": [
           "true",
           "false"
-        ],
-        "waterlogged": [
-          "true",
-          "false"
         ]
       }
     },
@@ -1530,10 +1521,6 @@
           "south",
           "up",
           "west"
-        ],
-        "waterlogged": [
-          "true",
-          "false"
         ]
       }
     },

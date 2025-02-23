@@ -277,7 +277,6 @@
           "acacia",
           "dark_oak",
           "mangrove",
-          "nether_brick",
           "crimson",
           "warped",
           "bamboo",
@@ -289,10 +288,6 @@
           "false"
         ],
         "south": [
-          "true",
-          "false"
-        ],
-        "waterlogged": [
           "true",
           "false"
         ],
@@ -2266,10 +2261,6 @@
         "dead": [
           "true",
           "false"
-        ],
-        "waterlogged": [
-          "true",
-          "false"
         ]
       }
     },
@@ -2294,10 +2285,6 @@
           "south",
           "up",
           "west"
-        ],
-        "waterlogged": [
-          "true",
-          "false"
         ]
       }
     },
