@@ -22,7 +22,7 @@ def main():
     torch.set_float32_matmul_precision("medium")
 
     experiment_name = "new_data_augmentation"
-    experiment_version = 2
+    experiment_version = 16
     checkpoint_dir = "lightning_logs"
     tensorboard_logger = TensorBoardLogger(
         checkpoint_dir, name=experiment_name, version=experiment_version
@@ -35,16 +35,17 @@ def main():
 
     structure_masker = StructureMasker()
     data_module = MinecraftDataModule(
-        file_path="data/data_v3.h5",
+        file_path="data/data_v5.h5",
         structure_masker=structure_masker,
-        batch_size=77,
-        num_workers=8,
+        crop_sizes={7: 250, 9: 150, 11: 75, 13: 50, 15: 25},
+        num_workers=10,
+        persistent_workers=True,
         separate_validation_datasets=["holdout\\holdout1\\overworld"],
     )
 
     lightning_model = LightningTransformerMinecraftStructureGenerator(
         num_classes=13000,
-        block_str_mapping=data_module.block_str_mapping,
+        block_str_mapping=data_module.get_block_str_mapping(),
         max_structure_size=MAX_STRUCTURE_SIZE,
         embedding_dropout=0.1,
         embedding_dim=128,
@@ -68,18 +69,21 @@ def main():
         block_token_converter=data_module.get_block_token_converter(),
         schematic_size=11,
         num_runs=200,
+        batch_size=77,
     )
 
     ddp = DDPStrategy(process_group_backend="gloo", find_unused_parameters=False)
 
     trainer = Trainer(
         strategy=ddp,
-        max_epochs=10,
+        max_epochs=20,
         logger=[tensorboard_logger, wandb_logger],
         val_check_interval=0.1,
         limit_val_batches=0.2,
         accumulate_grad_batches=4,
         precision="bf16-mixed",
+        reload_dataloaders_every_n_epochs=1,
+        use_distributed_sampler=False,
         callbacks=[
             latest_checkpoint_callback,
             best_model_checkpoint_callback,
