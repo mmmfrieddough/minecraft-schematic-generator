@@ -346,15 +346,15 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         air_probability_iteration_scaling: float,
     ):
         assert structure.dim() == 3, "Structure must have 3 dimensions"
-        assert (
-            structure.size(0) <= self.max_structure_size
-        ), f"Z dimension {structure.size(0)} exceeds maximum size {self.max_structure_size}"
-        assert (
-            structure.size(1) <= self.max_structure_size
-        ), f"Y dimension {structure.size(1)} exceeds maximum size {self.max_structure_size}"
-        assert (
-            structure.size(2) <= self.max_structure_size
-        ), f"X dimension {structure.size(2)} exceeds maximum size {self.max_structure_size}"
+        assert structure.size(0) <= self.max_structure_size, (
+            f"Z dimension {structure.size(0)} exceeds maximum size {self.max_structure_size}"
+        )
+        assert structure.size(1) <= self.max_structure_size, (
+            f"Y dimension {structure.size(1)} exceeds maximum size {self.max_structure_size}"
+        )
+        assert structure.size(2) <= self.max_structure_size, (
+            f"X dimension {structure.size(2)} exceeds maximum size {self.max_structure_size}"
+        )
 
         # Initialize tensor to track filled positions
         filled_positions = torch.zeros_like(structure, dtype=torch.bool)
