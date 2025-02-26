@@ -53,6 +53,9 @@ class TargetBlock(TypedDict):
 
 
 class WorldSampler:
+    CHUNK_MARK_VERSION = 1
+    SAMPLE_MARK_VERSION = 1
+
     DIMENSIONS = {
         "minecraft:overworld": "overworld",
         "minecraft:the_nether": "nether",
@@ -67,10 +70,11 @@ class WorldSampler:
         temp_directory: str,
         progress_save_period: int,
         chunk_mark_radius: int,
+        sample_check_size: int,
         sample_overlap_proportion: float,
-        sample_size: int,
         sample_target_block_threshold: int,
         sample_minimum_air_threshold: int,
+        sample_collection_size: int,
         sampling_purge_interval: int = 5,
         chunk_search_limit: int | None = None,
         sample_search_limit: int | None = None,
@@ -88,10 +92,11 @@ class WorldSampler:
         self.temp_directory = temp_directory
         self.progress_save_period = progress_save_period
         self.chunk_mark_radius = chunk_mark_radius
+        self.sample_check_size = sample_check_size
         self.sample_overlap_proportion = sample_overlap_proportion
-        self.sample_size = sample_size
         self.sample_target_block_threshold = sample_target_block_threshold
         self.sample_minimum_air_threshold = sample_minimum_air_threshold
+        self.sample_collection_size = sample_collection_size
         self.sampling_purge_interval = sampling_purge_interval
         self.worker_check_period = worker_check_period
         self.resource_usage_limit = resource_usage_limit
@@ -483,6 +488,7 @@ class WorldSampler:
     def _get_chunk_config(self, target_blocks: list[TargetBlock]) -> dict:
         """Returns the configuration for marking chunks"""
         return {
+            "version": self.CHUNK_MARK_VERSION,
             "target_blocks": target_blocks,
             "mark_radius": self.chunk_mark_radius,
         }
@@ -527,9 +533,10 @@ class WorldSampler:
     def _get_sample_config(self, target_blocks: list[TargetBlock]) -> dict:
         """Returns the configuration for identifying samples"""
         return {
+            "version": self.SAMPLE_MARK_VERSION,
             "target_blocks": target_blocks,
             "overlap_proportion": self.sample_overlap_proportion,
-            "size": self.sample_size,
+            "size": self.sample_check_size,
             "target_block_threshold": self.sample_target_block_threshold,
             "minimum_air_threshold": self.sample_minimum_air_threshold,
         }
@@ -953,7 +960,7 @@ class WorldSampler:
         max_height = world.bounds(dimension).max_y
 
         # Load all chunks that a selection starting in this chunk could possibly intersect
-        num_chunks = self.sample_size // 16 + 2
+        num_chunks = self.sample_check_size // 16 + 2
         # Create single 3D arrays instead of nested lists - using more efficient dtype specification
         chunk_blocks = np.zeros(
             (num_chunks * 16, max_height - min_height, num_chunks * 16),
@@ -1001,7 +1008,7 @@ class WorldSampler:
         air_count = np.cumsum(np.cumsum(np.cumsum(air_block, axis=2), axis=1), axis=0)
 
         # Iterate through grid of possible selection start positions
-        m = self.sample_size
+        m = self.sample_check_size
         sample_offset = math.ceil(m * (1 - self.sample_overlap_proportion))
         x_offset, y_offset, z_offset = self._get_deterministic_random_offsets(
             chunk_coords, sample_offset
@@ -1069,9 +1076,10 @@ class WorldSampler:
                         and total_air
                         > total_positions * self.sample_minimum_air_threshold
                     ):
-                        x = x_start + i
-                        y = j + min_height
-                        z = z_start + k
+                        # Add the middle position of the sample
+                        x = x_start + i + middle_offset
+                        y = j + min_height + middle_offset
+                        z = z_start + k + middle_offset
                         sample_positions.add((x, y, z))
 
                     k += sample_offset
@@ -1144,22 +1152,10 @@ class WorldSampler:
 
         # If any chunks were removed (size decreased after intersection)
         if len(sampled_chunks) < original_sampled_chunks_size:
-            original_sample_positions_size = len(sample_positions)
+            print("Relevant chunks have changed, resetting sample progress")
 
-            # Convert sample positions to chunk coordinates
-            position_chunk_map = {
-                (x, y, z): (x // 16, z // 16) for x, y, z in sample_positions
-            }
-            # Keep only samples from chunks that are still relevant
-            sample_positions = {
-                pos
-                for pos, chunk in position_chunk_map.items()
-                if chunk in sampled_chunks
-            }
-
-            print(
-                f"Removing {original_sample_positions_size - len(sample_positions)} unwanted sample positions"
-            )
+            sampled_chunks = set()
+            sample_positions = set()
 
             # Save the updated sample positions
             self._save_sample_progress(
@@ -1243,9 +1239,9 @@ class WorldSampler:
             + dimension
             + str(position)
             + str(timestamp)
-            + str(self.sample_size)
-            + str(self.sample_size)
-            + str(self.sample_size)
+            + str(self.sample_collection_size)
+            + str(self.sample_collection_size)
+            + str(self.sample_collection_size)
         )
         return hashlib.sha256(filename.encode()).hexdigest()
 
@@ -1289,9 +1285,10 @@ class WorldSampler:
             timestamp,
         )
         x, y, z = position
+        half_size = self.sample_collection_size // 2
         selection = SelectionBox(
-            (x, y, z),
-            (x + self.sample_size, y + self.sample_size, z + self.sample_size),
+            (x - half_size, y - half_size, z - half_size),
+            (x + half_size + 1, y + half_size + 1, z + half_size + 1),
         )
 
         # Extract the structure from the world
@@ -1601,25 +1598,35 @@ class WorldSampler:
             )
 
         # Get inputs ready
+        half_size = self.sample_collection_size // 2
         x, y, z = position
+        x, y, z = x - half_size, y - half_size, z - half_size
         array = np.zeros(
-            (self.sample_size, self.sample_size, self.sample_size), dtype=int
+            (
+                self.sample_collection_size,
+                self.sample_collection_size,
+                self.sample_collection_size,
+            ),
+            dtype=int,
         )
 
         # Directly get blocks from world
         try:
             for dx, dy, dz in np.ndindex(array.shape):
                 block = world.get_block(x + dx, y + dy, z + dz, dimension)
-                # if block.namespace != "universal_minecraft":
-                #     print(
-                #         f"Found non-universal block {block} at {x + dx}, {y + dy}, {z + dz}"
-                #     )
+                if block.namespace != "universal_minecraft":
+                    #     print(
+                    #         f"Found non-universal block {block} at {x + dx}, {y + dy}, {z + dz}"
+                    #     )
+                    raise ValueError(
+                        f"Found non-universal block {block} at {x + dx}, {y + dy}, {z + dz}"
+                    )
                 token = self._block_token_converter.universal_block_to_token(
                     block, update_mapping=True
                 )
                 array[dz, dy, dx] = token
             return (position, True, (hash_name, array))
-        except ChunkDoesNotExist:
+        except Exception:
             return (position, False, None)
 
     @staticmethod
