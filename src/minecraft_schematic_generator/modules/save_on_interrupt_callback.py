@@ -1,10 +1,10 @@
 from lightning import LightningModule
-from lightning.pytorch.callbacks import Callback
+from lightning.pytorch.callbacks import Callback, ModelCheckpoint
 from lightning.pytorch.trainer import Trainer
 
 
 class SaveOnInterruptCallback(Callback):
-    def __init__(self, checkpoint_callback):
+    def __init__(self, checkpoint_callback: ModelCheckpoint):
         self.checkpoint_callback = checkpoint_callback
 
     def on_exception(
@@ -13,7 +13,6 @@ class SaveOnInterruptCallback(Callback):
         if (
             isinstance(exception, KeyboardInterrupt)
             and self.checkpoint_callback is not None
-            and trainer.is_global_zero
         ):
             print("\nSaving checkpoint on interrupt...")
             self.checkpoint_callback.on_validation_end(trainer, lightning_module)
