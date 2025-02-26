@@ -1,16 +1,21 @@
+import logging
 import random
 from itertools import product
 
 import numpy as np
 import torch
 import torch.nn.functional as F
-from amulet import Block
-from amulet_nbt import StringTag
+from torch.profiler import record_function
 
 from minecraft_schematic_generator.converter import BlockTokenConverter
 from minecraft_schematic_generator.model.transformer_model import (
     TransformerMinecraftStructureGenerator,
 )
+
+# Set PyMCTranslate logging level before importing it
+logging.getLogger("PyMCTranslate").setLevel(logging.WARNING)
+from amulet import Block  # noqa: E402
+from amulet_nbt import StringTag  # noqa: E402
 
 
 class StructureMasker:
@@ -3753,12 +3758,15 @@ class StructureMasker:
         self._add_blocks_amount_second_dist_beta = add_blocks_amount_second_dist_beta
 
     def setup(self, block_token_converter: BlockTokenConverter):
-        self._natural_block_tokens = torch.tensor(
-            [
-                block_token_converter.universal_str_to_token(block)
-                for block in self.NATURAL_BLOCK_STRINGS
-            ]
-        )
+        natural_block_tokens = []
+        for block_str in self.NATURAL_BLOCK_STRINGS:
+            try:
+                token = block_token_converter.universal_str_to_token(block_str)
+                natural_block_tokens.append(token)
+            except KeyError:
+                pass
+        self._natural_block_tokens = torch.tensor(natural_block_tokens)
+
         self._air_block_token = block_token_converter.universal_str_to_token(
             "universal_minecraft:air"
         )
@@ -3795,7 +3803,7 @@ class StructureMasker:
             try:
                 token = block_token_converter.universal_block_to_token(block)
             except KeyError:
-                print(f"Block {block.blockstate} not found in mapping. Skipping.")
+                # print(f"Block {block.blockstate} not found in mapping. Skipping.")
                 continue
             all_tokens.add(token)
 
@@ -3912,6 +3920,7 @@ class StructureMasker:
         input_val = transform_def.get("input", None)
         output_val = transform_def["output"]
         lut = torch.arange(block_token_converter.get_unused_token() + 1)
+        changed_tokens = set()
 
         param_keys = list(varying_params.keys())
         for combo in product(*(varying_params[k] for k in param_keys)):
@@ -3946,8 +3955,9 @@ class StructureMasker:
 
             # Update the lookup table
             lut[input_token] = output_token
+            changed_tokens.add(input_token)
 
-        return lut
+        return lut, torch.tensor(list(changed_tokens))
 
     @staticmethod
     def _get_block_transforms(
@@ -3974,7 +3984,7 @@ class StructureMasker:
                         varying_params,
                     )
                 )
-            result.append((kernel, input_token, outputs))
+            result.append((kernel, input_token, torch.tensor(list(outputs))))
 
         return result
 
@@ -3987,10 +3997,10 @@ class StructureMasker:
         for transform in StructureMasker.BLOCK_PROPERTY_TRANSFORMS:
             kernel = torch.tensor(transform["kernel"]).unsqueeze(0).unsqueeze(0)
             transform_def = transform["transform"]
-            lut = StructureMasker._expand_block_property_transform(
+            lut, changed_tokens = StructureMasker._expand_block_property_transform(
                 block_token_converter, transform_def
             )
-            result.append((kernel, lut))
+            result.append((kernel, lut, changed_tokens))
 
         return result
 
@@ -4176,14 +4186,11 @@ class StructureMasker:
             ignore_blocks = torch.tensor([])
 
         # Get unique blocks, excluding natural blocks and air
-        unique_blocks = torch.tensor(
-            [
-                block.item()
-                for block in torch.unique(structure)
-                if block != self._air_block_token
-                and not torch.isin(block, ignore_blocks)
-            ]
+        unique_values = torch.unique(structure)
+        keep_mask = (unique_values != self._air_block_token) & ~torch.isin(
+            unique_values, ignore_blocks
         )
+        unique_blocks = unique_values[keep_mask]
 
         # Apply for all blocks
         if random.random() < self._mask_full_blocks_chance:
@@ -4197,7 +4204,8 @@ class StructureMasker:
 
         # Apply again for sampling of block types
         max_block_types = max(
-            int(self._percentage_block_types_to_mask * len(extended_unique_blocks)), 1
+            int(self._percentage_block_types_to_mask * len(extended_unique_blocks)),
+            1,
         )
         num_block_types = min(
             random.randint(0, max_block_types), len(extended_unique_blocks)
@@ -4286,7 +4294,8 @@ class StructureMasker:
         max_blocks = removed_blocks.sum().item()
 
         start_radius = random.randint(
-            self._min_autoregressive_start_radius, self._max_autoregressive_start_radius
+            self._min_autoregressive_start_radius,
+            self._max_autoregressive_start_radius,
         )
         if np.random.rand() < self._add_blocks_amount_first_dist_chance:
             num_blocks = min(
@@ -4313,9 +4322,20 @@ class StructureMasker:
             .unsqueeze(0)
         )
 
-        for kernel, input_token, output_tokens in self._block_transforms:
+        # Precompute random values
+        skip_random = torch.rand(len(self._block_transforms))
+        apply_subset_random = torch.rand(len(self._block_transforms))
+        mask_chances = torch.rand(len(self._block_transforms))
+
+        for i, (kernel, input_token, output_tokens) in enumerate(
+            self._block_transforms
+        ):
             # Chance to skip the transformation
-            if random.random() < self._skip_block_transform_chance:
+            if skip_random[i] < self._skip_block_transform_chance:
+                continue
+
+            # Skip if none of the output tokens are in the structure
+            if not torch.any(torch.isin(structure, output_tokens)):
                 continue
 
             # Apply the convolution
@@ -4330,13 +4350,13 @@ class StructureMasker:
             transform_mask &= structure == input_token
 
             # Chance to only apply the transformation to a subset of the blocks
-            if random.random() < self._random_block_transform_chance:
-                mask_chance = random.uniform(0, 1)
-
+            if apply_subset_random[i] < self._random_block_transform_chance:
                 # Remove a random portion of the mask positions based on the chance
-                transform_mask &= (
-                    torch.rand_like(transform_mask, dtype=torch.float32) < mask_chance
+                random_mask = (
+                    torch.rand_like(transform_mask, dtype=torch.float32)
+                    < mask_chances[i]
                 )
+                transform_mask &= random_mask
 
             # Replace the input tokens with the output token if it exists in the structure
             for output_token in output_tokens:
@@ -4346,9 +4366,20 @@ class StructureMasker:
         # Consider only actual masked positions
         masked_positions = (structure == 0).long().unsqueeze(0).unsqueeze(0)
 
-        for kernel, lut in self._block_property_transforms:
+        # Precompute random values
+        skip_random = torch.rand(len(self._block_property_transforms))
+        apply_subset_random = torch.rand(len(self._block_property_transforms))
+        mask_chances = torch.rand(len(self._block_property_transforms))
+
+        for i, (kernel, lut, changed_tokens) in enumerate(
+            self._block_property_transforms
+        ):
             # Chance to skip the transformation
-            if random.random() < self._skip_block_property_transform_chance:
+            if skip_random[i] < self._skip_block_property_transform_chance:
+                continue
+
+            # Skip if none of the changed tokens are in the structure
+            if not torch.any(torch.isin(structure, changed_tokens)):
                 continue
 
             # Apply the convolution
@@ -4360,16 +4391,17 @@ class StructureMasker:
             )
 
             # Chance to only apply the transformation to a subset of the blocks
-            if random.random() < self._random_block_property_transform_chance:
-                mask_chance = random.uniform(0, 1)
-
+            if apply_subset_random[i] < self._random_block_property_transform_chance:
                 # Remove a random portion of the mask positions based on the chance
-                transform_mask &= (
-                    torch.rand_like(transform_mask, dtype=torch.float32) < mask_chance
+                random_mask = (
+                    torch.rand_like(transform_mask, dtype=torch.float32)
+                    < mask_chances[i]
                 )
+                transform_mask &= random_mask
 
             # Apply the lookup table
-            structure = torch.where(transform_mask, lut[structure], structure)
+            if transform_mask.any():
+                structure = torch.where(transform_mask, lut[structure], structure)
 
         return structure
 
@@ -4377,7 +4409,8 @@ class StructureMasker:
         masked_structure = structure.clone()
 
         # Remove blocks to represent a partially built structure
-        masked_structure = self._remove_blocks(masked_structure)
+        with record_function("Remove blocks"):
+            masked_structure = self._remove_blocks(masked_structure)
 
         # Fill back in middle since infererence is triggered on a block position
         mid_d = structure.shape[0] // 2
@@ -4386,13 +4419,15 @@ class StructureMasker:
         masked_structure[mid_d, mid_h, mid_w] = structure[mid_d, mid_h, mid_w]
 
         # Apply block transformations so the blocks will accurately represent how they should be with the other blocks removed
-        masked_structure = self._apply_block_transformations(masked_structure)
+        with record_function("Apply block transformations"):
+            masked_structure = self._apply_block_transformations(masked_structure)
 
         # Remove all air since this is what's done at inference time
         masked_structure[masked_structure == self._air_block_token] = 0
 
         # Add some blocks back to represent a partial stage in the auto-regressive inference
-        if random.random() < self._add_blocks_chance:
-            masked_structure = self._add_blocks(masked_structure, structure)
+        with record_function("Add blocks"):
+            if random.random() < self._add_blocks_chance:
+                masked_structure = self._add_blocks(masked_structure, structure)
 
         return masked_structure
