@@ -6,18 +6,20 @@ def main():
         schematic_directory="data/schematics",
         temp_directory="data/temp",
         progress_save_period=30,
-        chunk_mark_radius=1,
-        sample_overlap_proportion=0.75,
-        sample_size=11,
-        sample_target_block_threshold=0.04,
-        sample_minimum_air_threshold=0.15,
+        chunk_mark_radius=2,
+        sample_check_size=9,
+        sample_overlap_proportion=0.7,
+        sample_target_block_threshold=0.03,
+        sample_minimum_air_threshold=0.10,
+        sample_collection_size=15,
         sampling_purge_interval=3,
         resource_usage_limit=0.8,
-        save_schematics=False,
-        save_to_hdf5=True,
-        hdf5_path="data/data_v3.h5",
+        save_schematics=True,
+        sample_limit=200,
+        save_to_hdf5=False,
+        hdf5_path="data/data_v6.h5",
     )
-    dir = "data"
+    dir = "data/worlds"
     world_sampler.sample_directory(dir)
 
 
