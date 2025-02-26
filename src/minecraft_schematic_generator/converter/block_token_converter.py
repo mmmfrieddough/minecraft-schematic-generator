@@ -69,7 +69,7 @@ class BlockTokenConverter:
         "tnt": ["unstable", "underwater"],
         "scaffolding": ["bottom", "distance", "stability_checked"],
         "jukebox": ["has_record"],
-        # "bed": ["occupied"],
+        "bed": ["occupied"],
     }
 
     block_names_to_change = {
