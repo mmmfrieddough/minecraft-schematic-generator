@@ -46,6 +46,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         num_layers: int,
         decoder_dropout: float,
         embedding_dim: int = None,
+        feed_forward_dim: int | None = None,
     ):
         super().__init__()
         self.num_classes = num_classes
@@ -54,6 +55,8 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         self.max_sequence_length = max_structure_size**3
         self.model_dim = model_dim
         self.embedding_dim = embedding_dim or model_dim
+
+        feed_forward_dim = feed_forward_dim or model_dim * 4
 
         # Input
         self.embedding = nn.Embedding(num_classes, self.embedding_dim)
@@ -65,7 +68,11 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
 
         # Transformer
         decoder_layer = SelfAttentionDecoderLayer(
-            model_dim, num_heads, dropout=decoder_dropout, batch_first=True
+            model_dim,
+            num_heads,
+            dim_feedforward=feed_forward_dim,
+            dropout=decoder_dropout,
+            batch_first=True,
         )
         self.decoder = SelfAttentionDecoder(decoder_layer, num_layers)
 

@@ -21,6 +21,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         decoder_dropout: float,
         max_learning_rate: float,
         warmup_proportion: float,
+        feed_forward_dim: int | None = None,
     ):
         super().__init__()
         self.model = TransformerMinecraftStructureGenerator(
@@ -33,6 +34,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
             num_layers=num_layers,
             decoder_dropout=decoder_dropout,
             embedding_dim=embedding_dim,
+            feed_forward_dim=feed_forward_dim,
         )
         self.num_classes = num_classes
         self.max_learning_rate = max_learning_rate
