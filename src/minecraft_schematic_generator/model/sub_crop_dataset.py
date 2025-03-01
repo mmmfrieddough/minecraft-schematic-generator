@@ -2,6 +2,7 @@ from torch.profiler import record_function
 from torch.utils.data import Dataset
 
 from .structure_masker import StructureMasker
+from .structure_transformer import StructureTransformer
 
 
 class SubCropDataset(Dataset):
@@ -9,11 +10,13 @@ class SubCropDataset(Dataset):
         self,
         dataset: Dataset,
         structure_masker: StructureMasker,
+        structure_transformer: StructureTransformer,
         crop_size: int,
         indices: list[int],
     ):
         self._dataset = dataset
         self._structure_masker = structure_masker
+        self._structure_transformer = structure_transformer
         self._crop_size = crop_size
         self._indices = indices
 
@@ -48,6 +51,9 @@ class SubCropDataset(Dataset):
                     y_start : y_start + self._crop_size,
                     x_start : x_start + self._crop_size,
                 ]
+
+            with record_function("Transform structure"):
+                structure = self._structure_transformer.transform_structure(structure)
 
             with record_function("Mask structure"):
                 masked_structure = self._structure_masker.mask_structure(structure)

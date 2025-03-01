@@ -34,6 +34,9 @@ class DictBlockTokenMapper(BlockTokenMapperInterface):
     def __init__(self, block_id_to_token_map: dict):
         self._next_available_token = AIR_BLOCK_ID
         self._block_id_to_token_map = block_id_to_token_map
+        self._update_reverse_mapping()
+
+    def _update_reverse_mapping(self):
         self._token_to_block_id_map = {
             v: k for k, v in self._block_id_to_token_map.items()
         }
@@ -56,6 +59,7 @@ class DictBlockTokenMapper(BlockTokenMapperInterface):
                 raise KeyError(f"Block {block_str} not found in mapping")
             token = self.find_next_available_token()
             self._block_id_to_token_map[block_str] = token
+            self._update_reverse_mapping()
         return self._block_id_to_token_map[block_str]
 
 

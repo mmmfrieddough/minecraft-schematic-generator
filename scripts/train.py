@@ -8,6 +8,9 @@ from lightning.pytorch.strategies import DDPStrategy
 import wandb
 from minecraft_schematic_generator.constants import MAX_STRUCTURE_SIZE
 from minecraft_schematic_generator.model.structure_masker import StructureMasker
+from minecraft_schematic_generator.model.structure_transformer import (
+    StructureTransformer,
+)
 from minecraft_schematic_generator.modules import (
     BlockBenchmarkCallback,
     LightningTransformerMinecraftStructureGenerator,
@@ -22,7 +25,7 @@ def main():
     torch.set_float32_matmul_precision("medium")
 
     experiment_name = "new_data_augmentation"
-    experiment_version = 16
+    experiment_version = 26
     checkpoint_dir = "lightning_logs"
     tensorboard_logger = TensorBoardLogger(
         checkpoint_dir, name=experiment_name, version=experiment_version
@@ -34,17 +37,20 @@ def main():
     )
 
     structure_masker = StructureMasker()
+    structure_transformer = StructureTransformer()
     data_module = MinecraftDataModule(
-        file_path="data/data_v5.h5",
+        file_path="data/data_v6.h5",
         structure_masker=structure_masker,
-        crop_sizes={7: 250, 9: 150, 11: 75, 13: 50, 15: 25},
+        structure_transformer=structure_transformer,
+        crop_sizes={7: 250, 9: 120, 11: 65, 13: 35, 15: 20},
+        # crop_sizes={11: 75},
         num_workers=10,
         persistent_workers=True,
         separate_validation_datasets=["holdout\\holdout1\\overworld"],
     )
 
     lightning_model = LightningTransformerMinecraftStructureGenerator(
-        num_classes=13000,
+        num_classes=14000,
         block_str_mapping=data_module.get_block_str_mapping(),
         max_structure_size=MAX_STRUCTURE_SIZE,
         embedding_dropout=0.1,
@@ -55,6 +61,7 @@ def main():
         decoder_dropout=0.1,
         max_learning_rate=5e-4,
         warmup_proportion=0.1,
+        feed_forward_dim=2048,
     )
 
     latest_checkpoint_callback = ModelCheckpoint(save_last=True)
@@ -76,7 +83,7 @@ def main():
 
     trainer = Trainer(
         strategy=ddp,
-        max_epochs=20,
+        max_epochs=10,
         logger=[tensorboard_logger, wandb_logger],
         val_check_interval=0.1,
         limit_val_batches=0.2,

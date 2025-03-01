@@ -19,6 +19,9 @@ from minecraft_schematic_generator.model import (
     SubCropDataset,
 )
 from minecraft_schematic_generator.model.structure_masker import StructureMasker
+from minecraft_schematic_generator.model.structure_transformer import (
+    StructureTransformer,
+)
 
 
 class MinecraftDataModule(LightningDataModule):
@@ -26,6 +29,7 @@ class MinecraftDataModule(LightningDataModule):
         self,
         file_path: str,
         structure_masker: StructureMasker,
+        structure_transformer: StructureTransformer,
         crop_sizes: dict[int, int],
         num_workers: int = 0,
         persistent_workers: bool = False,
@@ -65,10 +69,12 @@ class MinecraftDataModule(LightningDataModule):
                 raise ValueError("Mapping not found in HDF5 file.")
 
             self._structure_masker = structure_masker
+            self._structure_transformer = structure_transformer
             block_token_mapper = DictBlockTokenMapper(self._block_str_mapping)
             block_token_converter = BlockTokenConverter(block_token_mapper)
             self._block_token_converter = block_token_converter
             self._structure_masker.setup(block_token_converter)
+            self._structure_transformer.setup(block_token_converter)
 
     def get_block_str_mapping(self):
         return self._block_str_mapping
@@ -175,7 +181,11 @@ class MinecraftDataModule(LightningDataModule):
         for crop_size, batch_size in self._crop_sizes.items():
             indices = [i for i, size in enumerate(assigned_sizes) if size == crop_size]
             crop_dataset = SubCropDataset(
-                dataset, self._structure_masker, crop_size, indices
+                dataset,
+                self._structure_masker,
+                self._structure_transformer,
+                crop_size,
+                indices,
             )
             sampler = DistributedSampler(
                 dataset=crop_dataset,

@@ -147,9 +147,12 @@ class BlockTokenConverter:
     ) -> int:
         return self._block_token_mapper.get_token(universal_block_str, update_mapping)
 
-    def token_to_versioned_str(self, token: int) -> str:
+    def token_to_universal_block(self, token: int) -> Block:
         universal_block_str = self.token_to_universal_str(token)
-        universal_block = Block.from_string_blockstate(universal_block_str)
+        return Block.from_string_blockstate(universal_block_str)
+
+    def token_to_versioned_str(self, token: int) -> str:
+        universal_block = self.token_to_universal_block(token)
         versioned_block, _, _ = self._version_translator.block.from_universal(
             universal_block
         )
