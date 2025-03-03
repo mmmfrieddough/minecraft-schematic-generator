@@ -190,8 +190,8 @@ class MinecraftDataModule(LightningDataModule):
             sampler = DistributedSampler(
                 dataset=crop_dataset,
                 shuffle=train,
-                num_replicas=1,
-                rank=0,
+                num_replicas=self.trainer.world_size,
+                rank=self.trainer.global_rank,
             )
             dataloader = ResumableDataLoader(
                 crop_dataset,
@@ -200,7 +200,6 @@ class MinecraftDataModule(LightningDataModule):
                 drop_last=train,
                 num_workers=int(self._num_workers / len(self._crop_sizes)),
                 persistent_workers=self._persistent_workers,
-                pin_memory=train,
             )
 
             dataloaders.append(dataloader)
