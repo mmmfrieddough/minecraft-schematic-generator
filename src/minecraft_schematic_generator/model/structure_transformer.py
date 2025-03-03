@@ -253,7 +253,7 @@ class StructureTransformer:
         return structure
 
     def transform_structure(self, structure: torch.Tensor) -> torch.Tensor:
-        rotation = random.randint(1, 3)
+        rotation = random.randint(0, 3)
         structure = self._rotate_structure(structure, rotation)
 
         if random.random() > 0.5:
