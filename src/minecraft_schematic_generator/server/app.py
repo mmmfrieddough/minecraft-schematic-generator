@@ -118,7 +118,7 @@ async def complete_structure(input: StructureRequest, request: Request):
             app.state.block_token_mapper, version_translator
         )
         generator = StructureGenerator(app.state.model, block_token_mapper)
-        input_tensor = generator.prepare_input_tensor(input.structure)
+        input_tensor = generator.prepare_input_tensor(input.palette, input.structure)
 
         async def generate():
             for block_data in generator.generate_structure(
@@ -127,7 +127,7 @@ async def complete_structure(input: StructureRequest, request: Request):
                 input.start_radius,
                 input.max_iterations,
                 input.max_blocks,
-                input.air_probability_iteration_scaling,
+                input.max_alternatives,
             ):
                 response = Block(**block_data)
                 yield response.model_dump_json() + "\n"

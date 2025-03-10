@@ -287,17 +287,12 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         structure: torch.Tensor,
         pos: torch.Tensor,
         temperature: float,
-        iteration: int = 0,
-        air_probability_scaling: float = 0.0,
     ):
         """Make a prediction for a single position in the structure."""
         with torch.autocast(device_type="cuda"):
             structure = structure.unsqueeze(0)
             logits = self.forward(structure)
             logits_for_position = logits[0, :, pos[0], pos[1], pos[2]]
-
-            # Apply air probability scaling
-            logits_for_position[AIR_BLOCK_ID] += iteration * air_probability_scaling
 
             # Sample from the distribution
             probabilities = F.softmax(logits_for_position / temperature, dim=-1)
@@ -350,17 +345,14 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         start_radius: int,
         max_iterations: int,
         max_blocks: int,
-        air_probability_iteration_scaling: float,
+        max_alternatives: int,
     ):
         assert structure.dim() == 3, "Structure must have 3 dimensions"
+        assert structure.size(0) == structure.size(1) == structure.size(2), (
+            f"Structure must be cubic, got shape {structure.shape}"
+        )
         assert structure.size(0) <= self.max_structure_size, (
-            f"Z dimension {structure.size(0)} exceeds maximum size {self.max_structure_size}"
-        )
-        assert structure.size(1) <= self.max_structure_size, (
-            f"Y dimension {structure.size(1)} exceeds maximum size {self.max_structure_size}"
-        )
-        assert structure.size(2) <= self.max_structure_size, (
-            f"X dimension {structure.size(2)} exceeds maximum size {self.max_structure_size}"
+            f"Structure size {structure.size(0)} exceeds maximum size {self.max_structure_size}"
         )
 
         # Initialize tensor to track filled positions
@@ -382,7 +374,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
             filled_blocks = 0
 
             # Each iteration adds on a "layer" of blocks
-            for iteration in range(max_iterations):
+            for _ in range(max_iterations):
                 # print(f"Iteration {iteration+1}/{max_iterations}")
 
                 valid_positions = (
@@ -400,8 +392,6 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
                         structure,
                         pos,
                         temperature,
-                        iteration,
-                        air_probability_iteration_scaling,
                     )
 
                     z, y, x = pos

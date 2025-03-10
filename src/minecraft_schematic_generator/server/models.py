@@ -10,8 +10,9 @@ class StructureRequest(BaseModel):
     start_radius: int
     max_iterations: int
     max_blocks: int
-    air_probability_iteration_scaling: float
-    structure: List[List[List[str]]]
+    max_alternatives: int
+    palette: dict[int, str]
+    structure: List[List[List[int]]]
 
 
 class Block(BaseModel):

@@ -36,12 +36,24 @@ class StructureGenerator:
             )
             return self.block_token_mapper.get_unused_token()
 
-    def prepare_input_tensor(self, structure: list) -> torch.Tensor:
-        input_structure_ids = [
-            [[self.convert_block_to_token(block_str) for block_str in y] for y in z]
-            for z in structure
-        ]
-        input_tensor = torch.tensor(input_structure_ids)
+    def prepare_input_tensor(
+        self, palette: dict[int, str], structure: list[list[list[int]]]
+    ) -> torch.Tensor:
+        # Convert palette to tokens
+        for k, v in palette.items():
+            palette[k] = self.convert_block_to_token(v)
+
+        # Create lookup table for palette
+        max_id = max(palette.keys())
+        lookup_table = torch.zeros(max_id + 1, dtype=torch.long)
+        for block_id, token_id in palette.items():
+            lookup_table[block_id] = token_id
+
+        # Convert structure to tensor
+        input_tensor = torch.tensor(structure)
+
+        # Replace palette values with tokens
+        input_tensor = lookup_table[input_tensor]
 
         # Mask air blocks
         input_tensor[input_tensor == AIR_BLOCK_ID] = MASK_BLOCK_ID
@@ -58,7 +70,7 @@ class StructureGenerator:
         start_radius: int,
         max_iterations: int,
         max_blocks: int,
-        air_probability_iteration_scaling: float,
+        max_alternatives: int,
     ):
         try:
             input_tensor = input_tensor.to(next(self.model.parameters()).device)
@@ -70,6 +82,7 @@ class StructureGenerator:
                     "start_radius": start_radius,
                     "max_iterations": max_iterations,
                     "max_blocks": max_blocks,
+                    "max_alternatives": max_alternatives,
                 },
             )
 
@@ -80,7 +93,7 @@ class StructureGenerator:
                 start_radius,
                 max_iterations,
                 max_blocks,
-                air_probability_iteration_scaling,
+                max_alternatives,
             ):
                 blocks_generated += 1
                 versioned_block_str = self.block_token_mapper.token_to_versioned_str(
