@@ -87,6 +87,7 @@ class WorldSampler:
         save_to_hdf5: bool = False,
         hdf5_path: str | None = None,
         split_ratios: tuple[float, float, float] = (0.8, 0.1, 0.1),
+        max_workers: int | None = None,
     ):
         self.schematic_directory = schematic_directory
         self.temp_directory = temp_directory
@@ -109,6 +110,7 @@ class WorldSampler:
         self.save_to_hdf5 = save_to_hdf5
         self.hdf5_path = hdf5_path
         self._split_ratios = split_ratios
+        self._max_workers = max_workers
 
     def _get_data_directory(self, directory: str) -> str:
         """Returns the path to the data directory for a world"""
@@ -830,9 +832,10 @@ class WorldSampler:
             * progress_scaling
         )
 
-        # Limit to the cpu count
-        if workers_to_start + current_workers > psutil.cpu_count():
-            workers_to_start = psutil.cpu_count() - current_workers
+        # Limit to the max
+        max_workers = self._max_workers or psutil.cpu_count()
+        if workers_to_start + current_workers > max_workers:
+            workers_to_start = max_workers - current_workers
 
         return workers_to_start
 
@@ -1615,18 +1618,23 @@ class WorldSampler:
             for dx, dy, dz in np.ndindex(array.shape):
                 block = world.get_block(x + dx, y + dy, z + dz, dimension)
                 if block.namespace != "universal_minecraft":
-                    #     print(
-                    #         f"Found non-universal block {block} at {x + dx}, {y + dy}, {z + dz}"
-                    #     )
-                    raise ValueError(
-                        f"Found non-universal block {block} at {x + dx}, {y + dy}, {z + dz}"
-                    )
+                    # print(
+                    #     f"Found non-universal block {block} at {x + dx}, {y + dy}, {z + dz}"
+                    # )
+                    return (position, False, None)
                 token = self._block_token_converter.universal_block_to_token(
                     block, update_mapping=True
                 )
                 array[dz, dy, dx] = token
             return (position, True, (hash_name, array))
-        except Exception:
+        except ChunkDoesNotExist:
+            # print(f"Chunk does not exist at {x}, {y}, {z}")
+            return (position, False, None)
+        except ChunkLoadError:
+            # print(f"Error loading chunk at {x}, {y}, {z}: {e}")
+            return (position, False, None)
+        except Exception as e:
+            print(f"Unknown error converting sample position to array: {e}")
             return (position, False, None)
 
     @staticmethod
