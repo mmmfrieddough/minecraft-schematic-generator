@@ -2,7 +2,7 @@ import torch
 from lightning import Trainer
 from lightning.pytorch import seed_everything
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
-from lightning.pytorch.loggers import TensorBoardLogger, WandbLogger
+from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.strategies import DDPStrategy
 
 import wandb
@@ -24,17 +24,17 @@ def main():
 
     torch.set_float32_matmul_precision("medium")
 
-    experiment_name = "new_data_augmentation"
-    experiment_version = 26
+    experiment_name = "diamond_v1"
+    experiment_version = 0
     checkpoint_dir = "lightning_logs"
     tensorboard_logger = TensorBoardLogger(
         checkpoint_dir, name=experiment_name, version=experiment_version
     )
-    wandb_logger = WandbLogger(
-        name=experiment_name,
-        project="minecraft-structure-generator",
-        version=str(experiment_version),
-    )
+    # wandb_logger = WandbLogger(
+    #     name=experiment_name,
+    #     project="minecraft-structure-generator",
+    #     version=str(experiment_version),
+    # )
 
     structure_masker = StructureMasker()
     structure_transformer = StructureTransformer()
@@ -42,26 +42,26 @@ def main():
         file_path="data/data_v6.h5",
         structure_masker=structure_masker,
         structure_transformer=structure_transformer,
-        crop_sizes={7: 250, 9: 120, 11: 65, 13: 35, 15: 20},
-        # crop_sizes={11: 75},
-        num_workers=10,
+        # crop_sizes={7: 200, 9: 100, 11: 56, 13: 34, 15: 20},
+        crop_sizes={7: 90, 9: 45, 11: 24, 13: 14, 15: 9},
+        # crop_sizes={13: 14},
+        num_workers=15,
         persistent_workers=True,
         separate_validation_datasets=["holdout\\holdout1\\overworld"],
     )
 
     lightning_model = LightningTransformerMinecraftStructureGenerator(
-        num_classes=14000,
+        num_classes=15000,
         block_str_mapping=data_module.get_block_str_mapping(),
         max_structure_size=MAX_STRUCTURE_SIZE,
         embedding_dropout=0.1,
-        embedding_dim=128,
-        model_dim=192,
-        num_heads=2,
-        num_layers=2,
+        embedding_dim=256,
+        model_dim=1024,
+        num_heads=16,
+        num_layers=8,
         decoder_dropout=0.1,
-        max_learning_rate=5e-4,
+        max_learning_rate=1e-4,
         warmup_proportion=0.1,
-        feed_forward_dim=2048,
     )
 
     latest_checkpoint_callback = ModelCheckpoint(save_last=True)
@@ -76,18 +76,18 @@ def main():
         block_token_converter=data_module.get_block_token_converter(),
         schematic_size=11,
         num_runs=200,
-        batch_size=77,
+        batch_size=20,
     )
 
     ddp = DDPStrategy(process_group_backend="gloo", find_unused_parameters=False)
 
     trainer = Trainer(
         strategy=ddp,
-        max_epochs=10,
-        logger=[tensorboard_logger, wandb_logger],
+        max_epochs=20,
+        logger=[tensorboard_logger],
         val_check_interval=0.1,
         limit_val_batches=0.2,
-        accumulate_grad_batches=4,
+        accumulate_grad_batches=16,
         precision="bf16-mixed",
         reload_dataloaders_every_n_epochs=1,
         use_distributed_sampler=False,

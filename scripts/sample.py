@@ -14,10 +14,11 @@ def main():
         sample_collection_size=15,
         sampling_purge_interval=3,
         resource_usage_limit=0.8,
-        save_schematics=True,
-        sample_limit=200,
-        save_to_hdf5=False,
-        hdf5_path="data/data_v6.h5",
+        save_schematics=False,
+        # sample_limit=200,
+        save_to_hdf5=True,
+        hdf5_path="data/data_v6_test.h5",
+        # max_workers=1,
     )
     dir = "data/worlds"
     world_sampler.sample_directory(dir)
