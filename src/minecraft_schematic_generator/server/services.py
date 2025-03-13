@@ -87,7 +87,14 @@ class StructureGenerator:
             )
 
             blocks_generated = 0
-            for token, z, y, x in self.model.fill_structure(
+            for (
+                alternative_num,
+                previous_alternative_num,
+                token,
+                z,
+                y,
+                x,
+            ) in self.model.fill_structure(
                 input_tensor,
                 temperature,
                 start_radius,
@@ -99,7 +106,14 @@ class StructureGenerator:
                 versioned_block_str = self.block_token_mapper.token_to_versioned_str(
                     token
                 )
-                yield {"block_state": versioned_block_str, "z": z, "y": y, "x": x}
+                yield {
+                    "alternative_num": alternative_num,
+                    "previous_alternative_num": previous_alternative_num,
+                    "block_state": versioned_block_str,
+                    "z": z,
+                    "y": y,
+                    "x": x,
+                }
 
             self.logger.info(
                 "Structure generation completed",

@@ -16,6 +16,8 @@ class StructureRequest(BaseModel):
 
 
 class Block(BaseModel):
+    alternative_num: int
+    previous_alternative_num: int
     block_state: str
     z: int
     y: int

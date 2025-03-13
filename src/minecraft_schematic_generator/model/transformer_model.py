@@ -34,6 +34,59 @@ This model generates Minecraft structures using a decoder-only transformer archi
 """
 
 
+class StructureAlternative:
+    """Class representing a single alternative structure being generated."""
+
+    def __init__(
+        self,
+        alternative_id: int,
+        structure: torch.Tensor,
+        filled_positions: torch.Tensor,
+        remaining_iterations: int,
+        remaining_blocks: int,
+        valid_positions: list[tuple[int, int, int]] | None = None,
+    ):
+        self.id = alternative_id
+        self.structure = structure
+        self.filled_positions = filled_positions
+        self.remaining_iterations = remaining_iterations
+        self.remaining_blocks = remaining_blocks
+        self.valid_positions = valid_positions or []
+
+    def get_valid_positions(self):
+        """Get valid positions to fill next."""
+        if not self.valid_positions:
+            self.valid_positions = (
+                TransformerMinecraftStructureGenerator._get_valid_positions(
+                    self.structure, self.filled_positions
+                )
+            )
+            self.remaining_iterations -= 1
+
+    def place_block(self, token: int, pos: tuple[int, int, int]):
+        """Place a block and update state."""
+        z, y, x = pos
+        if token != AIR_BLOCK_ID:
+            self.filled_positions[z, y, x] = 1
+            self.remaining_blocks -= 1
+        self.structure[z, y, x] = token
+
+    def is_complete(self):
+        """Check if this alternative is complete."""
+        return self.remaining_blocks <= 0 or self.remaining_iterations <= 0
+
+    def clone_for_alternative(self, new_id: int, new_structure: torch.Tensor):
+        """Create a clone of this alternative with a new ID."""
+        return StructureAlternative(
+            alternative_id=new_id,
+            structure=new_structure,
+            filled_positions=self.filled_positions.clone(),
+            remaining_iterations=self.remaining_iterations,
+            remaining_blocks=self.remaining_blocks,
+            valid_positions=self.valid_positions.copy(),
+        )
+
+
 class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
     def __init__(
         self,
@@ -249,7 +302,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
     @staticmethod
     def _get_valid_positions(
         structure: torch.Tensor, filled_positions: torch.Tensor
-    ) -> torch.Tensor:
+    ) -> list[tuple[int, int, int]]:
         """Get ordered list of valid positions to fill, from center outward."""
         # Limit structure to positions that have been filled by the model
         mask_structure = structure * filled_positions
@@ -264,7 +317,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         mask = mask & (structure == MASK_BLOCK_ID)
 
         if not mask.any():
-            return None
+            return []
 
         # Get positions that need filling
         valid_positions = mask.nonzero()
@@ -280,29 +333,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         distances = torch.norm(valid_positions.float() - center, dim=1)
 
         # Return positions ordered by distance from center
-        return valid_positions[torch.argsort(distances)]
-
-    def _predict_single_position(
-        self,
-        structure: torch.Tensor,
-        pos: torch.Tensor,
-        temperature: float,
-    ):
-        """Make a prediction for a single position in the structure."""
-        with torch.autocast(device_type="cuda"):
-            structure = structure.unsqueeze(0)
-            logits = self.forward(structure)
-            logits_for_position = logits[0, :, pos[0], pos[1], pos[2]]
-
-            # Sample from the distribution
-            probabilities = F.softmax(logits_for_position / temperature, dim=-1)
-            predicted_token = torch.multinomial(probabilities, num_samples=1).item()
-
-            # print(
-            #     f"Selected token {predicted_token} with probability {probabilities[predicted_token].item()*100:.1f}%, air probability {probabilities[1].item()*100:.1f}%"
-            # )
-
-            return predicted_token
+        return valid_positions[torch.argsort(distances)].tolist()
 
     def one_shot_inference(
         self,
@@ -347,6 +378,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         max_blocks: int,
         max_alternatives: int,
     ):
+        """Fill a structure with multiple alternatives."""
         assert structure.dim() == 3, "Structure must have 3 dimensions"
         assert structure.size(0) == structure.size(1) == structure.size(2), (
             f"Structure must be cubic, got shape {structure.shape}"
@@ -358,7 +390,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         # Initialize tensor to track filled positions
         filled_positions = torch.zeros_like(structure, dtype=torch.bool)
 
-        # Fill the center up to the start radius to pretend the model has already filled it
+        # Fill the center up to the start radius
         z_mid, y_mid, x_mid = (
             structure.shape[0] // 2,
             structure.shape[1] // 2,
@@ -370,49 +402,96 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
             x_mid - start_radius : x_mid + start_radius + 1,
         ] = 1
 
-        with torch.no_grad():
-            filled_blocks = 0
+        # Create batch of structures for all possible alternatives
+        batched_structure = (
+            structure.unsqueeze(0).expand(max_alternatives, -1, -1, -1).clone()
+        )
 
-            # Each iteration adds on a "layer" of blocks
-            for _ in range(max_iterations):
-                # print(f"Iteration {iteration+1}/{max_iterations}")
+        # Create the first alternative
+        alternatives = [
+            StructureAlternative(
+                alternative_id=0,
+                structure=batched_structure[0],
+                filled_positions=filled_positions,
+                remaining_iterations=max_iterations,
+                remaining_blocks=max_blocks,
+            )
+        ]
 
-                valid_positions = (
-                    TransformerMinecraftStructureGenerator._get_valid_positions(
-                        structure, filled_positions
-                    )
-                )
-                if valid_positions is None:
-                    # print("No more elements to update")
-                    break
+        # Track the next available alternative ID
+        next_alternative_id = 1
 
-                # Process each position
-                for pos in valid_positions:
-                    predicted_token = self._predict_single_position(
-                        structure,
-                        pos,
-                        temperature,
-                    )
+        # Process alternatives until none remain
+        with torch.no_grad() and torch.autocast(device_type="cuda"):
+            while alternatives:
+                next_alternatives = []
 
+                # Forward pass for all current alternatives at once
+                logits = self.forward(batched_structure)
+
+                # Process each alternative in the current list
+                for alternative in alternatives:
+                    # Skip completed alternatives
+                    if alternative.is_complete():
+                        continue
+
+                    # Get the next valid positions if needed
+                    alternative.get_valid_positions()
+                    if not alternative.valid_positions:
+                        continue
+
+                    next_alternatives.append(alternative)
+
+                    # Process the next position
+                    pos = alternative.valid_positions.pop(0)
                     z, y, x = pos
-                    yield predicted_token, z, y, x
 
-                    if predicted_token != AIR_BLOCK_ID:
-                        filled_positions[z, y, x] = 1
-                        filled_blocks += 1
-                        # print(f"Filled {filled_blocks}/{max_blocks} solid blocks")
-                    if filled_blocks >= max_blocks:
-                        break
-                    structure[z, y, x] = predicted_token
+                    # Get logits for this position
+                    logits_for_position = logits[alternative.id, :, z, y, x]
 
-                if filled_blocks >= max_blocks:
-                    break
+                    # Sample from the distribution
+                    probabilities = F.softmax(logits_for_position / temperature, dim=-1)
+                    predicted_token = torch.multinomial(
+                        probabilities, num_samples=1
+                    ).item()
 
-    def complete_structure(
-        self, masked_structure: torch.Tensor, temperature: float = 1.0
-    ) -> torch.Tensor:
-        for predicted_token, z, y, x in self.fill_structure(
-            masked_structure, temperature
-        ):
-            masked_structure[z, y, x] = predicted_token
-        return masked_structure
+                    # Find second best token for potential alternative
+                    probabilities[predicted_token] = 0
+                    second_prob, second_token = torch.max(probabilities, dim=0)
+
+                    # Create an alternative if probability is high enough and we have room
+                    if second_prob > 0.3 and next_alternative_id < max_alternatives:
+                        # Create a new alternative with the second-best token
+                        batched_structure[next_alternative_id] = (
+                            alternative.structure.clone()
+                        )
+                        new_alternative = alternative.clone_for_alternative(
+                            next_alternative_id, batched_structure[next_alternative_id]
+                        )
+                        alternative_token = second_token.item()
+
+                        # Yield the result
+                        yield (
+                            new_alternative.id,
+                            alternative.id,
+                            alternative_token,
+                            z,
+                            y,
+                            x,
+                        )
+
+                        # Place the alternative block
+                        new_alternative.place_block(alternative_token, pos)
+
+                        # Add the new alternative to the processing list
+                        next_alternatives.append(new_alternative)
+                        next_alternative_id += 1
+
+                    # Yield the result
+                    yield alternative.id, 0, predicted_token, z, y, x
+
+                    # Place the block in the current alternative
+                    alternative.place_block(predicted_token, pos)
+
+                # Update the alternatives list for the next round
+                alternatives = next_alternatives
