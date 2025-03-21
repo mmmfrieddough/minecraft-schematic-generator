@@ -284,9 +284,10 @@ class MinecraftDataModule(LightningDataModule):
                 assigned_sizes=self._train_assigned_sizes,
             )
 
-        self._train_loaded_from_checkpoint = False
-
         return self._train_dataloader
+
+    def on_fit_start(self):
+        self._train_loaded_from_checkpoint = False
 
     def val_dataloader(self):
         for key in self._val_dataloaders:
