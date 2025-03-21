@@ -55,20 +55,20 @@ class ModelLoader:
             if checkpoint_path:
                 logger.info(f"Loading model from local checkpoint: {checkpoint_path}")
                 lightning_module = LightningTransformerMinecraftStructureGenerator.load_from_checkpoint(
-                    checkpoint_path
+                    checkpoint_path, map_location=device
                 )
                 self.model = lightning_module.model
             elif model_path:
                 logger.info(f"Loading model from local path: {model_path}")
                 self.model = TransformerMinecraftStructureGenerator.from_pretrained(
-                    model_path
+                    model_path, map_location=device
                 )
             elif model_id:
                 logger.info(
                     f"Loading model from Hugging Face: {model_id}, revision: {model_revision}"
                 )
                 self.model = TransformerMinecraftStructureGenerator.from_pretrained(
-                    model_id, revision=model_revision
+                    model_id, revision=model_revision, map_location=device
                 )
             else:
                 raise ModelLoadError("No model specified")
@@ -76,6 +76,5 @@ class ModelLoader:
             logger.error(f"Failed to load model: {str(e)}", exc_info=True)
             raise ModelLoadError(f"Model loading failed: {str(e)}") from e
 
-        self.model.to(device)
         self.model.eval()
         return self.model
