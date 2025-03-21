@@ -16,7 +16,7 @@ from amulet import Block  # noqa: E402
 
 
 class BlockTokenConverter:
-    block_properties_to_remove = {
+    BLOCK_PROPERTIES_TO_REMOVE = {
         # Plants
         "sugar_cane": ["age"],
         "cactus": ["age"],
@@ -72,7 +72,12 @@ class BlockTokenConverter:
         "bed": ["occupied"],
     }
 
-    block_names_to_change = {
+    BLOCK_PROPERTIES_TO_ADD = {
+        "kelp": {"waterlogged": StringTag("true")},
+        "kelp_plant": {"waterlogged": StringTag("true")},
+    }
+
+    BLOCK_NAMES_TO_CHANGE = {
         "cave_air": "air",
         "void_air": "air",
     }
@@ -95,25 +100,39 @@ class BlockTokenConverter:
     def _clean_block_properties(block: Block) -> Block:
         if (
             not block.properties
-            or block.base_name not in BlockTokenConverter.block_properties_to_remove
+            or block.base_name not in BlockTokenConverter.BLOCK_PROPERTIES_TO_REMOVE
         ):
             return block
         block_properties: dict = block.properties
-        for property in BlockTokenConverter.block_properties_to_remove[block.base_name]:
+        for property in BlockTokenConverter.BLOCK_PROPERTIES_TO_REMOVE[block.base_name]:
             block_properties.pop(property, None)
         if block_properties != block.properties:
             return Block(block.namespace, block.base_name, block_properties)
         return block
 
     @staticmethod
+    def _add_block_properties(block: Block) -> Block:
+        if block.base_name not in BlockTokenConverter.BLOCK_PROPERTIES_TO_ADD:
+            return block
+        block_properties: dict = block.properties
+        for property, value in BlockTokenConverter.BLOCK_PROPERTIES_TO_ADD[
+            block.base_name
+        ].items():
+            block_properties[property] = value
+        if block_properties != block.properties:
+            return Block(block.namespace, block.base_name, block_properties)
+        return block
+
+    @staticmethod
     def _clean_block(block: Block) -> Block:
-        if block.base_name in BlockTokenConverter.block_names_to_change:
+        if block.base_name in BlockTokenConverter.BLOCK_NAMES_TO_CHANGE:
             block = Block(
                 block.namespace,
-                BlockTokenConverter.block_names_to_change[block.base_name],
+                BlockTokenConverter.BLOCK_NAMES_TO_CHANGE[block.base_name],
                 block.properties,
             )
         block = BlockTokenConverter._clean_block_properties(block)
+        block = BlockTokenConverter._add_block_properties(block)
         return block
 
     @staticmethod
