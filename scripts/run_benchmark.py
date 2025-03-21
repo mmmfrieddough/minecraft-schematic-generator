@@ -7,10 +7,8 @@ from minecraft_schematic_generator.modules import (
     LightningTransformerMinecraftStructureGenerator,
 )
 
-experiment_name = "universal"
-model_version = "max_size_15_6"
-# experiment_name = "center_data"
-# model_version = 12
+experiment_name = "diamond_v1"
+model_version = "version_1"
 checkpoint_path = (
     f"lightning_logs/{experiment_name}/{model_version}/checkpoints/last.ckpt"
 )
