@@ -71,6 +71,7 @@ class StructureGenerator:
         max_iterations: int,
         max_blocks: int,
         max_alternatives: int,
+        min_alternative_probability: float,
     ):
         try:
             input_tensor = input_tensor.to(next(self.model.parameters()).device)
@@ -101,6 +102,7 @@ class StructureGenerator:
                 max_iterations,
                 max_blocks,
                 max_alternatives,
+                min_alternative_probability,
             ):
                 blocks_generated += 1
                 versioned_block_str = self.block_token_mapper.token_to_versioned_str(

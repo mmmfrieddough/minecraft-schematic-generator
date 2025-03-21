@@ -128,6 +128,7 @@ async def complete_structure(input: StructureRequest, request: Request):
                 input.max_iterations,
                 input.max_blocks,
                 input.max_alternatives,
+                input.min_alternative_probability,
             ):
                 response = Block(**block_data)
                 yield response.model_dump_json() + "\n"

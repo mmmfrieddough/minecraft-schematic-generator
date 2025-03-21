@@ -377,6 +377,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         max_iterations: int,
         max_blocks: int,
         max_alternatives: int,
+        min_alternative_probability: float,
     ):
         """Fill a structure with multiple alternatives."""
         assert structure.dim() == 3, "Structure must have 3 dimensions"
@@ -422,7 +423,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         next_alternative_id = 1
 
         # Process alternatives until none remain
-        with torch.no_grad() and torch.autocast(device_type="cuda"):
+        with torch.no_grad(), torch.autocast(device_type="cuda"):
             while alternatives:
                 next_alternatives = []
 
@@ -455,37 +456,46 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
                         probabilities, num_samples=1
                     ).item()
 
-                    # Find second best token for potential alternative
-                    probabilities[predicted_token] = 0
-                    second_prob, second_token = torch.max(probabilities, dim=0)
-
-                    # Create an alternative if probability is high enough and we have room
-                    if second_prob > 0.3 and next_alternative_id < max_alternatives:
-                        # Create a new alternative with the second-best token
-                        batched_structure[next_alternative_id] = (
-                            alternative.structure.clone()
-                        )
-                        new_alternative = alternative.clone_for_alternative(
-                            next_alternative_id, batched_structure[next_alternative_id]
-                        )
-                        alternative_token = second_token.item()
-
-                        # Yield the result
-                        yield (
-                            new_alternative.id,
-                            alternative.id,
-                            alternative_token,
-                            z,
-                            y,
-                            x,
+                    if next_alternative_id < max_alternatives:
+                        # Find potential alternatives
+                        probabilities[predicted_token] = 0
+                        top_probs, top_indices = torch.topk(
+                            probabilities, max_alternatives - next_alternative_id
                         )
 
-                        # Place the alternative block
-                        new_alternative.place_block(alternative_token, pos)
+                        for prob, token in zip(top_probs, top_indices):
+                            if (
+                                prob < min_alternative_probability
+                                or next_alternative_id >= max_alternatives
+                            ):
+                                break
 
-                        # Add the new alternative to the processing list
-                        next_alternatives.append(new_alternative)
-                        next_alternative_id += 1
+                            # Create a new alternative with this token
+                            batched_structure[next_alternative_id] = (
+                                alternative.structure.clone()
+                            )
+                            new_alternative = alternative.clone_for_alternative(
+                                next_alternative_id,
+                                batched_structure[next_alternative_id],
+                            )
+                            alternative_token = token.item()
+
+                            # Yield the result
+                            yield (
+                                new_alternative.id,
+                                alternative.id,
+                                alternative_token,
+                                z,
+                                y,
+                                x,
+                            )
+
+                            # Place the alternative block
+                            new_alternative.place_block(alternative_token, pos)
+
+                            # Add the new alternative to the processing list
+                            next_alternatives.append(new_alternative)
+                            next_alternative_id += 1
 
                     # Yield the result
                     yield alternative.id, 0, predicted_token, z, y, x

@@ -11,6 +11,7 @@ class StructureRequest(BaseModel):
     max_iterations: int
     max_blocks: int
     max_alternatives: int
+    min_alternative_probability: float
     palette: dict[int, str]
     structure: List[List[List[int]]]
 
