@@ -211,6 +211,10 @@ class RedstonePowerBenchmark(StructureBenchmark):
         random.seed(seed)
         used_positions = set()
         removed_positions = set()
+        top = self._schematic_middle + 1
+        bottom = self._schematic_middle - 1
+        if self.component_type == RedstoneComponentType.DOOR:
+            top = self._schematic_middle + 3
 
         # Make component-specific decisions once for the entire schematic
         is_sticky = (
@@ -250,10 +254,6 @@ class RedstonePowerBenchmark(StructureBenchmark):
                 # Randomly choose and place power source
                 powered = False
                 if place_power_source:
-                    top = self._schematic_middle + 1
-                    bottom = self._schematic_middle - 1
-                    if self.component_type == RedstoneComponentType.DOOR:
-                        top = self._schematic_middle + 3
                     source_type = random.choice(valid_sources)
                     # Try to place power source, respecting height constraints
                     source_positions, powered = self.place_power_source(
