@@ -1,9 +1,11 @@
 import contextlib
+import json
 import logging
 import traceback
 
 import aiohttp
 import semver
+import torch
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -16,7 +18,7 @@ from minecraft_schematic_generator.version import GITHUB_REPO, __version__
 
 from .config import AppState
 from .model_loader import ModelLoader
-from .models import Block, StructureRequest
+from .models import StructureResponse, StructureRequest
 from .services import StructureGenerator
 
 # Set PyMCTranslate logging level before importing it
@@ -110,6 +112,7 @@ async def general_exception_handler(_: Request, exc: Exception):
 @app.post("/complete-structure/")
 async def complete_structure(input: StructureRequest, request: Request):
     logger.info("Received structure generation request")
+
     try:
         version_translator = app.state.translation_manager.get_version(
             input.platform, input.version_number
@@ -119,8 +122,15 @@ async def complete_structure(input: StructureRequest, request: Request):
         )
         generator = StructureGenerator(app.state.model, block_token_mapper)
         input_tensor = generator.prepare_input_tensor(input.palette, input.structure)
+    except Exception as e:
+        logger.error(f"Error during input preparation: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error during input preparation: {str(e)}",
+        )
 
-        async def generate():
+    async def generate():
+        try:
             for block_data in generator.generate_structure(
                 input_tensor,
                 input.temperature,
@@ -130,7 +140,7 @@ async def complete_structure(input: StructureRequest, request: Request):
                 input.max_alternatives,
                 input.min_alternative_probability,
             ):
-                response = Block(**block_data)
+                response = StructureResponse(type="block", **block_data)
                 yield response.model_dump_json() + "\n"
 
                 # Check for client disconnection after each block
@@ -138,9 +148,21 @@ async def complete_structure(input: StructureRequest, request: Request):
                     logger.info("Client disconnected, stopping generation")
                     break
 
-        return StreamingResponse(generate(), media_type="application/x-ndjson")
+            complete_json = {"type": "complete"}
+            yield json.dumps(complete_json) + "\n"
+        except torch.cuda.OutOfMemoryError:
+            logger.error("CUDA out of memory error", exc_info=True)
+            error_json = {
+                "type": "error",
+                "detail": "The model ran out of memory. Try using a smaller input size or smaller model.",
+            }
+            yield json.dumps(error_json) + "\n"
+        except Exception as e:
+            logger.error(f"Error during structure generation: {str(e)}", exc_info=True)
+            error_json = {
+                "type": "error",
+                "detail": f"Error during structure generation: {str(e)}",
+            }
+            yield json.dumps(error_json) + "\n"
 
-    except Exception as e:
-        traceback_str = traceback.format_exc()
-        logger.error(f"Error during structure generation: {str(e)}\n{traceback_str}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return StreamingResponse(generate(), media_type="application/x-ndjson")

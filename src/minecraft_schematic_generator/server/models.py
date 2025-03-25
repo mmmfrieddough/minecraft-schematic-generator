@@ -16,7 +16,8 @@ class StructureRequest(BaseModel):
     structure: List[List[List[int]]]
 
 
-class Block(BaseModel):
+class StructureResponse(BaseModel):
+    type: str
     alternative_num: int
     previous_alternative_num: int
     block_state: str

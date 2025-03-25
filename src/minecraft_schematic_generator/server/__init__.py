@@ -1,6 +1,6 @@
 from .app import app
 from .config import get_config
 from .model_loader import ModelLoader
-from .models import Block, StructureRequest
+from .models import StructureResponse, StructureRequest
 
-__all__ = ["Block", "StructureRequest", "app", "ModelLoader", "get_config"]
+__all__ = ["StructureResponse", "StructureRequest", "app", "ModelLoader", "get_config"]
