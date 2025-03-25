@@ -26,8 +26,8 @@ This model generates Minecraft structures using a decoder-only transformer archi
 
 - Architecture: Decoder-only Transformer
 - Vocabulary Size: {{ num_classes }} block types
-- Sequence Length: {{ max_sequence_length }}
-- Embedding Dimension: {{ embedding.embedding_dim }}
+- Maximum Sequence Length: {{ max_sequence_length }}
+- Embedding Dimension: {{ embedding_dim }}
 - Attention Heads: {{ attention_heads }}
 - Transformer Layers: {{ transformer_layers }}
 - Parameters: {{ parameters }}
@@ -273,7 +273,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
             template_str=MODEL_CARD_TEMPLATE,
             num_classes=self.num_classes,
             max_sequence_length=self.max_sequence_length,
-            embedding=self.embedding.embedding_dim,
+            embedding_dim=self.embedding.embedding_dim,
             attention_heads=self.decoder.layers[0].self_attn.num_heads,
             transformer_layers=len(self.decoder.layers),
             parameters=f"{sum(p.numel() for p in self.parameters()):,}",
