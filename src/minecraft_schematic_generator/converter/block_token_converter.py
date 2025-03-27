@@ -79,7 +79,7 @@ class BlockTokenConverter:
 
     BLOCK_NAMES_TO_CHANGE = {
         "cave_air": "air",
-        "void_air": "air",
+        "void_air": "stone",
     }
 
     def __init__(

@@ -5,8 +5,6 @@ import torch
 from minecraft_schematic_generator.constants import (
     AIR_BLOCK_ID,
     MASK_BLOCK_ID,
-    VOID_AIR_BLOCK_ID,
-    VOID_AIR_BLOCK_STR,
 )
 from minecraft_schematic_generator.converter import BlockTokenConverter
 from minecraft_schematic_generator.model import TransformerMinecraftStructureGenerator
@@ -24,15 +22,10 @@ class StructureGenerator:
 
     def convert_block_to_token(self, block_str: str) -> int:
         try:
-            universal_block = self.block_token_mapper.versioned_str_to_universal_block(
-                block_str
-            )
-            if universal_block.blockstate == VOID_AIR_BLOCK_STR:
-                return VOID_AIR_BLOCK_ID
-            return self.block_token_mapper.universal_block_to_token(universal_block)
+            return self.block_token_mapper.versioned_str_to_token(block_str)
         except KeyError:
             self.logger.warning(
-                f"Block {universal_block.blockstate} not found in mapping. Returning unused token."
+                f"Block {block_str} not found in mapping. Returning unused token."
             )
             return self.block_token_mapper.get_unused_token()
 
@@ -57,9 +50,6 @@ class StructureGenerator:
 
         # Mask air blocks
         input_tensor[input_tensor == AIR_BLOCK_ID] = MASK_BLOCK_ID
-
-        # Turn void air into air
-        input_tensor[input_tensor == VOID_AIR_BLOCK_ID] = AIR_BLOCK_ID
 
         return input_tensor
 
