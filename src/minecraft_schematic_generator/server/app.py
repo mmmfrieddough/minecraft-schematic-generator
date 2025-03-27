@@ -1,7 +1,6 @@
 import contextlib
 import json
 import logging
-import traceback
 
 import aiohttp
 import semver
@@ -18,7 +17,7 @@ from minecraft_schematic_generator.version import GITHUB_REPO, __version__
 
 from .config import AppState
 from .model_loader import ModelLoader
-from .models import StructureResponse, StructureRequest
+from .models import StructureRequest, StructureResponse
 from .services import StructureGenerator
 
 # Set PyMCTranslate logging level before importing it
@@ -65,8 +64,7 @@ async def lifespan(app: SchematicGeneratorApp):
     await check_latest_version(app)
 
     logger.info("Loading model...")
-    model_loader = ModelLoader()
-    app.state.model = model_loader.load_model(
+    app.state.model = ModelLoader.load_model(
         app.state.checkpoint_path,
         app.state.model_path,
         app.state.model_id,
@@ -112,6 +110,38 @@ async def general_exception_handler(_: Request, exc: Exception):
 @app.post("/complete-structure/")
 async def complete_structure(input: StructureRequest, request: Request):
     logger.info("Received structure generation request")
+
+    try:
+        if input.model_type and input.model_type != "default":
+            model_id = f"mmmfrieddough/minecraft-schematic-generator-{input.model_type}"
+            if (
+                app.state.model_id != model_id
+                or app.state.model_revision != input.model_version
+            ):
+                logger.info(f"Loading model for model type: {input.model_type}")
+                app.state.model = ModelLoader.load_model(
+                    None,
+                    None,
+                    model_id,
+                    input.model_version,
+                    app.state.device,
+                )
+                logger.info("Model loaded successfully")
+                app.state.model_id = model_id
+                app.state.model_revision = input.model_version
+        if input.inference_device and input.inference_device != app.state.device:
+            logger.info(f"Changing device to {input.inference_device}")
+            app.state.device = input.inference_device
+            device = ModelLoader.configure_device(input.inference_device)
+            app.state.model.to(device)
+            logger.info("Device changed successfully")
+
+    except Exception as e:
+        logger.error(f"Error loading model: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error loading model: {str(e)}",
+        )
 
     try:
         version_translator = app.state.translation_manager.get_version(

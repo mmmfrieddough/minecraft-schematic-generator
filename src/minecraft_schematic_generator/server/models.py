@@ -4,14 +4,17 @@ from pydantic import BaseModel
 
 
 class StructureRequest(BaseModel):
-    platform: str
+    model_type: str = "default"
+    model_version: str | None = None
+    inference_device: str | None = None
+    platform: str = "java"
     version_number: int
-    temperature: float
-    start_radius: int
-    max_iterations: int
-    max_blocks: int
-    max_alternatives: int
-    min_alternative_probability: float
+    temperature: float = 1.0
+    start_radius: int = 1
+    max_iterations: int = 5
+    max_blocks: int = 20
+    max_alternatives: int = 1
+    min_alternative_probability: float = 0.3
     palette: dict[int, str]
     structure: List[List[List[int]]]
 
