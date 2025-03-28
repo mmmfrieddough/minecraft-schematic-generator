@@ -154,7 +154,9 @@ async def complete_structure(input: StructureRequest, request: Request):
             app.state.block_token_mapper, version_translator
         )
         generator = StructureGenerator(app.state.model, block_token_mapper)
-        input_tensor = generator.prepare_input_tensor(input.palette, input.structure)
+        input_tensor = generator.prepare_input_tensor(
+            input.ignore_replaceable_blocks, input.palette, input.structure
+        )
     except Exception as e:
         logger.error(f"Error during input preparation: {str(e)}")
         raise HTTPException(

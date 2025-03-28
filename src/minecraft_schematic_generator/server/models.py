@@ -15,6 +15,7 @@ class StructureRequest(BaseModel):
     max_blocks: int = 20
     max_alternatives: int = 1
     min_alternative_probability: float = 0.3
+    ignore_replaceable_blocks: bool = False
     palette: dict[int, str]
     structure: List[List[List[int]]]
 

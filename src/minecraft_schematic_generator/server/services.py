@@ -5,6 +5,7 @@ import torch
 from minecraft_schematic_generator.constants import (
     AIR_BLOCK_ID,
     MASK_BLOCK_ID,
+    REPLACEABLE_BLOCK_STRINGS,
 )
 from minecraft_schematic_generator.converter import BlockTokenConverter
 from minecraft_schematic_generator.model import TransformerMinecraftStructureGenerator
@@ -30,7 +31,10 @@ class StructureGenerator:
             return self.block_token_mapper.get_unused_token()
 
     def prepare_input_tensor(
-        self, palette: dict[int, str], structure: list[list[list[int]]]
+        self,
+        ignore_replaceable_blocks: bool,
+        palette: dict[int, str],
+        structure: list[list[list[int]]],
     ) -> torch.Tensor:
         # Convert palette to tokens
         for k, v in palette.items():
@@ -50,6 +54,17 @@ class StructureGenerator:
 
         # Mask air blocks
         input_tensor[input_tensor == AIR_BLOCK_ID] = MASK_BLOCK_ID
+
+        # Mask short grass blocks
+        if ignore_replaceable_blocks:
+            replaceable_block_tokens = torch.tensor(
+                [
+                    self.block_token_mapper.universal_str_to_token(block_str)
+                    for block_str in REPLACEABLE_BLOCK_STRINGS
+                ]
+            )
+            replaceable_mask = torch.isin(input_tensor, replaceable_block_tokens)
+            input_tensor[replaceable_mask] = MASK_BLOCK_ID
 
         return input_tensor
 
