@@ -1,4 +1,5 @@
 import contextlib
+import importlib
 import json
 import logging
 
@@ -13,7 +14,7 @@ from minecraft_schematic_generator.converter import (
     BlockTokenConverter,
     DictBlockTokenMapper,
 )
-from minecraft_schematic_generator.version import GITHUB_REPO, __version__
+from minecraft_schematic_generator.constants import GITHUB_REPO
 
 from .config import AppState
 from .model_loader import ModelLoader
@@ -42,7 +43,9 @@ async def check_latest_version(app: SchematicGeneratorApp):
                     data = await response.json()
                     latest_version = data["tag_name"].lstrip("v")
                     logger.debug(f"Latest version: {latest_version}")
-                    current_version = __version__
+                    current_version = importlib.metadata.version(
+                        "minecraft_schematic_generator"
+                    )
                     logger.debug(f"Current version: {current_version}")
 
                     if semver.compare(latest_version, current_version) > 0:
@@ -52,7 +55,7 @@ async def check_latest_version(app: SchematicGeneratorApp):
                             f"Visit https://github.com/{GITHUB_REPO}/releases/latest to update."
                         )
                     else:
-                        logger.info(f"Running latest version {current_version}")
+                        logger.info("Running latest version")
                 else:
                     raise Exception(f"Coudn't fetch latest version: {response.status}")
     except Exception as e:
@@ -61,7 +64,9 @@ async def check_latest_version(app: SchematicGeneratorApp):
 
 @contextlib.asynccontextmanager
 async def lifespan(app: SchematicGeneratorApp):
-    logger.info(f"Starting Minecraft Schematic Generator v{__version__}")
+    logger.info(
+        f"Starting Minecraft Schematic Generator v{importlib.metadata.version('minecraft_schematic_generator')}"
+    )
 
     # Check for updates
     await check_latest_version(app)

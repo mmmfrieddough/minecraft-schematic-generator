@@ -54,15 +54,6 @@ jobs:
           pip install -e .[server]
           pip install pyinstaller ${{ matrix.cuda && 'huggingface_hub' || '' }}
 
-      - name: Generate version file
-        run: |
-          VERSION=${{ github.ref_name }}
-          # Remove 'v' prefix if present
-          VERSION=${VERSION#v}
-          echo "# This file is auto-generated during build" > src/minecraft_schematic_generator/version.py
-          echo "__version__ = \"${VERSION}\"" >> src/minecraft_schematic_generator/version.py
-          echo "GITHUB_REPO = \"mmmfrieddough/minecraft-schematic-generator\"" >> src/minecraft_schematic_generator/version.py
-
       - name: Build binary
         run: |
           pyinstaller --onefile --name ${{ matrix.output_name }} --copy-metadata safetensors --collect-data minecraft_schematic_generator app/main.py

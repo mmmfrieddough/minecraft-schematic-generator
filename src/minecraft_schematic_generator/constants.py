@@ -1,5 +1,7 @@
 from typing import Tuple
 
+GITHUB_REPO: str = "mmmfrieddough/minecraft-schematic-generator"
+
 # Minecraft Version
 MINECRAFT_VERSION: Tuple[int, int, int] = (1, 21, 4)
 MINECRAFT_PLATFORM: str = "java"
