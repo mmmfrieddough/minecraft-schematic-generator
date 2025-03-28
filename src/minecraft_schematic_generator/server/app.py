@@ -33,6 +33,7 @@ class SchematicGeneratorApp(FastAPI):
 
 async def check_latest_version(app: SchematicGeneratorApp):
     """Check GitHub for the latest release version."""
+    logger.debug("Checking for updates...")
     try:
         async with aiohttp.ClientSession() as session:
             url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
@@ -40,7 +41,9 @@ async def check_latest_version(app: SchematicGeneratorApp):
                 if response.status == 200:
                     data = await response.json()
                     latest_version = data["tag_name"].lstrip("v")
+                    logger.debug(f"Latest version: {latest_version}")
                     current_version = __version__
+                    logger.debug(f"Current version: {current_version}")
 
                     if semver.compare(latest_version, current_version) > 0:
                         logger.warning(

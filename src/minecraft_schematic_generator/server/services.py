@@ -98,6 +98,9 @@ class StructureGenerator:
                 versioned_block_str = self.block_token_mapper.token_to_versioned_str(
                     token
                 )
+                self.logger.debug(
+                    f"Generated block: {versioned_block_str} at {z}, {y}, {x} for alternative {alternative_num}"
+                )
                 yield {
                     "alternative_num": alternative_num,
                     "previous_alternative_num": previous_alternative_num,
