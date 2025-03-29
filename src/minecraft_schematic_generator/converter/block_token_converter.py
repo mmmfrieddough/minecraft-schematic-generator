@@ -73,8 +73,11 @@ class BlockTokenConverter:
     }
 
     BLOCK_PROPERTIES_TO_ADD = {
+        # Add waterlogged property for blocks that are always waterlogged
         "kelp": {"waterlogged": StringTag("true")},
         "kelp_plant": {"waterlogged": StringTag("true")},
+        "seagrass": {"waterlogged": StringTag("true")},
+        "tall_seagrass": {"waterlogged": StringTag("true")},
     }
 
     BLOCK_NAMES_TO_CHANGE = {
