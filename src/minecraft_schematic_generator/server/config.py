@@ -5,6 +5,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+from minecraft_schematic_generator.constants import MODEL_TYPES
 from minecraft_schematic_generator.converter import BlockTokenMapperInterface
 from minecraft_schematic_generator.model import TransformerMinecraftStructureGenerator
 
@@ -17,6 +18,7 @@ class AppState(BaseModel):
     model: TransformerMinecraftStructureGenerator = None
     block_token_mapper: BlockTokenMapperInterface = None
     translation_manager: TranslationManager = None
+    model_type: Optional[str]
     checkpoint_path: Optional[str]
     model_path: Optional[str]
     model_id: str
@@ -36,6 +38,13 @@ def get_config() -> AppState:
     """Parse command-line arguments or environment variables and return configuration."""
     parser = argparse.ArgumentParser(description="Minecraft Schematic Generator Config")
     parser.add_argument(
+        "--model-type",
+        type=str,
+        choices=MODEL_TYPES,
+        default=os.environ.get("SCHEM_GEN_MODEL_TYPE", ""),
+        help="The type of model to use.",
+    )
+    parser.add_argument(
         "--checkpoint-path",
         type=str,
         default=os.environ.get("SCHEM_GEN_CHECKPOINT_PATH", ""),
@@ -50,9 +59,7 @@ def get_config() -> AppState:
     parser.add_argument(
         "--model-id",
         type=str,
-        default=os.environ.get(
-            "SCHEM_GEN_MODEL_ID", "mmmfrieddough/minecraft-schematic-generator"
-        ),
+        default=os.environ.get("SCHEM_GEN_MODEL_ID", ""),
         help="The Hugging Face model ID.",
     )
     parser.add_argument(
@@ -103,6 +110,7 @@ def get_config() -> AppState:
     args = parser.parse_args()
 
     return AppState(
+        model_type=args.model_type,
         checkpoint_path=args.checkpoint_path,
         model_path=args.model_path,
         model_id=args.model_id,

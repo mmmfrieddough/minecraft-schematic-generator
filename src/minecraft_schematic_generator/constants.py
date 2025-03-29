@@ -24,3 +24,7 @@ REPLACEABLE_BLOCK_STRINGS: list[str] = [
     "universal_minecraft:double_plant[half=upper,plant_type=large_fern]",
     "universal_minecraft:plant[plant_type=dead_bush]",
 ]
+
+MODEL_TYPE_IRON: str = "iron"
+MODEL_TYPE_DIAMOND: str = "diamond"
+MODEL_TYPES: list[str] = [MODEL_TYPE_IRON, MODEL_TYPE_DIAMOND]

@@ -2,6 +2,7 @@ import logging
 
 import torch
 
+from minecraft_schematic_generator.constants import MODEL_TYPE_DIAMOND, MODEL_TYPE_IRON
 from minecraft_schematic_generator.model import TransformerMinecraftStructureGenerator
 from minecraft_schematic_generator.modules import (
     LightningTransformerMinecraftStructureGenerator,
@@ -39,6 +40,7 @@ class ModelLoader:
 
     @staticmethod
     def load_model(
+        model_type: str | None,
         checkpoint_path: str | None,
         model_path: str | None,
         model_id: str | None,
@@ -49,6 +51,15 @@ class ModelLoader:
 
         device = ModelLoader.configure_device(device_type)
         model_revision = None if model_revision == "" else model_revision
+
+        if not model_type and not checkpoint_path and not model_path and not model_id:
+            model_type = MODEL_TYPE_IRON if device_type == "cpu" else MODEL_TYPE_DIAMOND
+            logger.info(
+                f"No model specified, auto selected default model: {model_type}"
+            )
+
+        if model_type:
+            model_id = f"mmmfrieddough/minecraft-schematic-generator-{model_type}"
 
         try:
             if checkpoint_path:

@@ -10,11 +10,11 @@ from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from minecraft_schematic_generator.constants import GITHUB_REPO
 from minecraft_schematic_generator.converter import (
     BlockTokenConverter,
     DictBlockTokenMapper,
 )
-from minecraft_schematic_generator.constants import GITHUB_REPO
 
 from .config import AppState
 from .model_loader import ModelLoader
@@ -73,6 +73,7 @@ async def lifespan(app: SchematicGeneratorApp):
 
     logger.info("Loading model...")
     app.state.model = ModelLoader.load_model(
+        app.state.model_type,
         app.state.checkpoint_path,
         app.state.model_path,
         app.state.model_id,
@@ -121,22 +122,16 @@ async def complete_structure(input: StructureRequest, request: Request):
 
     try:
         if input.model_type and input.model_type != "default":
-            model_id = f"mmmfrieddough/minecraft-schematic-generator-{input.model_type}"
-            if (
-                app.state.model_id != model_id
-                or app.state.model_revision != input.model_version
-            ):
-                logger.info(f"Loading model for model type: {input.model_type}")
-                app.state.model = ModelLoader.load_model(
-                    None,
-                    None,
-                    model_id,
-                    input.model_version,
-                    app.state.device,
-                )
-                logger.info("Model loaded successfully")
-                app.state.model_id = model_id
-                app.state.model_revision = input.model_version
+            logger.info(f"Loading model for model type: {input.model_type}")
+            app.state.model = ModelLoader.load_model(
+                input.model_type,
+                None,
+                None,
+                None,
+                input.model_version,
+                app.state.device,
+            )
+            logger.info("Model loaded successfully")
         if input.inference_device and input.inference_device != app.state.device:
             logger.info(f"Changing device to {input.inference_device}")
             app.state.device = input.inference_device
