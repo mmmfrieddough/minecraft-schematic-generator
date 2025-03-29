@@ -75,5 +75,6 @@ class ModelLoader:
             logger.error(f"Failed to load model: {str(e)}", exc_info=True)
             raise ModelLoadError(f"Model loading failed: {str(e)}") from e
 
+        model.to(device)
         model.eval()
         return model
