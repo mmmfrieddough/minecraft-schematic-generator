@@ -53,7 +53,7 @@ class ModelLoader:
         model_revision = None if model_revision == "" else model_revision
 
         if not model_type and not checkpoint_path and not model_path and not model_id:
-            model_type = MODEL_TYPE_IRON if device_type == "cpu" else MODEL_TYPE_DIAMOND
+            model_type = MODEL_TYPE_IRON if device.type == "cpu" else MODEL_TYPE_DIAMOND
             logger.info(
                 f"No model specified, auto selected default model: {model_type}"
             )
