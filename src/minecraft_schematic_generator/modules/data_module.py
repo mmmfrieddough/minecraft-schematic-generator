@@ -198,7 +198,7 @@ class MinecraftDataModule(LightningDataModule):
                 batch_size=batch_size,
                 sampler=sampler,
                 drop_last=train,
-                num_workers=int(self._num_workers / len(self._crop_sizes)),
+                num_workers=max(int(self._num_workers / len(self._crop_sizes)), 1),
                 persistent_workers=self._persistent_workers,
             )
 
