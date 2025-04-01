@@ -15,17 +15,22 @@ class RollingBatchTimeCallback(Callback):
         self.batch_count = 0
 
     def on_train_batch_start(self, trainer, pl_module, batch, batch_idx):
-        self.last_batch_time = time.time()
+        if trainer.is_global_zero:
+            self.last_batch_time = time.time()
 
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         self.batch_count += 1
 
         # Skip measurements during warmup
         if self.batch_count <= self.warmup_batches:
-            if self.batch_count == self.warmup_batches:
+            if self.batch_count == self.warmup_batches and trainer.is_global_zero:
                 print(
                     f"\nWarmup complete after {self.warmup_batches} batches. Starting measurements..."
                 )
+            return
+
+        # Only track timing on the main process
+        if not trainer.is_global_zero:
             return
 
         self.batch_times.append(time.time())
