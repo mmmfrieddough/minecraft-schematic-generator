@@ -54,12 +54,31 @@ async def check_latest_version(app: SchematicGeneratorApp):
                             f"You are currently running version {current_version}. "
                             f"Visit https://github.com/{GITHUB_REPO}/releases/latest to update."
                         )
+                    elif semver.compare(latest_version, current_version) < 0:
+                        logger.info(
+                            f"You are running a pre-release version {current_version}. "
+                            f"The latest stable version is {latest_version}."
+                        )
                     else:
                         logger.info("Running latest version")
                 else:
                     raise Exception(f"Coudn't fetch latest version: {response.status}")
     except Exception as e:
         logger.warning(f"Failed to check for updates: {str(e)}")
+
+
+async def load_default_model(app: SchematicGeneratorApp):
+    """Load the default model."""
+    logger.info("Loading default model...")
+    app.state.model = ModelLoader.load_model(
+        app.state.model_type,
+        app.state.checkpoint_path,
+        app.state.model_path,
+        app.state.model_id,
+        app.state.model_version,
+        app.state.device,
+    )
+    logger.info("Default model loaded successfully")
 
 
 @contextlib.asynccontextmanager
@@ -71,16 +90,10 @@ async def lifespan(app: SchematicGeneratorApp):
     # Check for updates
     await check_latest_version(app)
 
-    logger.info("Loading model...")
-    app.state.model = ModelLoader.load_model(
-        app.state.model_type,
-        app.state.checkpoint_path,
-        app.state.model_path,
-        app.state.model_id,
-        app.state.model_revision,
-        app.state.device,
-    )
-    logger.info("Model loaded successfully")
+    await load_default_model(app)
+    app.state.current_model_type = "default"
+    app.state.current_model_version = "default"
+    app.state.current_inference_device = "default"
 
     app.state.block_token_mapper = DictBlockTokenMapper(
         app.state.model.block_str_mapping
@@ -121,8 +134,19 @@ async def complete_structure(input: StructureRequest, request: Request):
     logger.info("Received structure generation request")
 
     try:
-        if input.model_type and input.model_type != "default":
-            logger.info(f"Loading model for model type: {input.model_type}")
+        # Model changing
+        if not input.model_type or input.model_type == "default":
+            if app.state.current_model_type != "default":
+                await load_default_model(app)
+                app.state.current_model_type = "default"
+                app.state.current_model_version = "default"
+        elif (
+            input.model_type != app.state.current_model_type
+            or input.model_version != app.state.current_model_version
+        ):
+            logger.info(
+                f"Model changed from {app.state.current_model_type}:{app.state.current_model_version} to {input.model_type}:{input.model_version}"
+            )
             app.state.model = ModelLoader.load_model(
                 input.model_type,
                 None,
@@ -131,12 +155,24 @@ async def complete_structure(input: StructureRequest, request: Request):
                 input.model_version,
                 app.state.device,
             )
+            app.state.current_model_type = input.model_type
+            app.state.current_model_version = input.model_version
             logger.info("Model loaded successfully")
-        if input.inference_device and input.inference_device != app.state.device:
-            logger.info(f"Changing device to {input.inference_device}")
-            app.state.device = input.inference_device
+
+        # Device changing
+        if not input.inference_device or input.inference_device == "default":
+            if app.state.current_inference_device != "default":
+                logger.info(f"Loading model on default device: {app.state.device}")
+                device = ModelLoader.configure_device(app.state.device)
+                app.state.model.to(device)
+                app.state.current_inference_device = "default"
+        elif input.inference_device != app.state.current_inference_device:
+            logger.info(
+                f"Device changed from {app.state.current_inference_device} to {input.inference_device}"
+            )
             device = ModelLoader.configure_device(input.inference_device)
             app.state.model.to(device)
+            app.state.current_inference_device = input.inference_device
             logger.info("Device changed successfully")
 
     except Exception as e:

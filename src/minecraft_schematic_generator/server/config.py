@@ -18,11 +18,14 @@ class AppState(BaseModel):
     model: TransformerMinecraftStructureGenerator = None
     block_token_mapper: BlockTokenMapperInterface = None
     translation_manager: TranslationManager = None
-    model_type: Optional[str]
-    checkpoint_path: Optional[str]
-    model_path: Optional[str]
-    model_id: str
-    model_revision: Optional[str]
+    current_model_type: Optional[str] = None
+    current_model_version: Optional[str] = None
+    current_inference_device: Optional[str] = None
+    model_type: Optional[str] = None
+    checkpoint_path: Optional[str] = None
+    model_path: Optional[str] = None
+    model_id: Optional[str] = None
+    model_version: Optional[str] = None
     host: str
     port: int
     log_level: str
@@ -114,7 +117,7 @@ def get_config() -> AppState:
         checkpoint_path=args.checkpoint_path,
         model_path=args.model_path,
         model_id=args.model_id,
-        model_revision=args.model_revision,
+        model_version=args.model_revision,
         host=args.host,
         port=args.port,
         log_level=args.log_level,
