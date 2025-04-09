@@ -113,10 +113,28 @@ app = SchematicGeneratorApp(lifespan=lifespan)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(_: Request, exc: RequestValidationError):
-    logger.error(f"Validation error: {exc.errors()}")
+    all_errors = exc.errors()
+
+    MAX_ERRORS = 5
+
+    error_messages = []
+    for error in all_errors[:MAX_ERRORS]:
+        msg = error.get("msg")
+        type = error.get("type")
+        loc = ".".join(str(x) for x in error.get("loc"))
+        error_messages.append(f"{loc}: {type} - {msg}")
+
+    # Add message about hidden errors if there are more
+    message = (
+        "Invalid request parameters. Make sure you are using the latest mod version."
+    )
+    if len(all_errors) > MAX_ERRORS:
+        message += f" (showing {MAX_ERRORS} of {len(all_errors)} errors)"
+
+    logger.error(f"Validation error: {message}. Errors: {error_messages}")
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={"detail": exc.errors(), "message": "Invalid request parameters"},
+        content={"detail": error_messages, "message": message},
     )
 
 
