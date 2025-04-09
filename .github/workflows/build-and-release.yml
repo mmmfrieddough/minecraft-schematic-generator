@@ -14,25 +14,30 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            output_name: minecraft-schematic-generator.exe
+            output_name: minecraft-schematic-generator-windows.exe
             torch_index: cpu
             cuda: false
+            icon: app/icon/icon.ico
           - os: ubuntu-latest
             output_name: minecraft-schematic-generator-linux
             torch_index: cpu
             cuda: false
+            icon: app/icon/icon.png
           - os: macos-latest
             output_name: minecraft-schematic-generator-mac
             torch_index: cpu
             cuda: false
+            icon: app/icon/icon.icns
           - os: windows-latest
-            output_name: minecraft-schematic-generator.exe
+            output_name: minecraft-schematic-generator-windows.exe
             torch_index: cu124
             cuda: true
+            icon: app/icon/icon.ico
           - os: ubuntu-latest
             output_name: minecraft-schematic-generator-linux
             torch_index: cu124
             cuda: true
+            icon: app/icon/icon.png
 
     runs-on: ${{ matrix.os }}
 
@@ -56,7 +61,7 @@ jobs:
 
       - name: Build binary
         run: |
-          pyinstaller --onefile --name ${{ matrix.output_name }} --copy-metadata safetensors --collect-data minecraft_schematic_generator app/main.py
+          pyinstaller --onefile --name ${{ matrix.output_name }} --icon ${{ matrix.icon }} --copy-metadata safetensors --copy-metadata minecraft_schematic_generator --collect-data minecraft_schematic_generator app/main.py
 
       - name: Upload to Hugging Face
         if: matrix.cuda
@@ -130,7 +135,7 @@ jobs:
 
             ### CUDA Version (Recommended)
             For optimal performance on Windows and Linux, download the CUDA-enabled version (hosted on Hugging Face due to file size limits):
-            - [Windows CUDA](https://huggingface.co/mmmfrieddough/minecraft-schematic-generator/resolve/${{ github.ref_name }}/binaries/minecraft-schematic-generator.exe)
+            - [Windows CUDA](https://huggingface.co/mmmfrieddough/minecraft-schematic-generator/resolve/${{ github.ref_name }}/binaries/minecraft-schematic-generator-windows.exe)
             - [Linux CUDA](https://huggingface.co/mmmfrieddough/minecraft-schematic-generator/resolve/${{ github.ref_name }}/binaries/minecraft-schematic-generator-linux)
 
             **Note:** CUDA version requires an NVIDIA GPU but provides significantly faster inference.
