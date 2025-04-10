@@ -131,6 +131,8 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           body: |
+            ${{ github.event.release.body }}
+
             ## Download Options
 
             ### CUDA Version (Recommended)
@@ -155,7 +157,7 @@ jobs:
 
             By default, it will run on http://localhost:8000 (Craftpilot will connect to this address).
           draft: false
-          prerelease: false
+          prerelease: ${{ github.event.release.prerelease }}
           files: |
             dist/minecraft-schematic-generator*/minecraft-schematic-generator*
         env:
