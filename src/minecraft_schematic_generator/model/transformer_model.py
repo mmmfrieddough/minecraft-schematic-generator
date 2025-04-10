@@ -381,12 +381,12 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
     ):
         """Fill a structure with multiple alternatives."""
         assert structure.dim() == 3, "Structure must have 3 dimensions"
-        assert (
-            structure.size(0) == structure.size(1) == structure.size(2)
-        ), f"Structure must be cubic, got shape {structure.shape}"
-        assert (
-            structure.size(0) <= self.max_structure_size
-        ), f"Structure size {structure.size(0)} exceeds maximum size {self.max_structure_size}"
+        assert structure.size(0) == structure.size(1) == structure.size(2), (
+            f"Structure must be cubic, got shape {structure.shape}"
+        )
+        assert structure.size(0) <= self.max_structure_size, (
+            f"Structure size {structure.size(0)} exceeds maximum size {self.max_structure_size}"
+        )
 
         # Initialize tensor to track filled positions
         filled_positions = torch.zeros_like(structure, dtype=torch.bool)
