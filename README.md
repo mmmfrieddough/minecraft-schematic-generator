@@ -15,24 +15,33 @@ This project uses a decoder-only transformer model to generate Minecraft structu
 
 ### Key Features
 
-- Processes 11x11x11 3D structure inputs
-- Handles ~14,000 unique block types and states
-- Trained on 8M+ samples (10B+ tokens) from real player builds
+- Processes variable size 3D structure inputs
+- Handles thousands of unique block types and states
+- Trained on millions of samples from real player builds
 - Autoregressive generation starting from existing blocks
 - Built with PyTorch + Lightning for scalable training
+
+## Variants
+
+Several size variants of the model are trained to give users options depending on their hardware.
+
+| Name | Parameters | Max Input Size | Vocab Size | Training Samples | Link |
+|------|------------|----------------|------------|------------------|------|
+| Iron | ~10M | 15x15x15 | 14K | 10M+ | https://huggingface.co/mmmfrieddough/minecraft-schematic-generator-iron |
+| Diamond | ~110M | 15x15x15 | 15K | 10M+ | https://huggingface.co/mmmfrieddough/minecraft-schematic-generator-diamond |
 
 ## How It Works
 
 ### Input Processing
 
-1. Takes a 3D Minecraft schematic (11x11x11)
-2. Converts blocks to tokens (~14K vocabulary)
+1. Takes a 3D Minecraft schematic
+2. Converts blocks to tokens
 3. Marks areas to be filled with token 0
 4. Flattens the 3D structure for transformer processing
 
 ### Model Architecture
 
-- Decoder-only transformer (~80M parameters)
+- Decoder-only transformer
 - Learned positional encodings for 3D spatial awareness
 - Token embeddings for block representation
 - Autoregressive generation focusing on blocks adjacent to existing structures
