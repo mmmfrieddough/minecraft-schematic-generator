@@ -4,7 +4,6 @@ import torch
 import torch._dynamo.config
 import wandb
 from lightning import Trainer
-from lightning.pytorch import seed_everything
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 
@@ -24,8 +23,6 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 
 def main():
-    # seed_everything(0)
-
     torch.set_float32_matmul_precision("medium")
 
     experiment_name = "iron_v1"
