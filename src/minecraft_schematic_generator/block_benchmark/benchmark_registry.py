@@ -44,7 +44,7 @@ class BenchmarkSuite:
 class BenchmarkCategory(Enum):
     STRUCTURES = "structures"
     PATTERNS = "patterns"
-    REDSTONE = "redstone"
+    # REDSTONE = "redstone"
 
 
 class BenchmarkRegistry:

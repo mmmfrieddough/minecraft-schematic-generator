@@ -8,10 +8,6 @@ from .benchmarks.bed_benchmark import BedBenchmark
 from .benchmarks.door_benchmark import DoorBenchmark
 from .benchmarks.pattern_benchmark import PatternBenchmark, PatternType
 from .benchmarks.portal_benchmark import PortalBenchmark
-from .benchmarks.redstone_power_benchmark import (
-    RedstoneComponentType,
-    RedstonePowerBenchmark,
-)
 from .benchmarks.stairs_benchmark import StairsBenchmark
 from .benchmarks.tall_plant_benchmark import TallPlantBenchmark
 
@@ -104,37 +100,6 @@ def create_default_registry(
             min_width=0,
             max_width=3,
             save_debug_schematics=save_debug_schematics,
-        ),
-    )
-
-    registry.register_benchmark(
-        BenchmarkCategory.REDSTONE,
-        RedstonePowerBenchmark(
-            "redstone_lamps",
-            schematic_array_converter,
-            schematic_size,
-            RedstoneComponentType.LAMP,
-            save_debug_schematics,
-        ),
-    )
-    registry.register_benchmark(
-        BenchmarkCategory.REDSTONE,
-        RedstonePowerBenchmark(
-            "iron_doors",
-            schematic_array_converter,
-            schematic_size,
-            RedstoneComponentType.DOOR,
-            save_debug_schematics,
-        ),
-    )
-    registry.register_benchmark(
-        BenchmarkCategory.REDSTONE,
-        RedstonePowerBenchmark(
-            "pistons",
-            schematic_array_converter,
-            schematic_size,
-            RedstoneComponentType.PISTON,
-            save_debug_schematics,
         ),
     )
 
