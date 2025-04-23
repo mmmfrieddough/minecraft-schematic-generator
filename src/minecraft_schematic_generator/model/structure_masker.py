@@ -4223,25 +4223,10 @@ class StructureMasker:
         self,
         structure: torch.Tensor,
         original_structure: torch.Tensor,
-        start_radius: int,
+        filled_positions: torch.Tensor,
         max_iterations: int,
         max_blocks: int,
     ) -> torch.Tensor:
-        # Initialize tensor to track filled positions
-        filled_positions = torch.zeros_like(structure, dtype=torch.bool)
-
-        # Fill the center up to the start radius to pretend the model has already filled it
-        z_mid, y_mid, x_mid = (
-            structure.shape[0] // 2,
-            structure.shape[1] // 2,
-            structure.shape[2] // 2,
-        )
-        filled_positions[
-            z_mid - start_radius : z_mid + start_radius + 1,
-            y_mid - start_radius : y_mid + start_radius + 1,
-            x_mid - start_radius : x_mid + start_radius + 1,
-        ] = 1
-
         filled_blocks = 0
 
         # Each iteration adds on a "layer" of blocks
@@ -4249,7 +4234,7 @@ class StructureMasker:
             # print(f"Iteration {iteration}/{max_iterations}")
 
             valid_positions = (
-                TransformerMinecraftStructureGenerator._get_valid_positions(
+                TransformerMinecraftStructureGenerator.get_valid_positions(
                     structure, filled_positions
                 )
             )
@@ -4284,34 +4269,57 @@ class StructureMasker:
     def _add_blocks(
         self, structure: torch.Tensor, original_structure: torch.Tensor
     ) -> torch.Tensor:
-        # Find how many blocks that were removed from the original, excluding air blocks not adjacent to a solid block
-        mask = TransformerMinecraftStructureGenerator.generate_neighbor_mask(
-            original_structure.unsqueeze(0)
-        ).squeeze(0)
-        removed_blocks = (structure == 0) & (
-            mask | (original_structure != self._air_block_token)
-        )
-        max_blocks = removed_blocks.sum().item()
-
+        # Pick a start radius
         start_radius = random.randint(
             self._min_autoregressive_start_radius,
             self._max_autoregressive_start_radius,
         )
-        if np.random.rand() < self._add_blocks_amount_first_dist_chance:
-            num_blocks = min(
-                max_blocks,
-                int(
-                    self._add_blocks_amount_first_dist_amount
-                    * np.random.beta(1, self._add_blocks_amount_first_dist_beta)
-                ),
-            )
-        else:
-            num_blocks = int(
-                max_blocks * np.random.beta(1, self._add_blocks_amount_second_dist_beta)
-            )
-        return self._fake_autoregressive_inference(
-            structure, original_structure, start_radius, 100, num_blocks
+
+        # Initialize tensor to track filled positions
+        filled_positions = torch.zeros_like(structure, dtype=torch.bool)
+
+        # Fill the center up to the start radius to pretend the model has already filled it
+        z_mid, y_mid, x_mid = (
+            structure.shape[0] // 2,
+            structure.shape[1] // 2,
+            structure.shape[2] // 2,
         )
+        filled_positions[
+            z_mid - start_radius : z_mid + start_radius + 1,
+            y_mid - start_radius : y_mid + start_radius + 1,
+            x_mid - start_radius : x_mid + start_radius + 1,
+        ] = 1
+
+        # Decide if we should add blocks
+        if random.random() < self._add_blocks_chance:
+            # Find how many blocks that were removed from the original, excluding air blocks not adjacent to a solid block
+            mask = TransformerMinecraftStructureGenerator.generate_neighbor_mask(
+                original_structure.unsqueeze(0)
+            ).squeeze(0)
+            removed_blocks = (structure == 0) & (
+                mask | (original_structure != self._air_block_token)
+            )
+            max_blocks = removed_blocks.sum().item()
+
+            if np.random.rand() < self._add_blocks_amount_first_dist_chance:
+                num_blocks = min(
+                    max_blocks,
+                    int(
+                        self._add_blocks_amount_first_dist_amount
+                        * np.random.beta(1, self._add_blocks_amount_first_dist_beta)
+                    ),
+                )
+            else:
+                num_blocks = int(
+                    max_blocks
+                    * np.random.beta(1, self._add_blocks_amount_second_dist_beta)
+                )
+
+            return self._fake_autoregressive_inference(
+                structure, original_structure, filled_positions, 100, num_blocks
+            ), filled_positions
+        else:
+            return structure, filled_positions
 
     def _apply_block_transformations(self, structure: torch.Tensor) -> torch.Tensor:
         # Consider masked and air positions
@@ -4427,7 +4435,16 @@ class StructureMasker:
 
         # Add some blocks back to represent a partial stage in the auto-regressive inference
         with record_function("Add blocks"):
-            if random.random() < self._add_blocks_chance:
-                masked_structure = self._add_blocks(masked_structure, structure)
+            masked_structure, filled_positions = self._add_blocks(
+                masked_structure, structure
+            )
 
-        return masked_structure
+        # Create the mask for the positions we want to fill
+        mask_structure = masked_structure * filled_positions
+        mask_structure = mask_structure.unsqueeze(0)
+        mask = TransformerMinecraftStructureGenerator.generate_neighbor_mask(
+            mask_structure
+        )
+        mask = mask & (masked_structure == 0)
+
+        return masked_structure, mask
