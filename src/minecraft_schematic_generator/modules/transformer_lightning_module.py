@@ -22,6 +22,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         max_learning_rate: float,
         warmup_proportion: float,
         feed_forward_dim: int | None = None,
+        weight_decay: float = 0.0,
     ):
         super().__init__()
         self.model = TransformerMinecraftStructureGenerator(
@@ -39,6 +40,7 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         self.num_classes = num_classes
         self.max_learning_rate = max_learning_rate
         self.warmup_proportion = warmup_proportion
+        self._weight_decay = weight_decay
         self.validation_step_outputs = []
         self.save_hyperparameters()
 
@@ -77,6 +79,9 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
         with record_function("training_step_total"):
             with record_function("forward_and_loss"):
                 _, loss, perplexity = self._forward_and_loss(batch)
+
+            if not torch.isfinite(loss):
+                raise ValueError(f"Loss is {loss}, stopping training")
 
             with record_function("logging"):
                 self.log("train_loss", loss)
@@ -125,7 +130,11 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
             self.log_dict(norms)
 
     def configure_optimizers(self) -> dict:
-        optimizer = optim.Adam(self.parameters(), lr=self.max_learning_rate)
+        optimizer = optim.Adam(
+            self.parameters(),
+            lr=self.max_learning_rate,
+            weight_decay=self._weight_decay,
+        )
 
         scheduler = {
             "scheduler": torch.optim.lr_scheduler.OneCycleLR(
