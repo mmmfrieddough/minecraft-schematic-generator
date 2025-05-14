@@ -50,15 +50,10 @@ class LightningTransformerMinecraftStructureGenerator(L.LightningModule):
     def _forward_and_loss(self, batch: torch.Tensor) -> torch.Tensor:
         with record_function("data_prep"):
             # Get the structures
-            full_structures, masked_structures = batch
-
-            # Create a mask for the locations that we actually want to predict (the original masked locations that are next to a non-air block)
-            mask = self.model.generate_neighbor_mask(masked_structures) & (
-                masked_structures == 0
-            )
+            full_structures, masked_structures, masks = batch
 
             # Zero out the non-masked elements in full_structures so they don't contribute to the loss
-            full_structures = full_structures * mask
+            full_structures = full_structures * masks
 
         with record_function("model_forward"):
             # Make the predictions

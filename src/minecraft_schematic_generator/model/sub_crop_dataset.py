@@ -56,6 +56,8 @@ class SubCropDataset(Dataset):
                 structure = self._structure_transformer.transform_structure(structure)
 
             with record_function("Mask structure"):
-                masked_structure = self._structure_masker.mask_structure(structure)
+                masked_structure, mask = self._structure_masker.mask_structure(
+                    structure
+                )
 
-        return structure, masked_structure
+        return structure, masked_structure, mask

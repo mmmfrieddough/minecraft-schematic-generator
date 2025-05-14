@@ -57,7 +57,7 @@ class StructureAlternative:
         """Get valid positions to fill next."""
         if not self.valid_positions:
             self.valid_positions = (
-                TransformerMinecraftStructureGenerator._get_valid_positions(
+                TransformerMinecraftStructureGenerator.get_valid_positions(
                     self.structure, self.filled_positions
                 )
             )
@@ -300,7 +300,7 @@ class TransformerMinecraftStructureGenerator(nn.Module, PyTorchModelHubMixin):
         return has_non_air_neighbors.squeeze(1)
 
     @staticmethod
-    def _get_valid_positions(
+    def get_valid_positions(
         structure: torch.Tensor, filled_positions: torch.Tensor
     ) -> list[tuple[int, int, int]]:
         """Get ordered list of valid positions to fill, from center outward."""
