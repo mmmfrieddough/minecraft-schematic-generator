@@ -2,7 +2,6 @@ import os
 
 import torch
 import torch._dynamo.config
-import wandb
 from lightning import Trainer
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
@@ -31,11 +30,6 @@ def main():
     tensorboard_logger = TensorBoardLogger(
         checkpoint_dir, name=experiment_name, version=experiment_version
     )
-    # wandb_logger = WandbLogger(
-    #     name=experiment_name,
-    #     project="minecraft-structure-generator",
-    #     version=str(experiment_version),
-    # )
 
     structure_masker = StructureMasker()
     structure_transformer = StructureTransformer()
@@ -101,6 +95,7 @@ def main():
         precision="bf16-mixed",
         reload_dataloaders_every_n_epochs=1,
         use_distributed_sampler=False,
+        gradient_clip_val=1.0,
         callbacks=[
             latest_checkpoint_callback,
             best_model_checkpoint_callback,
@@ -111,8 +106,6 @@ def main():
     )
 
     trainer.fit(lightning_model, datamodule=data_module, ckpt_path="last")
-
-    wandb.finish()
 
 
 if __name__ == "__main__":

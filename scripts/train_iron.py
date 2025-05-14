@@ -2,7 +2,6 @@ import os
 
 import torch
 import torch._dynamo.config
-import wandb
 from lightning import Trainer
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
@@ -26,16 +25,11 @@ def main():
     torch.set_float32_matmul_precision("medium")
 
     experiment_name = "iron_v1"
-    experiment_version = 11
+    experiment_version = 14
     checkpoint_dir = "lightning_logs"
     tensorboard_logger = TensorBoardLogger(
         checkpoint_dir, name=experiment_name, version=experiment_version
     )
-    # wandb_logger = WandbLogger(
-    #     name=experiment_name,
-    #     project="minecraft-structure-generator",
-    #     version=str(experiment_version),
-    # )
 
     structure_masker = StructureMasker()
     structure_transformer = StructureTransformer()
@@ -43,9 +37,8 @@ def main():
         file_path="/mnt/windows/data_v7.h5",
         structure_masker=structure_masker,
         structure_transformer=structure_transformer,
-        # crop_sizes={7: 550, 9: 264, 11: 143, 13: 85, 15: 57},
-        # crop_sizes={7: 430},
-        crop_sizes={15: 43, 13: 80, 11: 130, 9: 240, 7: 430},
+        crop_sizes={15: 43, 13: 64, 11: 106, 9: 198, 7: 418},
+        # crop_sizes={15: 55},
         num_workers=20,
         persistent_workers=True,
         separate_validation_datasets=["hermitcraft\\hermitcraft6\\overworld"],
@@ -56,14 +49,23 @@ def main():
         block_str_mapping=data_module.get_block_str_mapping(),
         max_structure_size=MAX_STRUCTURE_SIZE,
         embedding_dropout=0.1,
-        embedding_dim=256,
+        embedding_dim=128,
         model_dim=384,
         num_heads=6,
         num_layers=4,
         decoder_dropout=0.1,
-        max_learning_rate=1e-4,
+        max_learning_rate=5e-4,
         warmup_proportion=0.05,
     )
+
+    # checkpoint = torch.load(
+    #     "lightning_logs/iron_v1/version_9/checkpoints/last.ckpt",
+    #     weights_only=False,
+    #     map_location="cpu",
+    # )
+    # lightning_model.load_state_dict(checkpoint["state_dict"], strict=False)
+    # del checkpoint
+
     torch._dynamo.config.cache_size_limit = 16
     lightning_model = torch.compile(lightning_model)
 
@@ -79,7 +81,7 @@ def main():
         block_token_converter=data_module.get_block_token_converter(),
         schematic_size=11,
         num_runs=200,
-        batch_size=35,
+        batch_size=50,
     )
 
     trainer = Trainer(
@@ -91,6 +93,7 @@ def main():
         precision="bf16-mixed",
         reload_dataloaders_every_n_epochs=1,
         use_distributed_sampler=False,
+        gradient_clip_val=1.0,
         callbacks=[
             latest_checkpoint_callback,
             best_model_checkpoint_callback,
@@ -101,8 +104,6 @@ def main():
     )
 
     trainer.fit(lightning_model, datamodule=data_module, ckpt_path="last")
-
-    wandb.finish()
 
 
 if __name__ == "__main__":
