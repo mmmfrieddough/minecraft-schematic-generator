@@ -4446,5 +4446,6 @@ class StructureMasker:
             mask_structure
         )
         mask = mask & (masked_structure == 0)
+        mask = mask.squeeze(0)
 
         return masked_structure, mask
