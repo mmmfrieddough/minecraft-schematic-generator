@@ -23,7 +23,6 @@ from tqdm import tqdm
 
 from minecraft_schematic_generator.constants import (
     MINECRAFT_PLATFORM,
-    MINECRAFT_VERSION,
 )
 from minecraft_schematic_generator.converter import (
     BlockTokenConverter,
@@ -1304,10 +1303,10 @@ class WorldSampler:
             # Save the schematic to a temporary file
             wrapper = SpongeSchemFormatWrapper(tmp_path)
 
-            # The schematic must be saved in a specific MC version so we choose the one we are using thoughout the project
+            latest_version = world.translation_manager.version_numbers("java")[-1]
             wrapper.create_and_open(
                 MINECRAFT_PLATFORM,
-                MINECRAFT_VERSION,
+                latest_version,
                 bounds=SelectionGroup(structure.bounds(dimension)),
                 overwrite=True,
             )

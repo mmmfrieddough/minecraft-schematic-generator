@@ -78,7 +78,7 @@ def main():
     )
     lr_monitor_callback = LearningRateMonitor()
     block_benchmark_callback = BlockBenchmarkCallback(
-        block_token_converter=data_module.get_block_token_converter(),
+        block_str_mapping=data_module.get_block_str_mapping(),
         schematic_size=11,
         num_runs=200,
         batch_size=50,

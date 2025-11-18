@@ -71,16 +71,14 @@ class MinecraftDataModule(LightningDataModule):
             self._structure_masker = structure_masker
             self._structure_transformer = structure_transformer
             block_token_mapper = DictBlockTokenMapper(self._block_str_mapping)
+            # Create base converter (no version needed for universal operations)
             block_token_converter = BlockTokenConverter(block_token_mapper)
-            self._block_token_converter = block_token_converter
+            # Structure masker and transformer only need universal operations
             self._structure_masker.setup(block_token_converter)
             self._structure_transformer.setup(block_token_converter)
 
     def get_block_str_mapping(self):
         return self._block_str_mapping
-
-    def get_block_token_converter(self):
-        return self._block_token_converter
 
     def save_split_state_dict(
         self,

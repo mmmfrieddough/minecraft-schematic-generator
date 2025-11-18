@@ -1,6 +1,8 @@
 from minecraft_schematic_generator.converter import (
     BlockTokenConverter,
+    DictBlockTokenMapper,
     SchematicArrayConverter,
+    VersionedBlockTokenConverter,
 )
 
 from .benchmark_registry import BenchmarkCategory, BenchmarkRegistry
@@ -13,13 +15,18 @@ from .benchmarks.tall_plant_benchmark import TallPlantBenchmark
 
 
 def create_default_registry(
-    block_token_converter: BlockTokenConverter,
+    block_str_mapping: dict[str, int],
     schematic_size: int,
     save_debug_schematics: bool,
 ) -> BenchmarkRegistry:
     """Create and populate a registry with all standard benchmarks"""
+    # Create versioned converter from block_str_mapping
+    block_token_mapper = DictBlockTokenMapper(block_str_mapping)
+    block_token_converter = BlockTokenConverter(block_token_mapper)
+    versioned_block_token_converter = VersionedBlockTokenConverter(block_token_converter)
+    
     registry = BenchmarkRegistry()
-    schematic_array_converter = SchematicArrayConverter(block_token_converter)
+    schematic_array_converter = SchematicArrayConverter(versioned_block_token_converter)
 
     registry.register_benchmark(
         BenchmarkCategory.STRUCTURES,
@@ -108,7 +115,7 @@ def create_default_registry(
 
 def run_benchmark(
     model,
-    block_token_converter: BlockTokenConverter,
+    block_str_mapping: dict[str, int],
     schematic_size: int,
     num_runs: int = 1,
     save_debug_schematics: bool = False,
@@ -121,6 +128,8 @@ def run_benchmark(
 
     Args:
         model: The model to benchmark
+        block_str_mapping: Dictionary mapping block strings to token IDs
+        schematic_size: Size of schematics to generate for benchmarks
         num_runs: Number of times to run each test (default: 1)
         save_debug_schematics: Whether to save debug schematics (default: False)
         base_seed: Starting seed for random number generation (default: 0)
@@ -131,7 +140,7 @@ def run_benchmark(
         BenchmarkSuite containing all results
     """
     registry = create_default_registry(
-        block_token_converter, schematic_size, save_debug_schematics
+        block_str_mapping, schematic_size, save_debug_schematics
     )
     results = registry.run_all(model, num_runs, base_seed, batch_size, show_progress)
     return results
@@ -140,6 +149,8 @@ def run_benchmark(
 def run_category(
     category: BenchmarkCategory,
     model,
+    block_str_mapping: dict[str, int],
+    schematic_size: int,
     num_runs=1,
     save_debug_schematics=False,
     base_seed=0,
@@ -151,6 +162,8 @@ def run_category(
     Args:
         category: BenchmarkCategory to run
         model: The model to benchmark
+        block_str_mapping: Dictionary mapping block strings to token IDs
+        schematic_size: Size of schematics to generate for benchmarks
         num_runs: Number of times to run each test (default: 1)
         save_debug_schematics: Whether to save debug schematics (default: False)
         base_seed: Starting seed for random number generation (default: 0)
@@ -159,6 +172,6 @@ def run_category(
     Returns:
         CategoryResult containing category results
     """
-    registry = create_default_registry(save_debug_schematics)
+    registry = create_default_registry(block_str_mapping, schematic_size, save_debug_schematics)
     results = registry.run_category(category, model, num_runs, base_seed, batch_size)
     return results

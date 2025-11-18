@@ -1,8 +1,4 @@
 from minecraft_schematic_generator.block_benchmark import run_benchmark
-from minecraft_schematic_generator.converter import (
-    BlockTokenConverter,
-    DictBlockTokenMapper,
-)
 from minecraft_schematic_generator.modules import (
     LightningTransformerMinecraftStructureGenerator,
 )
@@ -17,13 +13,10 @@ model = LightningTransformerMinecraftStructureGenerator.load_from_checkpoint(
 ).model
 model.eval()
 
-block_token_mapper = DictBlockTokenMapper(model.block_str_mapping)
-block_token_converter = BlockTokenConverter(block_token_mapper)
-
 # Run all benchmarks
 results = run_benchmark(
     model,
-    block_token_converter=block_token_converter,
+    block_str_mapping=model.block_str_mapping,
     schematic_size=11,
     num_runs=1,
     save_debug_schematics=True,

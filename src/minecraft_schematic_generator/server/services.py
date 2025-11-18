@@ -7,7 +7,7 @@ from minecraft_schematic_generator.constants import (
     MASK_BLOCK_ID,
     REPLACEABLE_BLOCK_STRINGS,
 )
-from minecraft_schematic_generator.converter import BlockTokenConverter
+from minecraft_schematic_generator.converter import VersionedBlockTokenConverter
 from minecraft_schematic_generator.model import TransformerMinecraftStructureGenerator
 
 
@@ -15,7 +15,7 @@ class StructureGenerator:
     def __init__(
         self,
         model: TransformerMinecraftStructureGenerator,
-        block_token_mapper: BlockTokenConverter,
+        block_token_mapper: VersionedBlockTokenConverter,
     ):
         self.logger = logging.getLogger(__name__)
         self.model = model

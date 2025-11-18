@@ -4,11 +4,11 @@ import numpy as np
 import schempy
 from schempy import Schematic
 
-from .block_token_converter import BlockTokenConverter
+from .versioned_block_token_converter import VersionedBlockTokenConverter
 
 
 class SchematicArrayConverter:
-    def __init__(self, block_token_converter: BlockTokenConverter):
+    def __init__(self, block_token_converter: VersionedBlockTokenConverter):
         self._block_token_converter = block_token_converter
 
     def schematic_to_array(

@@ -1,20 +1,19 @@
 from lightning.pytorch.callbacks import Callback
 
 from minecraft_schematic_generator.block_benchmark import run_benchmark
-from minecraft_schematic_generator.converter import BlockTokenConverter
 
 
 class BlockBenchmarkCallback(Callback):
     def __init__(
         self,
-        block_token_converter: BlockTokenConverter,
+        block_str_mapping: dict[str, int],
         schematic_size: int,
         num_runs: int = 100,
         batch_size: int = 0,
         save_debug_schematics: bool = False,
         base_seed: int = 0,
     ):
-        self._block_token_converter = block_token_converter
+        self._block_str_mapping = block_str_mapping
         self._schematic_size = schematic_size
         self._num_runs = num_runs
         self._batch_size = batch_size
@@ -28,7 +27,7 @@ class BlockBenchmarkCallback(Callback):
         if trainer.global_rank == 0:
             results = run_benchmark(
                 pl_module.model,
-                block_token_converter=self._block_token_converter,
+                block_str_mapping=self._block_str_mapping,
                 schematic_size=self._schematic_size,
                 num_runs=self._num_runs,
                 save_debug_schematics=self._save_debug_schematics,

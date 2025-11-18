@@ -14,6 +14,7 @@ from minecraft_schematic_generator.constants import GITHUB_REPO
 from minecraft_schematic_generator.converter import (
     BlockTokenConverter,
     DictBlockTokenMapper,
+    VersionedBlockTokenConverter,
 )
 
 from .config import AppState
@@ -204,10 +205,11 @@ async def complete_structure(input: StructureRequest, request: Request):
         version_translator = app.state.translation_manager.get_version(
             input.platform, input.version_number
         )
-        block_token_mapper = BlockTokenConverter(
-            app.state.block_token_mapper, version_translator
+        block_token_converter = BlockTokenConverter(app.state.block_token_mapper)
+        versioned_block_token_converter = VersionedBlockTokenConverter(
+            block_token_converter, version_translator
         )
-        generator = StructureGenerator(app.state.model, block_token_mapper)
+        generator = StructureGenerator(app.state.model, versioned_block_token_converter)
         input_tensor = generator.prepare_input_tensor(
             input.ignore_replaceable_blocks, input.palette, input.structure
         )
